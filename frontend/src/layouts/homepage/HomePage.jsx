@@ -10,25 +10,6 @@ export function HomePage() {
       <div className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-gradient-radial from-[#4169E1]/20 via-[#4169E1]/5 to-transparent rounded-full blur-3xl pointer-events-none"></div>
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-radial from-[#5B8DEF]/10 via-transparent to-transparent rounded-full blur-3xl pointer-events-none"></div>
 
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 backdrop-blur-xl bg-background/60 border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-[#5B8DEF]"></div>
-            <span className="text-xl text-white">ZenLink</span>
-          </div>
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#" className="text-white/70 hover:text-white transition-colors">Clinici</a>
-            <a href="#" className="text-white/70 hover:text-white transition-colors">Medici</a>
-            <a href="#" className="text-white/70 hover:text-white transition-colors">Inbox</a>
-            <a href="#" className="text-white/70 hover:text-white transition-colors">About</a>
-            <a href="/dashboard" className="text-white/70 hover:text-white transition-colors">Dashboard</a>
-          </div>
-          <Button className="bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] hover:from-[#5B8DEF]/90 hover:to-[#4169E1]/90 text-white">
-            Get Started
-          </Button>
-        </div>
-      </nav>
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center px-6 py-20">

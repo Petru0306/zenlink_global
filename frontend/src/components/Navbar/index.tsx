@@ -1,0 +1,87 @@
+import { Link, useLocation } from 'react-router-dom';
+import { Button } from '../ui/button';
+import { Brain } from 'lucide-react';
+
+export default function Navbar() {
+  const location = useLocation();
+
+  const navLinks = [
+    { name: 'Home', path: '/' },
+    { name: 'Doctors', path: '/doctori' },
+    { name: 'Clinics', path: '/clinici' },
+    { name: 'Dashboard', path: '/dashboard' },
+  ];
+
+  const isActive = (path: string) => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(path);
+  };
+
+  return (
+    <nav className="sticky top-0 z-50 backdrop-blur-xl bg-[#0b1437]/80 border-b border-[#2d4a7c]/50">
+      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        {/* Logo and Site Name */}
+        <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#5B8DEF] to-[#4169E1] flex items-center justify-center">
+            <Brain className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-xl font-semibold text-white">ZenLink</span>
+        </Link>
+
+        {/* Navigation Links */}
+        <div className="hidden md:flex items-center gap-8">
+          {navLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={`transition-colors duration-200 ${
+                isActive(link.path)
+                  ? 'text-white font-semibold'
+                  : 'text-[#a3aed0] hover:text-white'
+              }`}
+            >
+              {link.name}
+            </Link>
+          ))}
+        </div>
+
+        {/* Auth Buttons */}
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            className="bg-[#1a2f5c] border-[#2d4a7c] text-[#a3aed0] hover:text-white hover:border-blue-500 transition-all hidden sm:flex"
+          >
+            Log In
+          </Button>
+          <Button 
+            className="bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] hover:from-[#5B8DEF]/90 hover:to-[#4169E1]/90 text-white"
+          >
+            Sign up
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile Navigation */}
+      <div className="md:hidden border-t border-[#2d4a7c]/50 bg-[#0b1437]/95">
+        <div className="px-6 py-3 flex flex-wrap gap-4">
+          {navLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={`text-sm transition-colors duration-200 ${
+                isActive(link.path)
+                  ? 'text-white font-semibold'
+                  : 'text-[#a3aed0] hover:text-white'
+              }`}
+            >
+              {link.name}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </nav>
+  );
+}
+

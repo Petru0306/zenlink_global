@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { ThemeProvider } from '@mui/material/styles'
 // @ts-ignore - JS file
 import CssBaseline from '@mui/material/CssBaseline'
+import Navbar from './components/Navbar'
 import DoctorsPage from './pages/DoctorsPage'
 import ClinicsPage from './pages/ClinicsPage'
 // @ts-ignore - JS file
@@ -16,6 +17,7 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      <Navbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/dashboard" element={<Dashboard />} />
