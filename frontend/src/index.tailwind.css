@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-size: 16px;
+  --background: #0a0a0f;
+  --foreground: #ffffff;
+  --card: rgba(15, 15, 25, 0.6);
+  --card-foreground: #ffffff;
+  --popover: #0f0f19;
+  --popover-foreground: #ffffff;
+  --primary: #5B8DEF;
+  --primary-foreground: #ffffff;
+  --secondary: #4169E1;
+  --secondary-foreground: #ffffff;
+  --muted: rgba(255, 255, 255, 0.1);
+  --muted-foreground: rgba(255, 255, 255, 0.5);
+  --accent: rgba(91, 141, 239, 0.1);
+  --accent-foreground: #ffffff;
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: transparent;
+  --input-background: rgba(255, 255, 255, 0.05);
+  --switch-background: rgba(255, 255, 255, 0.2);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: #5B8DEF;
+  --chart-1: #5B8DEF;
+  --chart-2: #4169E1;
+  --chart-3: #10B981;
+  --chart-4: #F59E0B;
+  --chart-5: #EF4444;
+  --radius: 0.75rem;
+  --sidebar: rgba(10, 10, 20, 0.8);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #5B8DEF;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(91, 141, 239, 0.1);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #5B8DEF;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: rgba(91, 141, 239, 0.5);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
+
+html {
+  font-size: var(--font-size);
+}
+
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scroll {
+  animation: scroll 10s linear infinite;
+}
+
