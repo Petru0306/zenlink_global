@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { 
@@ -6,9 +6,44 @@ import {
   History, CreditCard, Bot, Upload, Download, ChevronRight,
   CheckCircle, XCircle, AlertCircle, Stethoscope
 } from 'lucide-react';
+import { useAppointments } from '../../context/AppointmentContext';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('profile');
+  const { appointments } = useAppointments();
+
+  // Format date from YYYY-MM-DD to DD.MM.YYYY
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ro-RO');
+  };
+
+  // Separate appointments into active and completed
+  const appointmentsData = useMemo(() => {
+    const now = new Date();
+    const active = appointments.filter(apt => {
+      if (apt.status === 'completed' || apt.status === 'cancelled') return false;
+      const aptDate = new Date(`${apt.date}T${apt.time}`);
+      return aptDate >= now;
+    }).sort((a, b) => {
+      const dateA = new Date(`${a.date}T${a.time}`);
+      const dateB = new Date(`${b.date}T${b.time}`);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    const completed = appointments.filter(apt => {
+      if (apt.status === 'completed') return true;
+      if (apt.status === 'cancelled') return false;
+      const aptDate = new Date(`${apt.date}T${apt.time}`);
+      return aptDate < now;
+    }).sort((a, b) => {
+      const dateA = new Date(`${a.date}T${a.time}`);
+      const dateB = new Date(`${b.date}T${b.time}`);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    return { active, completed };
+  }, [appointments]);
 
   // Mock data
   const patientProfile = {
@@ -43,15 +78,6 @@ export default function Dashboard() {
       nextCheckup: '15.02.2024'
     }
   ];
-
-  const appointments = {
-    active: [
-      { id: 1, doctor: 'Dr. Gabriela Sofiniuc', date: '20.02.2024', time: '10:00', type: 'Cardiologie' }
-    ],
-    completed: [
-      { id: 2, doctor: 'Dr. Alina Ion', date: '15.01.2024', time: '14:30', type: 'Consult General' }
-    ]
-  };
 
   const consultations = [
     { 
@@ -256,47 +282,60 @@ export default function Dashboard() {
             <div>
               <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-yellow-400" />
-                Active
+                Active ({appointmentsData.active.length})
               </h3>
-              {appointments.active.map((apt) => (
-                <Card key={apt.id} className="p-6 bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-3xl mb-4 hover:border-blue-500/50 transition-all">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="text-white text-lg font-semibold mb-2">Dr. {apt.doctor}</h4>
-                      <div className="space-y-1">
-                        <p className="text-blue-400">{apt.type}</p>
-                        <p className="text-[#a3aed0]">Data: {apt.date}</p>
-                        <p className="text-[#a3aed0]">Ora: {apt.time}</p>
-                      </div>
-                    </div>
-                    <Button variant="outline" className="border-blue-500 text-blue-400 hover:bg-blue-500/10">
-                      Vezi Detalii
-                    </Button>
-                  </div>
+              {appointmentsData.active.length === 0 ? (
+                <Card className="p-6 bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-3xl text-center">
+                  <p className="text-[#a3aed0]">Nu ai programări active</p>
                 </Card>
-              ))}
+              ) : (
+                appointmentsData.active.map((apt) => (
+                  <Card key={apt.id} className="p-6 bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-3xl mb-4 hover:border-blue-500/50 transition-all">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="text-white text-lg font-semibold mb-2">{apt.doctorName}</h4>
+                        <div className="space-y-1">
+                          <p className="text-[#a3aed0]">Data: {formatDate(apt.date)}</p>
+                          <p className="text-[#a3aed0]">Ora: {apt.time}</p>
+                          {apt.notes && (
+                            <p className="text-blue-400 text-sm mt-2">Note: {apt.notes}</p>
+                          )}
+                        </div>
+                      </div>
+                      <Button variant="outline" className="border-blue-500 text-blue-400 hover:bg-blue-500/10">
+                        Vezi Detalii
+                      </Button>
+                    </div>
+                  </Card>
+                ))
+              )}
             </div>
 
             <div>
               <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-green-400" />
-                Finalizate
+                Finalizate ({appointmentsData.completed.length})
               </h3>
-              {appointments.completed.map((apt) => (
-                <Card key={apt.id} className="p-6 bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-3xl mb-4 opacity-75">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="text-white text-lg font-semibold mb-2">Dr. {apt.doctor}</h4>
-                      <div className="space-y-1">
-                        <p className="text-blue-400">{apt.type}</p>
-                        <p className="text-[#a3aed0]">Data: {apt.date}</p>
-                        <p className="text-[#a3aed0]">Ora: {apt.time}</p>
-                      </div>
-                    </div>
-                    <CheckCircle className="w-6 h-6 text-green-400" />
-                  </div>
+              {appointmentsData.completed.length === 0 ? (
+                <Card className="p-6 bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-3xl text-center opacity-75">
+                  <p className="text-[#a3aed0]">Nu ai programări finalizate</p>
                 </Card>
-              ))}
+              ) : (
+                appointmentsData.completed.map((apt) => (
+                  <Card key={apt.id} className="p-6 bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-3xl mb-4 opacity-75">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="text-white text-lg font-semibold mb-2">{apt.doctorName}</h4>
+                        <div className="space-y-1">
+                          <p className="text-[#a3aed0]">Data: {formatDate(apt.date)}</p>
+                          <p className="text-[#a3aed0]">Ora: {apt.time}</p>
+                        </div>
+                      </div>
+                      <CheckCircle className="w-6 h-6 text-green-400" />
+                    </div>
+                  </Card>
+                ))
+              )}
             </div>
           </div>
         );

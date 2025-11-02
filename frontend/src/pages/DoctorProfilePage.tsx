@@ -206,9 +206,10 @@ export default function DoctorProfilePage() {
           {/* Action Buttons */}
           <div className="flex gap-4">
             <Button
+              onClick={() => navigate(`/doctor/${doctorId}/book`)}
               className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-xl px-8 py-6 text-lg shadow-lg shadow-blue-500/30"
             >
-              Book Appointment
+              Programează-te
             </Button>
             <Button
               variant="outline"
