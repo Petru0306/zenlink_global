@@ -1,85 +1,10 @@
 import { useState, useMemo } from 'react'
-import type { Doctor } from '../types/doctor'
+import { useNavigate } from 'react-router-dom'
 import FiltersBar from '../components/FiltersBar'
 import { DoctorCard } from '../components/DoctorCard'
 import { StatsGrid } from '../components/StatsGrid'
-import { Button } from '../components/ui/button';
-
-// Mock data pentru doctori
-const mockDoctors: Doctor[] = [
-  {
-    id: 1,
-    name: 'Dr. Alina Ion',
-    specialization: 'Primary Care, Gynecology',
-    rating: 4.98,
-    reviewsCount: 565,
-    views: 106489,
-    location: 'Bucharest, Sector 1',
-    fullAddress: 'BUCURESTI, Str. Ion Campineanu nr. 23, Sector 1',
-    clinic: 'Clinica Sala Palatului',
-    imageUrl: 'https://images.unsplash.com/photo-1584432810601-6c7f27d2362b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmZW1hbGUlMjBkb2N0b3IlMjBtZWRpY2FsfGVufDF8fHx8MTc2MTk2NjU1Mnww&ixlib=rb-4.1.0&q=80&w=1080',
-  },
-  {
-    id: 2,
-    name: 'Dr. Gabriela Sofiniuc',
-    specialization: 'Specialist, Cardiology',
-    rating: 4.95,
-    reviewsCount: 541,
-    views: 71105,
-    location: 'Galati',
-    fullAddress: 'Galati, Str. G-ral Alexandru Cernat nr. 61, Galati',
-    clinic: 'Hiperdia Medical Center',
-    imageUrl: 'https://images.unsplash.com/photo-1615177393114-bd2917a4f74a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkb2N0b3IlMjBwcm9mZXNzaW9uYWwlMjBwb3J0cmFpdHxlbnwxfHx8fDE3NjIwMjY3MzF8MA&ixlib=rb-4.1.0&q=80&w=1080',
-  },
-  {
-    id: 3,
-    name: 'Dr. Lucretia Anghel',
-    specialization: 'Primary Care, Internal Medicine',
-    rating: 4.96,
-    reviewsCount: 512,
-    views: 64221,
-    location: 'Galati',
-    fullAddress: 'Galati, Str. G-ral Alexandru Cernat nr. 61, Galati',
-    clinic: 'Hiperdia Medical Center',
-    imageUrl: 'https://images.unsplash.com/photo-1631558554770-74e921444006?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYWxlJTIwZG9jdG9yJTIwaG9zcGl0YWx8ZW58MXx8fHwxNzYyMDI2ODQzfDA&ixlib=rb-4.1.0&q=80&w=1080',
-  },
-  {
-    id: 4,
-    name: 'Dr. Loredana Cosmina Popescu',
-    specialization: 'Specialist, Dermatology',
-    rating: 4.99,
-    reviewsCount: 474,
-    views: 31635,
-    location: 'Bucharest, Sector 1',
-    fullAddress: 'BUCURESTI, Str. Ion Campineanu nr. 23, Sector 1',
-    clinic: 'Clinica Sala Palatului',
-    imageUrl: 'https://images.unsplash.com/photo-1580281657702-257584239a55?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtZWRpY2FsJTIwcHJvZmVzc2lvbmFsJTIwY2xpbmljfGVufDF8fHx8MTc2MTk5OTk1OHww&ixlib=rb-4.1.0&q=80&w=1080',
-  },
-  {
-    id: 5,
-    name: 'Dr. Marcus Chen',
-    specialization: 'Orthopedic Surgery',
-    rating: 4.94,
-    reviewsCount: 389,
-    views: 45821,
-    location: 'Bucharest, Sector 1',
-    fullAddress: 'BUCURESTI, Bd. Magheru nr. 15, Sector 1',
-    clinic: 'ZenLink Orthopedic Center',
-    imageUrl: 'https://images.unsplash.com/photo-1615177393114-bd2917a4f74a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkb2N0b3IlMjBwcm9mZXNzaW9uYWwlMjBwb3J0cmFpdHxlbnwxfHx8fDE3NjIwMjY3MzF8MA&ixlib=rb-4.1.0&q=80&w=1080',
-  },
-  {
-    id: 6,
-    name: 'Dr. Elena Popovici',
-    specialization: 'Pediatrics',
-    rating: 4.97,
-    reviewsCount: 623,
-    views: 89234,
-    location: 'Cluj-Napoca',
-    fullAddress: 'Cluj-Napoca, Str. Clinicilor nr. 8',
-    clinic: 'Children\'s Health Center',
-    imageUrl: 'https://images.unsplash.com/photo-1584432810601-6c7f27d2362b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmZW1hbGUlMjBkb2N0b3IlMjBtZWRpY2FsfGVufDF8fHx8MTc2MTk2NjU1Mnww&ixlib=rb-4.1.0&q=80&w=1080',
-  },
-];
+import { Button } from '../components/ui/button'
+import { mockDoctors } from '../data/mockData'
 
 export default function DoctorsPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -102,9 +27,10 @@ export default function DoctorsPage() {
     });
   }, [searchTerm, locationFilter, specializationFilter]);
 
+  const navigate = useNavigate()
+
   const handleViewDoctor = (doctorId: number) => {
-    // TODO: Navigate to doctor profile page when routing is implemented
-    console.log('View profile for doctor:', doctorId);
+    navigate(`/doctor/${doctorId}`);
   };
 
   return (

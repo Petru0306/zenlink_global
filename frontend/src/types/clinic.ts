@@ -11,5 +11,11 @@ export interface Clinic {
   patients?: number;
   openHours?: string;
   featured?: boolean;
+  description?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  address?: string;
+  doctors?: number[];
 }
 

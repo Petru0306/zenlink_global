@@ -9,6 +9,8 @@ import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
 import DoctorsPage from './pages/DoctorsPage'
 import ClinicsPage from './pages/ClinicsPage'
+import DoctorProfilePage from './pages/DoctorProfilePage'
+import ClinicProfilePage from './pages/ClinicProfilePage'
 // @ts-ignore - JS file
 import { HomePage } from './layouts/homepage/HomePage'
 // @ts-ignore - JS file  
@@ -30,7 +32,9 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/doctori" element={<DoctorsPage />} />
+          <Route path="/doctor/:id" element={<DoctorProfilePage />} />
           <Route path="/clinici" element={<ClinicsPage />} />
+          <Route path="/clinic/:id" element={<ClinicProfilePage />} />
           <Route path="/authentication/sign-in" element={<SignInPage />} />
           <Route path="/authentication/sign-up" element={<SignUpPage />} />
           <Route 

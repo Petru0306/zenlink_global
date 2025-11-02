@@ -8,7 +8,13 @@ export interface Doctor {
   location: string;
   fullAddress: string;
   clinic: string;
+  clinicId: number;
   imageUrl?: string;
+  bio?: string;
+  education?: string[];
+  experience?: string;
+  languages?: string[];
+  consultationFee?: number;
 }
 
 
