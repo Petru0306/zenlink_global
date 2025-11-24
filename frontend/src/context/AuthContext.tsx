@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+
+export type UserRole = 'PATIENT' | 'DOCTOR' | 'CLINIC';
 
 export interface User {
   id: string;
@@ -6,6 +8,7 @@ export interface User {
   firstName: string;
   lastName: string;
   phone?: string;
+  role?: UserRole;
   token?: string;
 }
 
@@ -13,7 +16,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (firstName: string, lastName: string, email: string, password: string, phone?: string) => Promise<void>;
+  signup: (firstName: string, lastName: string, email: string, password: string, phone?: string, role?: UserRole, referralCode?: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -39,11 +42,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Load user from localStorage on mount
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
-    const storedToken = localStorage.getItem('token');
     
-    if (storedUser && storedToken) {
+    if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
+        // Ensure role is included when loading from localStorage
+        if (!parsedUser.role) {
+          parsedUser.role = 'PATIENT'; // Default to PATIENT if role is missing
+        }
+        console.log('Loaded user from localStorage:', parsedUser);
         setUser(parsedUser);
       } catch (error) {
         console.error('Error parsing stored user:', error);
@@ -70,23 +77,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const data = await response.json();
+      console.log('Login success, received data:', data);
       
       const userData: User = {
-        id: data.userId || data.id || Date.now().toString(),
+        id: String(data.userId || data.id || Date.now()),
         email: data.email || email,
         firstName: data.firstName || data.firstName || '',
         lastName: data.lastName || data.lastName || '',
         phone: data.phone,
+        role: data.role, // Backend should return the role
         token: data.token || data.accessToken,
       };
 
+      console.log('Setting user data with role:', userData.role, 'Full user:', userData);
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
       if (userData.token) {
         localStorage.setItem('token', userData.token);
       }
     } catch (error) {
-      // If backend is not available, use mock authentication for development
+      // If backend is not available, use mock authentication for development (login only)
       console.warn('Backend not available, using mock authentication:', error);
       
       // Mock login - check against localStorage stored users
@@ -102,6 +112,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             firstName: foundUser.firstName,
             lastName: foundUser.lastName,
             phone: foundUser.phone,
+            role: foundUser.role || 'PATIENT', // Include role from stored user
           };
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
@@ -113,68 +124,78 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signup = async (firstName: string, lastName: string, email: string, password: string, phone?: string) => {
+  const signup = async (firstName: string, lastName: string, email: string, password: string, phone?: string, role: UserRole = 'PATIENT', referralCode?: string) => {
     try {
+      const requestBody: any = { 
+        firstName, 
+        lastName, 
+        email, 
+        password,
+        phone,
+        role,
+      };
+      
+      // Always include referralCode for DOCTOR and CLINIC (even if empty, so backend can validate)
+      // For PATIENT, don't include it
+      if (role === 'DOCTOR' || role === 'CLINIC') {
+        requestBody.referralCode = referralCode || '';
+      }
+
+      console.log('Signup request body:', requestBody);
+      console.log('=== SIGNUP FUNCTION v2 - NO MOCK AUTH ===');
+      
       const response = await fetch('http://localhost:8080/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          firstName, 
-          lastName, 
-          email, 
-          password,
-          phone,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log('Signup response status:', response.status);
+      console.log('Signup response ok?', response.ok);
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Signup failed' }));
-        throw new Error(errorData.message || 'Signup failed');
+        let errorData;
+        try {
+          errorData = await response.json();
+          console.error('Signup error response:', errorData);
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          errorData = { message: 'Signup failed' };
+        }
+        
+        // Show the actual error message from backend (e.g., "Invalid or already used referral code")
+        const errorMessage = errorData.message || 'Signup failed';
+        console.error('Throwing error with message:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      console.log('Signup success, received data:', data);
       
+      // IMPORTANT: Use role from backend response, not from parameter
       const userData: User = {
-        id: data.userId || data.id || Date.now().toString(),
+        id: String(data.userId || data.id || Date.now()),
         email: data.email || email,
         firstName: data.firstName || firstName,
         lastName: data.lastName || lastName,
         phone: data.phone || phone,
+        role: data.role || role, // Backend should return the role
         token: data.token || data.accessToken,
       };
 
+      console.log('Setting user data with role:', userData.role, 'Full user:', userData);
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
       if (userData.token) {
         localStorage.setItem('token', userData.token);
       }
-    } catch (error) {
-      // If backend is not available, use mock authentication for development
-      console.warn('Backend not available, using mock authentication:', error);
-      
-      // Mock signup - store in localStorage
-      const userId = Date.now().toString();
-      const userData: User = {
-        id: userId,
-        email,
-        firstName,
-        lastName,
-        phone,
-      };
-
-      // Store user in mock users array
-      const storedUsers = localStorage.getItem('users');
-      const users = storedUsers ? JSON.parse(storedUsers) : [];
-      users.push({
-        ...userData,
-        password, // Store password only in mock (not in userData)
-      });
-      localStorage.setItem('users', JSON.stringify(users));
-
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (error: any) {
+      // DO NOT use mock authentication for signup - always require backend validation
+      // This ensures referral codes are properly validated
+      console.error('=== SIGNUP ERROR CAUGHT - THROWING ERROR (NO MOCK) ===', error);
+      throw error; // Re-throw to show error to user - DO NOT use mock auth
     }
   };
 

@@ -3,9 +3,11 @@ import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { User, Mail, Lock, Brain, Facebook, Apple, Phone, AlertCircle } from 'lucide-react';
+import { User, Mail, Lock, Brain, Facebook, Apple, Phone, AlertCircle, Key } from 'lucide-react';
 import { FaGoogle } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
+
+type UserRole = 'PATIENT' | 'DOCTOR' | 'CLINIC';
 
 export default function SignUpPage() {
   const [firstName, setFirstName] = useState('');
@@ -14,6 +16,8 @@ export default function SignUpPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState<UserRole>('PATIENT');
+  const [referralCode, setReferralCode] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -56,12 +60,26 @@ export default function SignUpPage() {
       return;
     }
 
+    // Validate referral code for DOCTOR and CLINIC roles
+    if ((role === 'DOCTOR' || role === 'CLINIC') && !referralCode.trim()) {
+      setError('Referral code is required for ' + (role === 'DOCTOR' ? 'Doctor' : 'Clinic') + ' registration');
+      return;
+    }
+
     setIsLoading(true);
+    setError(''); // Clear any previous errors
     try {
-      await signup(firstName, lastName, email, password, phone || undefined);
+      await signup(firstName, lastName, email, password, phone || undefined, role, referralCode.trim() || undefined);
+      // Only navigate if signup was successful (no error thrown)
+      console.log('Signup successful, navigating to dashboard');
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Signup failed. Please try again.');
+      console.error('Signup error caught in SignUpPage:', err);
+      // Show the actual error message from backend
+      const errorMessage = err?.message || 'Signup failed. Please try again.';
+      console.error('Setting error message:', errorMessage);
+      setError(errorMessage);
+      // DO NOT navigate on error - stay on signup page to show error
     } finally {
       setIsLoading(false);
     }
@@ -119,6 +137,75 @@ export default function SignUpPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Account Type Selection */}
+            <div>
+              <label className="text-[#a3aed0] text-sm mb-3 block">Account Type</label>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRole('PATIENT');
+                    setReferralCode(''); // Clear referral code when switching to patient
+                  }}
+                  className={`py-3 px-4 rounded-xl border transition-all ${
+                    role === 'PATIENT'
+                      ? 'bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] border-blue-500 text-white'
+                      : 'bg-[#0f1f3d] border-[#2d4a7c] text-[#a3aed0] hover:border-blue-500'
+                  }`}
+                >
+                  <div className="font-semibold">Patient</div>
+                  <div className="text-xs mt-1 opacity-80">Book appointments</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('DOCTOR')}
+                  className={`py-3 px-4 rounded-xl border transition-all ${
+                    role === 'DOCTOR'
+                      ? 'bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] border-blue-500 text-white'
+                      : 'bg-[#0f1f3d] border-[#2d4a7c] text-[#a3aed0] hover:border-blue-500'
+                  }`}
+                >
+                  <div className="font-semibold">Doctor</div>
+                  <div className="text-xs mt-1 opacity-80">Manage schedule</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('CLINIC')}
+                  className={`py-3 px-4 rounded-xl border transition-all ${
+                    role === 'CLINIC'
+                      ? 'bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] border-blue-500 text-white'
+                      : 'bg-[#0f1f3d] border-[#2d4a7c] text-[#a3aed0] hover:border-blue-500'
+                  }`}
+                >
+                  <div className="font-semibold">Clinic</div>
+                  <div className="text-xs mt-1 opacity-80">Register clinic</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Referral Code Field - Only for DOCTOR and CLINIC */}
+            {(role === 'DOCTOR' || role === 'CLINIC') && (
+              <div>
+                <label className="text-[#a3aed0] text-sm mb-2 block">
+                  Referral Code <span className="text-red-400">*</span>
+                </label>
+                <div className="relative">
+                  <Key className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#a3aed0]" />
+                  <input
+                    type="text"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value)}
+                    placeholder={`Enter referral code for ${role === 'DOCTOR' ? 'Doctor' : 'Clinic'} registration...`}
+                    className="w-full bg-[#0f1f3d] border border-[#2d4a7c] rounded-xl px-12 py-3 text-white placeholder-[#a3aed0] focus:outline-none focus:border-blue-500 transition-all"
+                    required
+                  />
+                </div>
+                <p className="text-[#a3aed0] text-xs mt-2 opacity-70">
+                  Contact us to receive your referral code
+                </p>
+              </div>
+            )}
+
             {/* First Name Field */}
             <div>
               <label className="text-[#a3aed0] text-sm mb-2 block">First Name</label>

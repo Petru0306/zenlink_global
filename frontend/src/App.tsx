@@ -17,6 +17,7 @@ import AppointmentBookingPage from './pages/AppointmentBookingPage'
 import { HomePage } from './layouts/homepage/HomePage'
 // @ts-ignore - JS file  
 import Dashboard from './layouts/dashboard'
+import DashboardRouter from './components/DashboardRouter'
 import SignInPage from './pages/SignInPage'
 import SignUpPage from './pages/SignUpPage'
 // @ts-ignore - JS file
@@ -45,7 +46,7 @@ function App() {
               path="/dashboard" 
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <DashboardRouter />
                 </ProtectedRoute>
               } 
             />
