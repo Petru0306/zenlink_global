@@ -1,27 +1,54 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Calendar as CalendarIcon, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Clock, Calendar as CalendarIcon, CheckCircle2, AlertCircle, Stethoscope } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Calendar } from '../components/Calendar';
-import { getDoctorById } from '../data/mockData';
-import { useAppointments } from '../context/AppointmentContext';
 import { useAuth } from '../context/AuthContext';
-import { ImageWithFallback } from '../components/figma/ImageWithFallback';
+
+interface DoctorData {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+}
+
+interface AvailabilitySlot {
+  id: number;
+  date: string;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+}
 
 export default function AppointmentBookingPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const { addAppointment, getAvailableTimeSlots } = useAppointments();
   
   const doctorId = id ? parseInt(id, 10) : null;
-  const doctor = doctorId ? getDoctorById(doctorId) : null;
-  
+  const [doctor, setDoctor] = useState<DoctorData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<AvailabilitySlot[]>([]);
   const [bookingSuccess, setBookingSuccess] = useState(false);
+
+  useEffect(() => {
+    if (doctorId) {
+      fetch(`http://localhost:8080/api/users/doctors/${doctorId}`)
+        .then(res => res.json())
+        .then((data: DoctorData) => {
+          setDoctor(data);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('Error fetching doctor:', err);
+          setLoading(false);
+        });
+    }
+  }, [doctorId]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -32,11 +59,26 @@ export default function AppointmentBookingPage() {
   useEffect(() => {
     if (selectedDate && doctorId) {
       const dateStr = selectedDate.toISOString().split('T')[0];
-      const slots = getAvailableTimeSlots(doctorId, dateStr);
-      setAvailableSlots(slots);
-      setSelectedTime(null);
+      fetch(`http://localhost:8080/api/availability/doctor/${doctorId}/date/${dateStr}`)
+        .then(res => res.json())
+        .then((slots: AvailabilitySlot[]) => {
+          setAvailableSlots(slots);
+          setSelectedTime(null);
+        })
+        .catch(err => {
+          console.error('Error fetching availability:', err);
+          setAvailableSlots([]);
+        });
     }
-  }, [selectedDate, doctorId, getAvailableTimeSlots]);
+  }, [selectedDate, doctorId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0b1437] flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
 
   if (!doctor || !doctorId) {
     return (
@@ -48,6 +90,8 @@ export default function AppointmentBookingPage() {
       </div>
     );
   }
+
+  const doctorName = `Dr. ${doctor.firstName} ${doctor.lastName}`;
 
   if (!isAuthenticated) {
     return null; // Will redirect
@@ -61,25 +105,41 @@ export default function AppointmentBookingPage() {
     setSelectedTime(time);
   };
 
-  const handleBookAppointment = () => {
-    if (!selectedDate || !selectedTime || !user) return;
-
-    const dateStr = selectedDate.toISOString().split('T')[0];
+  const handleBookAppointment = async () => {
+    if (!selectedDate || !selectedTime || !user || !doctorId) return;
     
-    addAppointment({
-      doctorId: doctor.id,
-      doctorName: doctor.name,
-      date: dateStr,
-      time: selectedTime,
-      status: 'upcoming',
-    });
+    try {
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      const [hours, minutes] = selectedTime.split(':');
+      const timeStr = `${hours}:${minutes}:00`;
+      
+      const response = await fetch(`http://localhost:8080/api/appointments?patientId=${user.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          doctorId: doctorId,
+          date: dateStr,
+          time: timeStr,
+        }),
+      });
 
-    setBookingSuccess(true);
-    
-    // Redirect to dashboard after 2 seconds
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 2000);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Booking failed' }));
+        throw new Error(errorData.message || 'Booking failed');
+      }
+
+      setBookingSuccess(true);
+      
+      // Redirect to dashboard after 2 seconds
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+    } catch (error: any) {
+      console.error('Error booking appointment:', error);
+      alert(error.message || 'Failed to book appointment. Please try again.');
+    }
   };
 
   const formatDateDisplay = (date: Date) => {
@@ -99,7 +159,7 @@ export default function AppointmentBookingPage() {
           <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-6" />
           <h2 className="text-white text-2xl font-semibold mb-4">Programare Confirmată!</h2>
           <p className="text-[#a3aed0] mb-6">
-            Programarea ta cu {doctor.name} a fost confirmată pentru{' '}
+            Programarea ta cu {doctorName} a fost confirmată pentru{' '}
             {selectedDate && formatDateDisplay(selectedDate)} la ora {selectedTime}
           </p>
           <p className="text-blue-400 text-sm">Redirecționare către dashboard...</p>
@@ -130,7 +190,7 @@ export default function AppointmentBookingPage() {
                 <h1 className="text-white text-3xl font-bold">Programează-te</h1>
               </div>
               <p className="text-[#a3aed0] mb-8">
-                Selectează data și ora pentru programarea ta cu {doctor.name}
+                Selectează data și ora pentru programarea ta cu {doctorName}
               </p>
               <Calendar
                 selectedDate={selectedDate}
@@ -144,26 +204,14 @@ export default function AppointmentBookingPage() {
             {/* Doctor Card */}
             <Card className="p-6 bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-3xl">
               <div className="flex items-center gap-4 mb-4">
-                {doctor.imageUrl ? (
-                  <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#2d4a7c]">
-                    <ImageWithFallback
-                      src={doctor.imageUrl}
-                      alt={doctor.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : null}
+                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#2d4a7c] flex items-center justify-center">
+                  <Stethoscope className="w-10 h-10 text-[#6b7bb5]" />
+                </div>
                 <div>
-                  <h3 className="text-white font-semibold text-lg">{doctor.name}</h3>
-                  <p className="text-blue-400 text-sm">{doctor.specialization}</p>
+                  <h3 className="text-white font-semibold text-lg">{doctorName}</h3>
+                  <p className="text-blue-400 text-sm">General Medicine</p>
                 </div>
               </div>
-              {doctor.consultationFee && (
-                <div className="pt-4 border-t border-[#2d4a7c]">
-                  <p className="text-[#a3aed0] text-sm">Consult:</p>
-                  <p className="text-white font-semibold">{doctor.consultationFee} RON</p>
-                </div>
-              )}
             </Card>
 
             {/* Selected Date Display */}
@@ -184,21 +232,24 @@ export default function AppointmentBookingPage() {
                   <>
                     <p className="text-[#a3aed0] text-sm mb-4">Selectează ora:</p>
                     <div className="grid grid-cols-2 gap-3">
-                      {availableSlots.map((slot) => (
-                        <button
-                          key={slot}
-                          onClick={() => handleTimeSelect(slot)}
-                          className={`
-                            py-3 px-4 rounded-xl font-semibold transition-all
-                            ${selectedTime === slot
-                              ? 'bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] text-white shadow-lg shadow-blue-500/30'
-                              : 'bg-[#2d4a7c] text-white hover:bg-[#3d5a8c]'
-                            }
-                          `}
-                        >
-                          {slot}
-                        </button>
-                      ))}
+                      {availableSlots.map((slot) => {
+                        const timeStr = slot.startTime.substring(0, 5); // Get HH:MM
+                        return (
+                          <button
+                            key={slot.id}
+                            onClick={() => handleTimeSelect(timeStr)}
+                            className={`
+                              py-3 px-4 rounded-xl font-semibold transition-all
+                              ${selectedTime === timeStr
+                                ? 'bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] text-white shadow-lg shadow-blue-500/30'
+                                : 'bg-[#2d4a7c] text-white hover:bg-[#3d5a8c]'
+                              }
+                            `}
+                          >
+                            {timeStr}
+                          </button>
+                        );
+                      })}
                     </div>
                   </>
                 )}

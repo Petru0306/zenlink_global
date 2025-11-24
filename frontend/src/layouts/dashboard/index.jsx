@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useAppointments } from '../../context/AppointmentContext';
+import { useState, useMemo, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { VisionSidebar } from './components/VisionSidebar';
 import { VisionTopBar } from './components/VisionTopBar';
 import { PatientHeader } from './components/PatientHeader';
@@ -13,7 +13,35 @@ import {
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('profile');
-  const { appointments } = useAppointments();
+  const { user } = useAuth();
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Fetch real appointments from backend
+    if (user?.id) {
+      fetch(`http://localhost:8080/api/appointments/patient/${user.id}`)
+        .then(res => res.json())
+        .then((data) => {
+          const transformed = data.map(apt => ({
+            id: apt.id,
+            doctorId: apt.doctorId,
+            doctorName: apt.doctorName,
+            date: apt.date,
+            time: apt.time.substring(0, 5), // Get HH:MM
+            status: apt.status,
+          }));
+          setAppointments(transformed);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('Error fetching appointments:', err);
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
 
   // Format date from YYYY-MM-DD to DD.MM.YYYY
   const formatDate = (dateStr) => {
@@ -48,13 +76,13 @@ export default function Dashboard() {
     return { active, completed };
   }, [appointments]);
 
-  // Mock data
+  // Use real user data
   const patientProfile = {
-    firstName: 'Ion',
-    lastName: 'Popescu',
-    email: 'ion.popescu@email.com',
-    phone: '+40 721 123 456',
-    age: 34
+    firstName: user?.firstName || 'N/A',
+    lastName: user?.lastName || 'N/A',
+    email: user?.email || 'N/A',
+    phone: user?.phone || 'N/A',
+    age: 0 // TODO: Add age field to user profile
   };
 
   const medicalProfile = {

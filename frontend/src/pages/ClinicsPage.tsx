@@ -1,16 +1,62 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SearchFilters } from '../components/SearchFilters';
 import { StatsGrid } from '../components/StatsGrid';
 import { ClinicCard } from '../components/ClinicCard';
-import { mockClinics } from '../data/mockData';
+import type { Clinic } from '../types/clinic';
+
+interface User {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  role: string;
+}
 
 export default function ClinicsPage() {
+  const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [loading, setLoading] = useState(true);
   const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [specialtyFilter, setSpecialtyFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [ratingFilter, setRatingFilter] = useState('');
+
+  useEffect(() => {
+    // Fetch real clinics from backend
+    fetch('http://localhost:8080/api/users/clinics')
+      .then(res => res.json())
+      .then((users: User[]) => {
+        // Transform User to Clinic format
+        const transformedClinics: Clinic[] = users.map(user => ({
+          id: user.id,
+          name: `${user.firstName} ${user.lastName} Clinic`,
+          image: undefined,
+          location: 'Location not set',
+          distance: '',
+          rating: 0,
+          reviews: 0,
+          specialties: [],
+          verified: false,
+          patients: 0,
+          openHours: 'Hours not set',
+          featured: false,
+          description: 'Clinic information pending',
+          phone: user.phone || 'Phone not set',
+          email: user.email,
+          website: '',
+          address: 'Address not set',
+          doctors: [],
+        }));
+        setClinics(transformedClinics);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching clinics:', err);
+        setLoading(false);
+      });
+  }, []);
 
   const handleSearch = (search: string, specialty: string, location: string, rating: string) => {
     setSearchTerm(search.toLowerCase());
@@ -20,7 +66,7 @@ export default function ClinicsPage() {
   };
 
   const filteredClinics = useMemo(() => {
-    return mockClinics.filter((clinic) => {
+    return clinics.filter((clinic) => {
       const matchesSearch = !searchTerm || 
         clinic.name.toLowerCase().includes(searchTerm) ||
         clinic.location.toLowerCase().includes(searchTerm) ||
@@ -37,7 +83,7 @@ export default function ClinicsPage() {
       
       return matchesSearch && matchesSpecialty && matchesLocation && matchesRating;
     });
-  }, [searchTerm, specialtyFilter, locationFilter, ratingFilter]);
+  }, [clinics, searchTerm, specialtyFilter, locationFilter, ratingFilter]);
 
   const navigate = useNavigate()
 
@@ -52,7 +98,7 @@ export default function ClinicsPage() {
         <div className="animate-fade-in">
           <h1 className="text-white text-4xl mb-2 font-semibold">Clinics Directory</h1>
           <p className="text-[#a3aed0]">
-            Browse and manage {mockClinics.length} medical facilities in your network
+            Browse and manage {clinics.length} medical facilities in your network
           </p>
         </div>
 
@@ -70,18 +116,23 @@ export default function ClinicsPage() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-[#a3aed0] text-sm">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span>{mockClinics.filter(c => c.featured).length} Featured Clinics</span>
+              <span>{clinics.filter(c => c.featured).length} Featured Clinics</span>
             </div>
           </div>
         </div>
 
         {/* Clinic Cards Grid */}
-        <div className={`${
-          viewType === 'grid' 
-            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' 
-            : 'space-y-4'
-        }`}>
-          {filteredClinics.map((clinic, index) => (
+        {loading ? (
+          <div className="text-white text-center py-12">Loading clinics...</div>
+        ) : filteredClinics.length === 0 ? (
+          <div className="text-white text-center py-12">No clinics found. Be the first to register!</div>
+        ) : (
+          <div className={`${
+            viewType === 'grid' 
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' 
+              : 'space-y-4'
+          }`}>
+            {filteredClinics.map((clinic, index) => (
             <div
               key={clinic.id}
               className="animate-fade-in-up"
@@ -90,7 +141,8 @@ export default function ClinicsPage() {
               <ClinicCard {...clinic} onViewClinic={handleViewClinic} />
             </div>
           ))}
-        </div>
+          </div>
+        )}
 
         {/* Load More */}
         <div className="flex justify-center pt-4">

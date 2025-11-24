@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { 
   Building2, Users, UserCheck, CreditCard, Bot, 
@@ -10,16 +10,33 @@ export default function ClinicDashboard() {
   const [activeSection, setActiveSection] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Mock data - will be replaced with API calls
-  const doctors = [
-    { id: 1, name: 'Dr. Alina Ion', specialization: 'Gynecology', email: 'alina@clinic.com', phone: '+40 123 456 789' },
-    { id: 2, name: 'Dr. Marcus Chen', specialization: 'Orthopedics', email: 'marcus@clinic.com', phone: '+40 987 654 321' },
-  ];
+  // Real data - fetched from backend
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [clinicPatients, setClinicPatients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const clinicPatients = [
-    { id: 1, name: 'Ion Popescu', email: 'ion@example.com', doctor: 'Dr. Alina Ion', lastVisit: '2025-11-20' },
-    { id: 2, name: 'Maria Ionescu', email: 'maria@example.com', doctor: 'Dr. Marcus Chen', lastVisit: '2025-11-18' },
-  ];
+  useEffect(() => {
+    // Fetch doctors from backend
+    fetch('http://localhost:8080/api/users/doctors')
+      .then(res => res.json())
+      .then((users: any[]) => {
+        const transformedDoctors = users.map(user => ({
+          id: user.id,
+          name: `Dr. ${user.firstName} ${user.lastName}`,
+          specialization: 'General Medicine', // Default until profile is completed
+          email: user.email,
+          phone: user.phone || 'N/A',
+        }));
+        setDoctors(transformedDoctors);
+        // TODO: Fetch clinic's patients when endpoint is ready
+        setClinicPatients([]);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching doctors:', err);
+        setLoading(false);
+      });
+  }, []);
 
   const subscriptions = {
     plan: 'Premium',
@@ -129,8 +146,13 @@ export default function ClinicDashboard() {
               </div>
 
               <div className="space-y-4">
-                {doctors.map((doctor) => (
-                  <div key={doctor.id} className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
+                {doctors.length === 0 ? (
+                  <div className="text-white/60 text-center py-8">
+                    No doctors registered yet. Doctors will appear here once they create accounts.
+                  </div>
+                ) : (
+                  doctors.map((doctor) => (
+                    <div key={doctor.id} className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
@@ -155,8 +177,9 @@ export default function ClinicDashboard() {
                         View Profile
                       </button>
                     </div>
-                  </div>
-                ))}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -173,8 +196,13 @@ export default function ClinicDashboard() {
             <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
               <h2 className="text-white text-xl font-semibold mb-6">All Patients</h2>
               <div className="space-y-4">
-                {clinicPatients.map((patient) => (
-                  <div key={patient.id} className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
+                {clinicPatients.length === 0 ? (
+                  <div className="text-white/60 text-center py-8">
+                    No patients yet. Patients will appear here once they book appointments with your doctors.
+                  </div>
+                ) : (
+                  clinicPatients.map((patient) => (
+                    <div key={patient.id} className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
@@ -193,8 +221,9 @@ export default function ClinicDashboard() {
                         View Details
                       </button>
                     </div>
-                  </div>
-                ))}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
