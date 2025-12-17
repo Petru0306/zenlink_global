@@ -5,11 +5,12 @@ interface VisionSidebarProps {
   onClose?: () => void;
   activeSection: string;
   onSectionChange: (section: string) => void;
+  menuItems?: Array<{ id: string; label: string; icon: any }>;
 }
 
-export function VisionSidebar({ isOpen, onClose, activeSection, onSectionChange }: VisionSidebarProps) {
+export function VisionSidebar({ isOpen, onClose, activeSection, onSectionChange, menuItems }: VisionSidebarProps) {
 
-  const menuItems = [
+  const defaultMenu = [
     { id: 'profile', label: 'Profil Pacient', icon: User },
     { id: 'medical', label: 'Profil Medical', icon: Stethoscope },
     { id: 'files', label: 'Fișiere', icon: FileText },
@@ -18,6 +19,8 @@ export function VisionSidebar({ isOpen, onClose, activeSection, onSectionChange 
     { id: 'subscription', label: 'Abonament', icon: CreditCard },
     { id: 'ai', label: 'Asistent AI', icon: Sparkles },
   ];
+
+  const items = menuItems ?? defaultMenu;
 
   return (
     <>
@@ -51,7 +54,7 @@ export function VisionSidebar({ isOpen, onClose, activeSection, onSectionChange 
 
         {/* Navigation Menu */}
         <nav className="p-4 space-y-1">
-          {menuItems.map((item) => {
+          {items.map((item) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
 

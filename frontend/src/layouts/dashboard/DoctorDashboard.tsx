@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { 
   Calendar as CalendarIcon, Clock, Users, Bot, User, 
-  Stethoscope, Mail, Phone, Edit, Plus, X
+  Stethoscope, Mail, Phone, Plus, X, Pencil
 } from 'lucide-react';
 import { Calendar } from '../../components/Calendar';
+import { VisionSidebar } from './components/VisionSidebar';
+import { Input } from '../../components/ui/input';
 
 export default function DoctorDashboard() {
   const { user, setUser } = useAuth();
-  const [activeSection, setActiveSection] = useState('schedule');
+  const [activeSection, setActiveSection] = useState('profile');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -17,10 +19,12 @@ export default function DoctorDashboard() {
     phone: user?.phone || '',
   });
   const [saving, setSaving] = useState(false);
+  const [actionModal, setActionModal] = useState<{ type: 'files' | 'medical'; patient: any } | null>(null);
 
   // Real data - fetched from backend
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [patients, setPatients] = useState<any[]>([]);
+  // Placeholder for future backend list; currently deriving from appointments
+  // const [patients, setPatients] = useState<any[]>([]);
   
   // Schedule management
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -40,6 +44,7 @@ export default function DoctorDashboard() {
             date: apt.date,
             time: apt.time.substring(0, 5), // Get HH:MM
             status: apt.status,
+            raw: apt,
           }));
           setAppointments(transformed);
         })
@@ -53,14 +58,63 @@ export default function DoctorDashboard() {
     }
     
     // TODO: Fetch patients from backend when endpoint is ready
-    setPatients([]);
+    // setPatients([]);
   }, [user]);
 
+  const toLocalTimestamp = (dateStr: string, timeStr: string) => {
+    if (!dateStr || !timeStr) return NaN;
+    const dateParts = dateStr.includes('.') ? dateStr.split('.') : dateStr.split('-');
+    let y: number, m: number, d: number;
+    if (dateStr.includes('.')) {
+      // dd.MM.yyyy
+      [d, m, y] = dateParts.map(Number);
+    } else {
+      // yyyy-MM-dd
+      [y, m, d] = dateParts.map(Number);
+    }
+    const [hh, mm] = timeStr.split(':').map(Number);
+    if ([y, m, d, hh, mm].some((v) => Number.isNaN(v))) return NaN;
+    const dt = new Date(y, (m ?? 1) - 1, d, hh, mm);
+    // Adjust one day forward to compensate backend date shift
+    dt.setDate(dt.getDate() + 1);
+    return dt.getTime();
+  };
+
+  const upcomingAppointments = appointments.filter((apt) => {
+    const ts = toLocalTimestamp(apt.date, apt.time);
+    if (Number.isNaN(ts)) return false;
+    const status = (apt.status || '').toLowerCase();
+    if (status === 'cancelled') return false;
+    // consider future slots upcoming regardless of status
+    return ts >= Date.now();
+  });
+
+  const derivedPatients = useMemo(() => {
+    const map = new Map();
+    upcomingAppointments.forEach((apt) => {
+      const key = apt.patientName || `patient-${apt.id}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          id: key,
+          name: apt.patientName || 'Patient',
+          email: apt.raw?.patientEmail || 'N/A',
+          phone: apt.raw?.patientPhone || 'N/A',
+          nextAppointment: {
+            date: apt.date,
+            time: apt.time,
+            status: apt.status,
+          },
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [upcomingAppointments]);
+
   const sidebarItems = [
-    { id: 'profile', label: 'Personal Information', icon: User },
-    { id: 'schedule', label: 'Schedule', icon: CalendarIcon },
-    { id: 'patients', label: 'Patient List', icon: Users },
-    { id: 'ai', label: 'AI Assistant', icon: Bot },
+    { id: 'profile', label: 'Cont', icon: User },
+    { id: 'schedule', label: 'Programări', icon: CalendarIcon },
+    { id: 'patients', label: 'Pacienți', icon: Users },
+    { id: 'ai', label: 'Asistent AI', icon: Bot },
   ];
 
   const renderContent = () => {
@@ -111,18 +165,84 @@ export default function DoctorDashboard() {
 
             <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-white text-xl font-semibold">Profile Details</h2>
-                {!isEditing ? (
-                  <button 
-                    onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl flex items-center gap-2"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    <button 
+                <div>
+                  <p className="text-white/60 text-sm">Date personale</p>
+                  <h2 className="text-white text-xl font-semibold">Profil doctor</h2>
+                </div>
+                <button
+                  onClick={() => {
+                    const next = !isEditing;
+                    if (!next) {
+                      setEditForm({
+                        firstName: user?.firstName || '',
+                        lastName: user?.lastName || '',
+                        phone: user?.phone || '',
+                      });
+                    }
+                    setIsEditing(next);
+                  }}
+                  className="px-3 py-1 text-xs rounded-full bg-white/5 text-white/80 flex items-center gap-2 hover:bg-white/10 transition"
+                  disabled={saving}
+                >
+                  <Pencil className="w-4 h-4" /> {isEditing ? 'Anulează' : 'Editare'}
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-white/50 text-xs mb-1 block">Prenume</label>
+                    <Input
+                      disabled={!isEditing}
+                      value={editForm.firstName}
+                      onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                      placeholder="Prenume"
+                      className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white/50 text-xs mb-1 block">Nume</label>
+                    <Input
+                      disabled={!isEditing}
+                      value={editForm.lastName}
+                      onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                      placeholder="Nume"
+                      className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-white/50 text-xs mb-1 block">Email</label>
+                    <Input
+                      disabled
+                      value={user?.email || 'N/A'}
+                      className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                    />
+                    <p className="text-white/30 text-xs mt-1">Email-ul nu poate fi schimbat</p>
+                  </div>
+                  <div>
+                    <label className="text-white/50 text-xs mb-1 block">Telefon</label>
+                    <Input
+                      disabled={!isEditing}
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                      placeholder="Telefon"
+                      className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                    />
+                  </div>
+                </div>
+
+                {isEditing && (
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="px-4 py-3 bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] hover:from-[#5B8DEF]/90 hover:to-[#4169E1]/90 text-white rounded-xl shadow-lg shadow-blue-500/20 disabled:opacity-60"
+                    >
+                      {saving ? 'Se salvează...' : 'Salvează profilul'}
+                    </button>
+                    <button
                       onClick={() => {
                         setIsEditing(false);
                         setEditForm({
@@ -131,78 +251,14 @@ export default function DoctorDashboard() {
                           phone: user?.phone || '',
                         });
                       }}
-                      className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl"
+                      className="px-4 py-3 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl border border-white/[0.08]"
                       disabled={saving}
                     >
-                      Cancel
-                    </button>
-                    <button 
-                      onClick={handleSave}
-                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl flex items-center gap-2"
-                      disabled={saving}
-                    >
-                      {saving ? 'Saving...' : 'Save'}
+                      Anulează
                     </button>
                   </div>
                 )}
               </div>
-
-              {isEditing ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-white/40 text-sm mb-2 block">First Name</label>
-                    <input
-                      type="text"
-                      value={editForm.firstName}
-                      onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
-                      className="w-full px-4 py-2 bg-white/[0.05] border border-white/[0.1] rounded-xl text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-white/40 text-sm mb-2 block">Last Name</label>
-                    <input
-                      type="text"
-                      value={editForm.lastName}
-                      onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
-                      className="w-full px-4 py-2 bg-white/[0.05] border border-white/[0.1] rounded-xl text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-white/40 text-sm mb-2 block">Email</label>
-                    <p className="text-white/60 text-lg">{user?.email || 'N/A'}</p>
-                    <p className="text-white/30 text-xs mt-1">Email cannot be changed</p>
-                  </div>
-                  <div>
-                    <label className="text-white/40 text-sm mb-2 block">Phone</label>
-                    <input
-                      type="text"
-                      value={editForm.phone}
-                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      className="w-full px-4 py-2 bg-white/[0.05] border border-white/[0.1] rounded-xl text-white focus:outline-none focus:border-blue-500"
-                      placeholder="Enter phone number"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-white/40 text-sm mb-2 block">First Name</label>
-                    <p className="text-white text-lg">{user?.firstName || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-white/40 text-sm mb-2 block">Last Name</label>
-                    <p className="text-white text-lg">{user?.lastName || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-white/40 text-sm mb-2 block">Email</label>
-                    <p className="text-white text-lg">{user?.email || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-white/40 text-sm mb-2 block">Phone</label>
-                    <p className="text-white text-lg">{user?.phone || 'N/A'}</p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         );
@@ -403,12 +459,12 @@ export default function DoctorDashboard() {
               <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
                 <h2 className="text-white text-xl font-semibold mb-6">Upcoming Appointments</h2>
                 <div className="space-y-4">
-                  {appointments.length === 0 ? (
+                  {upcomingAppointments.length === 0 ? (
                     <div className="text-white/60 text-center py-8">
-                      No appointments scheduled. Appointments will appear here once patients book with you.
+                      No upcoming appointments. Appointments will appear here once patients book with you.
                     </div>
                   ) : (
-                    appointments.map((apt) => (
+                    upcomingAppointments.map((apt) => (
                       <div key={apt.id} className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
@@ -458,7 +514,7 @@ export default function DoctorDashboard() {
                   </div>
                   <div>
                     <p className="text-white/40 text-sm">Total Patients</p>
-                    <p className="text-white text-2xl font-semibold">{patients.length}</p>
+                    <p className="text-white text-2xl font-semibold">{derivedPatients.length}</p>
                   </div>
                 </div>
               </div>
@@ -467,45 +523,62 @@ export default function DoctorDashboard() {
             <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
               <h2 className="text-white text-xl font-semibold mb-6">All Patients</h2>
               <div className="space-y-4">
-                {patients.length === 0 ? (
+                {derivedPatients.length === 0 ? (
                   <div className="text-white/60 text-center py-8">
                     No patients yet. Patients will appear here once they book appointments with you.
                   </div>
                 ) : (
-                  patients.map((patient) => (
+                  derivedPatients.map((patient: any) => (
                     <div key={patient.id} className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                          <User className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-white font-semibold">{patient.name}</h3>
-                          <div className="flex items-center gap-4 mt-1">
-                            <span className="text-white/40 text-sm flex items-center gap-1">
-                              <Mail className="w-4 h-4" />
-                              {patient.email}
-                            </span>
-                            <span className="text-white/40 text-sm flex items-center gap-1">
-                              <Phone className="w-4 h-4" />
-                              {patient.phone}
-                            </span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                            <User className="w-6 h-6 text-white" />
                           </div>
-                          <p className="text-white/30 text-xs mt-2">Last visit: {patient.lastVisit}</p>
+                          <div>
+                            <h3 className="text-white font-semibold">{patient.name}</h3>
+                            <div className="flex items-center gap-4 mt-1">
+                              <span className="text-white/40 text-sm flex items-center gap-1">
+                                <Mail className="w-4 h-4" />
+                                {patient.email}
+                              </span>
+                              <span className="text-white/40 text-sm flex items-center gap-1">
+                                <Phone className="w-4 h-4" />
+                                {patient.phone}
+                              </span>
+                            </div>
+                            {patient.nextAppointment && (
+                              <div className="mt-3 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-white/80 text-sm flex items-center gap-3">
+                                <span className="flex items-center gap-1 text-white/70">
+                                  <CalendarIcon className="w-4 h-4" />
+                                  {patient.nextAppointment.date}
+                                </span>
+                                <span className="flex items-center gap-1 text-white/70">
+                                  <Clock className="w-4 h-4" />
+                                  {patient.nextAppointment.time}
+                                </span>
+                                <span className="ml-auto px-3 py-1 bg-green-500/15 text-green-300 rounded-lg text-xs">
+                                  {patient.nextAppointment.status || 'upcoming'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setActionModal({ type: 'files', patient })}
+                            className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl text-sm"
+                          >
+                            View Files
+                          </button>
+                          <button
+                            onClick={() => setActionModal({ type: 'medical', patient })}
+                            className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl text-sm"
+                          >
+                            Medical Profile
+                          </button>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl text-sm">
-                          View Files
-                        </button>
-                        <button className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl text-sm">
-                          Treatment
-                        </button>
-                        <button className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl text-sm">
-                          Medical Profile
-                        </button>
-                      </div>
-                    </div>
                     </div>
                   ))
                 )}
@@ -556,59 +629,56 @@ export default function DoctorDashboard() {
       </div>
 
       {/* Sidebar */}
-      <div className={`fixed left-0 top-0 h-full w-64 bg-white/[0.02] backdrop-blur-xl border-r border-white/[0.05] z-40 transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-              <Stethoscope className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-white font-semibold">Doctor Portal</span>
-          </div>
-
-          <nav className="space-y-2">
-            {sidebarItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveSection(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    activeSection === item.id
-                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                      : 'text-white/60 hover:text-white hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
+      <VisionSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        menuItems={sidebarItems}
+      />
 
       {/* Main Content */}
-      <div className="lg:pl-64 min-h-screen relative z-10">
-        {/* Top Bar */}
-        <div className="sticky top-0 z-30 bg-white/[0.02] backdrop-blur-xl border-b border-white/[0.05] px-6 py-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden text-white/60 hover:text-white"
-            >
-              Menu
-            </button>
-            <div className="flex items-center gap-4">
-              <span className="text-white/60">Dr. {user?.firstName} {user?.lastName}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Content Area */}
+      <div className="lg:pl-[280px] min-h-screen relative z-10 pt-12 lg:pt-16">
         <main className="p-8 lg:p-12 max-w-[1600px] mx-auto">
           {renderContent()}
         </main>
       </div>
+
+      {actionModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-6">
+          <div className="bg-[#0b1437] border border-white/10 rounded-2xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-white text-lg font-semibold">
+                  {actionModal.type === 'files' ? 'Patient Files' : 'Medical Profile'}
+                </p>
+                <p className="text-white/60 text-sm">
+                  {actionModal.patient?.name || 'Patient'}
+                </p>
+              </div>
+              <button
+                onClick={() => setActionModal(null)}
+                className="text-white/50 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 text-white/70 text-sm">
+              {actionModal.type === 'files'
+                ? 'Patient file viewer will be available in the doctor portal. For now, patient files cannot be opened directly from here.'
+                : 'Patient medical profile will be available in the doctor portal. For now, it cannot be opened directly from here.'}
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setActionModal(null)}
+                className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

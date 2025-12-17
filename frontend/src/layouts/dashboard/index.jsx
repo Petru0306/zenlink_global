@@ -137,34 +137,77 @@ export default function Dashboard() {
   }, [user]);
 
   // Format date from YYYY-MM-DD to DD.MM.YYYY
+  const parseDateLocal = (dateStr) => {
+    if (!dateStr) return null;
+    const parts = dateStr.includes('.') ? dateStr.split('.') : dateStr.split('-');
+    let y, m, d;
+    if (dateStr.includes('.')) {
+      [d, m, y] = parts.map(Number);
+    } else {
+      [y, m, d] = parts.map(Number);
+    }
+    if ([y, m, d].some((v) => Number.isNaN(v))) return null;
+    const dt = new Date(y, (m ?? 1) - 1, d);
+    // Adjust one day forward to compensate backend date shift
+    dt.setDate(dt.getDate() + 1);
+    return dt;
+  };
+
   const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
+    const date = parseDateLocal(dateStr);
+    if (!date) return dateStr || '';
     return date.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const toLocalTimestamp = (dateStr, timeStr) => {
+    if (!dateStr || !timeStr) return NaN;
+    const parts = dateStr.includes('.') ? dateStr.split('.') : dateStr.split('-');
+    let y, m, d;
+    if (dateStr.includes('.')) {
+      [d, m, y] = parts.map(Number);
+    } else {
+      [y, m, d] = parts.map(Number);
+    }
+    const [hh, mm] = timeStr.split(':').map(Number);
+    if ([y, m, d, hh, mm].some((v) => Number.isNaN(v))) return NaN;
+    const dt = new Date(y, (m ?? 1) - 1, d, hh, mm);
+    // Adjust one day forward to compensate backend date shift
+    dt.setDate(dt.getDate() + 1);
+    return dt.getTime();
   };
 
   // Separate appointments into active and completed
   const appointmentsData = useMemo(() => {
-    const now = new Date();
-    const active = appointments.filter(apt => {
-      if (apt.status === 'completed' || apt.status === 'cancelled') return false;
-      const aptDate = new Date(`${apt.date}T${apt.time}`);
-      return aptDate >= now;
-    }).sort((a, b) => {
-      const dateA = new Date(`${a.date}T${a.time}`);
-      const dateB = new Date(`${b.date}T${b.time}`);
-      return dateA.getTime() - dateB.getTime();
-    });
+    const nowTs = Date.now();
+    const active = appointments
+      .filter((apt) => {
+        const status = (apt.status || '').toLowerCase();
+        if (status === 'cancelled') return false;
+        const ts = toLocalTimestamp(apt.date, apt.time);
+        if (Number.isNaN(ts)) return false;
+        // future appointments are active regardless of status label
+        return ts >= nowTs;
+      })
+      .sort((a, b) => {
+        const aTs = toLocalTimestamp(a.date, a.time);
+        const bTs = toLocalTimestamp(b.date, b.time);
+        return aTs - bTs;
+      });
 
-    const completed = appointments.filter(apt => {
-      if (apt.status === 'completed') return true;
-      if (apt.status === 'cancelled') return false;
-      const aptDate = new Date(`${apt.date}T${apt.time}`);
-      return aptDate < now;
-    }).sort((a, b) => {
-      const dateA = new Date(`${a.date}T${a.time}`);
-      const dateB = new Date(`${b.date}T${b.time}`);
-      return dateB.getTime() - dateA.getTime();
-    });
+    const completed = appointments
+      .filter((apt) => {
+        const status = (apt.status || '').toLowerCase();
+        if (status === 'cancelled') return false;
+        const ts = toLocalTimestamp(apt.date, apt.time);
+        if (Number.isNaN(ts)) return false;
+        // past appointments or explicitly completed
+        return ts < nowTs || status === 'completed';
+      })
+      .sort((a, b) => {
+        const aTs = toLocalTimestamp(a.date, a.time);
+        const bTs = toLocalTimestamp(b.date, b.time);
+        return bTs - aTs;
+      });
 
     return { active, completed };
   }, [appointments]);
