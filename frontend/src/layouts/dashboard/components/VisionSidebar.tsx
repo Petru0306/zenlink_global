@@ -1,5 +1,4 @@
-import { User, Stethoscope, FileText, Clock, Calendar, History, CreditCard, Sparkles, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { User, Stethoscope, FileText, Calendar, History, CreditCard, Sparkles, ChevronRight } from 'lucide-react';
 
 interface VisionSidebarProps {
   isOpen: boolean;
@@ -14,7 +13,6 @@ export function VisionSidebar({ isOpen, onClose, activeSection, onSectionChange 
     { id: 'profile', label: 'Profil Pacient', icon: User },
     { id: 'medical', label: 'Profil Medical', icon: Stethoscope },
     { id: 'files', label: 'Fișiere', icon: FileText },
-    { id: 'treatments', label: 'Tratamente', icon: Clock },
     { id: 'appointments', label: 'Programări', icon: Calendar },
     { id: 'history', label: 'Istoric', icon: History },
     { id: 'subscription', label: 'Abonament', icon: CreditCard },

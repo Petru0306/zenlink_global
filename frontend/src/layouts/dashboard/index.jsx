@@ -187,14 +187,56 @@ export default function Dashboard() {
 
   const ongoingTreatments = [];
   const consultations = [];
-  const subscription = {
+  const [subscription, setSubscription] = useState({
     hasAISubscription: false,
-    plan: 'Standard',
-    price: '99',
+    plan: 'AI Access',
+    price: 50,
+    currency: 'EUR',
     startDate: '',
-    endDate: '',
     renewalDate: '',
-    features: ['Chat AI', 'Analiză Profil Medical', 'Analiză Tratament', 'Analiză Fisiere', 'Consultații telemedicină nelimitate'],
+    features: ['Chat AI', 'Analiză Profil Medical', 'Analiză Tratament', 'Analiză Fișiere'],
+  });
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const stored = localStorage.getItem(`patientSubscription-${user.id}`);
+    if (stored) {
+      try {
+        setSubscription(JSON.parse(stored));
+      } catch (err) {
+        console.error('Failed to parse subscription', err);
+      }
+    }
+  }, [user]);
+
+  const persistSubscription = (next) => {
+    setSubscription(next);
+    if (user?.id) {
+      localStorage.setItem(`patientSubscription-${user.id}`, JSON.stringify(next));
+    }
+  };
+
+  const handleActivateSubscription = () => {
+    const now = new Date();
+    const renewal = new Date();
+    renewal.setMonth(renewal.getMonth() + 1);
+    const next = {
+      ...subscription,
+      hasAISubscription: true,
+      startDate: now.toISOString(),
+      renewalDate: renewal.toISOString(),
+    };
+    persistSubscription(next);
+  };
+
+  const handleCancelSubscription = () => {
+    const next = {
+      ...subscription,
+      hasAISubscription: false,
+      startDate: '',
+      renewalDate: '',
+    };
+    persistSubscription(next);
   };
 
   const healthMetrics = {
@@ -1003,75 +1045,6 @@ export default function Dashboard() {
           </div>
         );
 
-      case 'treatments':
-        return (
-          <div className="space-y-6">
-            <div className="mb-12">
-              <h1 className="text-white mb-2">Tratamente</h1>
-              <p className="text-white/40">Gestionează medicația și tratamentele active</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                    <Pill className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-white/40 text-xs">Tratamente active</p>
-                    <p className="text-white text-2xl">{ongoingTreatments.length}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {ongoingTreatments.map((treatment) => (
-              <div
-                key={treatment.id}
-                className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]"
-              >
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                      <Pill className="w-6 h-6 text-blue-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-white text-xl font-semibold mb-2">{treatment.medication} {treatment.dosage}</h3>
-                      <p className="text-blue-400">Dr. {treatment.doctor}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-white/40 text-sm">Progres</span>
-                      <span className="text-white font-semibold">{treatment.progress}%</span>
-                    </div>
-                    <div className="w-full bg-white/[0.05] rounded-full h-2">
-                      <div 
-                        className="bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] h-2 rounded-full transition-all"
-                        style={{ width: `${treatment.progress}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4 pt-4 border-t border-white/[0.05]">
-                    <div>
-                      <label className="text-white/40 text-sm">Data început</label>
-                      <p className="text-white">{treatment.startDate}</p>
-                    </div>
-                    <div>
-                      <label className="text-white/40 text-sm">Următorul control</label>
-                      <p className="text-white">{treatment.nextCheckup}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-
       case 'appointments':
         return (
           <div className="space-y-6">
@@ -1223,53 +1196,79 @@ export default function Dashboard() {
               <p className="text-white/40">Gestionează planul și beneficiile tale</p>
             </div>
 
-            {subscription.hasAISubscription ? (
-              <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl p-8 border border-blue-500/20">
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-white/[0.08] flex items-center justify-center">
-                      <CreditCard className="w-8 h-8 text-yellow-400" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h2 className="text-white">Plan {subscription.plan}</h2>
-                        <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-xs border border-yellow-500/30">
+            <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl p-8 border border-blue-500/20">
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-white/[0.08] flex items-center justify-center">
+                    <CreditCard className="w-8 h-8 text-yellow-400" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h2 className="text-white">Plan {subscription.plan}</h2>
+                      {subscription.hasAISubscription ? (
+                        <span className="px-2 py-1 bg-emerald-500/20 text-emerald-300 rounded-lg text-xs border border-emerald-500/30">
                           Activ
                         </span>
-                      </div>
-                      <p className="text-white/60">Se reînnoiește la {subscription.renewalDate}</p>
+                      ) : (
+                        <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-xs border border-yellow-500/30">
+                          Neactivat
+                        </span>
+                      )}
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-white/40 text-sm mb-1">Preț lunar</p>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-white text-3xl">{subscription.price}</span>
-                      <span className="text-white/60">RON/lună</span>
-                    </div>
+                    <p className="text-white/60">
+                      Acces la AI și analiză medicală. {subscription.hasAISubscription ? 'Reînnoire automată lunar.' : 'Activează pentru a porni accesul.'}
+                    </p>
                   </div>
                 </div>
+                <div className="text-right">
+                  <p className="text-white/40 text-sm mb-1">Preț lunar</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-white text-3xl">{subscription.price}</span>
+                    <span className="text-white/60">{subscription.currency}/lună</span>
+                  </div>
+                </div>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {subscription.features.map((feature, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                        <CheckCircle className="w-3 h-3 text-emerald-400" />
-                      </div>
-                      <span className="text-white/80 text-sm">{feature}</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                {subscription.features.map((feature, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-3 h-3 text-emerald-400" />
                     </div>
-                  ))}
-                </div>
+                    <span className="text-white/80 text-sm">{feature}</span>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05] text-center">
-                <XCircle className="w-16 h-16 text-white/40 mx-auto mb-4" />
-                <h3 className="text-white text-xl font-semibold mb-2">Nu ai abonament AI activ</h3>
-                <p className="text-white/40 mb-6">Cumpără un abonament pentru acces la Asistent AI</p>
-                <button className="px-4 py-2 bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] hover:from-[#5B8DEF]/90 hover:to-[#4169E1]/90 text-white rounded-xl">
-                  Cumpără Abonament
-                </button>
+
+              <div className="flex items-center gap-3">
+                {subscription.hasAISubscription ? (
+                  <>
+                    <button
+                      onClick={handleActivateSubscription}
+                      className="px-4 py-3 bg-white/10 hover:bg-white/15 text-white rounded-xl shadow-lg shadow-blue-500/20 border border-white/15"
+                    >
+                      Reînnoiește / menține activ
+                    </button>
+                    <button
+                      onClick={handleCancelSubscription}
+                      className="px-4 py-3 bg-red-500/15 hover:bg-red-500/25 text-red-200 rounded-xl border border-red-500/30"
+                    >
+                      Anulează abonamentul
+                    </button>
+                    <div className="text-white/60 text-sm">
+                      Activ din {subscription.startDate ? new Date(subscription.startDate).toLocaleDateString('ro-RO') : '—'}
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleActivateSubscription}
+                    className="px-4 py-3 bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] hover:from-[#5B8DEF]/90 hover:to-[#4169E1]/90 text-white rounded-xl shadow-lg shadow-blue-500/20"
+                  >
+                    Activează abonament (50€)
+                  </button>
+                )}
               </div>
-            )}
+            </div>
           </div>
         );
 
@@ -1325,9 +1324,12 @@ export default function Dashboard() {
               <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05] text-center">
                 <Bot className="w-16 h-16 text-white/40 mx-auto mb-4" />
                 <h3 className="text-white text-xl font-semibold mb-2">Ai nevoie de abonament AI</h3>
-                <p className="text-white/40 mb-6">Cumpără un abonament pentru a accesa Asistent AI</p>
-                <button className="px-4 py-2 bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] hover:from-[#5B8DEF]/90 hover:to-[#4169E1]/90 text-white rounded-xl">
-                  Cumpără Abonament
+                <p className="text-white/40 mb-6">Activează abonamentul de 50€ pentru a accesa Asistent AI</p>
+                <button
+                  className="px-4 py-2 bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] hover:from-[#5B8DEF]/90 hover:to-[#4169E1]/90 text-white rounded-xl"
+                  onClick={() => setActiveSection('subscription')}
+                >
+                  Mergi la abonament
                 </button>
               </div>
             )}
