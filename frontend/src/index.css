@@ -97,6 +97,32 @@
     }
   }
 
+  /* Softer float for tiny background particles (less "busy" than float) */
+  @keyframes float-soft {
+    0%, 100% {
+      transform: translate3d(0px, 0px, 0);
+    }
+    25% {
+      transform: translate3d(6px, -8px, 0);
+    }
+    50% {
+      transform: translate3d(-5px, -4px, 0);
+    }
+    75% {
+      transform: translate3d(4px, -6px, 0);
+    }
+  }
+
+  /* Gentle opacity shimmer for stars */
+  @keyframes twinkle {
+    0%, 100% {
+      opacity: var(--twinkle-min, 0.25);
+    }
+    50% {
+      opacity: var(--twinkle-max, 0.75);
+    }
+  }
+
   @keyframes float-logo {
     0%, 100% {
       transform: translateY(0px) scale(1);
@@ -166,8 +192,16 @@
     animation: float 8s ease-in-out infinite;
   }
 
+  .animate-float-soft {
+    animation: float-soft 18s ease-in-out infinite;
+  }
+
   .animate-float-logo {
     animation: float-logo 3s ease-in-out infinite;
+  }
+
+  .animate-twinkle {
+    animation: twinkle 4.5s ease-in-out infinite;
   }
 
   .animate-spin-slow {
