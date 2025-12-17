@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { ArrowRight, Facebook, Instagram, Twitter, Youtube, Activity, Shield, Sparkles } from "lucide-react";
@@ -8,49 +8,131 @@ import { CounterAnimation } from "../../components/CounterAnimation";
 export function HomePage() {
   const navigate = useNavigate();
   const heroRef = useRef(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const orbTopRightRef = useRef(null);
+  const orbBottomLeftRef = useRef(null);
+  const mouseTargetRef = useRef({ x: 0, y: 0 }); // normalized [-1..1]
+  const mouseCurrentRef = useRef({ x: 0, y: 0 }); // smoothed [-1..1]
+  const rafIdRef = useRef(null);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  const particles = useMemo(() => {
+    const count = 20;
+    return Array.from({ length: count }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      delay: Math.random() * 5,
+      duration: 10 + Math.random() * 20,
+    }));
+  }, []);
 
   useEffect(() => {
-    const handleMouseMove = (e) => {
-      setMousePosition({
-        x: (e.clientX / window.innerWidth) * 100,
-        y: (e.clientY / window.innerHeight) * 100,
-      });
+    const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (!media) return;
+
+    const onChange = () => setReducedMotion(Boolean(media.matches));
+    onChange();
+
+    // Safari < 14 uses addListener/removeListener
+    if (media.addEventListener) media.addEventListener("change", onChange);
+    else media.addListener(onChange);
+
+    return () => {
+      if (media.removeEventListener) media.removeEventListener("change", onChange);
+      else media.removeListener(onChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (reducedMotion) return;
+
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    const updateFromClientXY = (clientX, clientY) => {
+      const nx = (clientX / window.innerWidth - 0.5) * 2; // -1..1
+      const ny = (clientY / window.innerHeight - 0.5) * 2; // -1..1
+      mouseTargetRef.current = { x: nx, y: ny };
+    };
+    const handlePointerMove = (e) => updateFromClientXY(e.clientX, e.clientY);
+    const handleMouseMove = (e) => updateFromClientXY(e.clientX, e.clientY);
+
+    const animate = (now) => {
+      const t = now; // ms
+
+      // Smooth mouse movement so it feels “floaty”, not twitchy
+      const current = mouseCurrentRef.current;
+      const target = mouseTargetRef.current;
+      const next = {
+        x: lerp(current.x, target.x, 0.12),
+        y: lerp(current.y, target.y, 0.12),
+      };
+      mouseCurrentRef.current = next;
+
+      // Ambient drift (subtle, always-on)
+      const ambient1 = {
+        x: Math.sin(t * 0.00012) * 28 + Math.cos(t * 0.00008) * 16,
+        y: Math.cos(t * 0.0001) * 22 + Math.sin(t * 0.00007) * 14,
+      };
+      const ambient2 = {
+        x: Math.cos(t * 0.00011) * 22 + Math.sin(t * 0.00006) * 12,
+        y: Math.sin(t * 0.00009) * 18 + Math.cos(t * 0.00005) * 10,
+      };
+
+      // Mouse parallax overlay (intentionally noticeable; tweak if you want subtler)
+      const mouse1 = { x: next.x * 70, y: next.y * 70 };
+      const mouse2 = { x: next.x * -55, y: next.y * -55 };
+
+      const orb1 = orbTopRightRef.current;
+      if (orb1) {
+        orb1.style.transform = `translate3d(${ambient1.x + mouse1.x}px, ${ambient1.y + mouse1.y}px, 0)`;
+      }
+
+      const orb2 = orbBottomLeftRef.current;
+      if (orb2) {
+        orb2.style.transform = `translate3d(${ambient2.x + mouse2.x}px, ${ambient2.y + mouse2.y}px, 0)`;
+      }
+
+      rafIdRef.current = requestAnimationFrame(animate);
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
+    // Some environments don’t reliably bubble pointer events to window; document capture is the most robust.
+    document.addEventListener("pointermove", handlePointerMove, { passive: true, capture: true });
+    document.addEventListener("mousemove", handleMouseMove, { passive: true, capture: true });
+    rafIdRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      document.removeEventListener("pointermove", handlePointerMove, { capture: true });
+      document.removeEventListener("mousemove", handleMouseMove, { capture: true });
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    };
+  }, [reducedMotion]);
 
   return (
     <div className="min-h-screen bg-[hsl(240,10%,3%)] text-[hsl(220,12%,98%)] relative overflow-x-hidden">
       {/* Animated background gradient orbs */}
       <div 
+        ref={orbTopRightRef}
         className="fixed top-0 right-0 w-[800px] h-[800px] bg-[hsl(217,80%,55%)] rounded-full blur-[120px] opacity-20 pointer-events-none animate-pulse"
-        style={{
-          transform: `translate(${mousePosition.x * 0.02}px, ${mousePosition.y * 0.02}px)`,
-          transition: 'transform 0.3s ease-out'
-        }}
+        style={{ willChange: "transform" }}
       ></div>
       <div 
+        ref={orbBottomLeftRef}
         className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-[hsl(217,80%,50%)] rounded-full blur-[120px] opacity-20 pointer-events-none animate-pulse"
-        style={{
-          transform: `translate(${-mousePosition.x * 0.02}px, ${-mousePosition.y * 0.02}px)`,
-          transition: 'transform 0.3s ease-out'
-        }}
+        style={{ willChange: "transform" }}
       ></div>
 
       {/* Floating particles animation */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {[...Array(20)].map((_, i) => (
+        {particles.map((p) => (
           <div
-            key={i}
-            className="absolute w-1 h-1 bg-[hsl(217,80%,55%)] rounded-full animate-float"
+            key={p.id}
+            className={`absolute w-1 h-1 bg-[hsl(217,80%,55%)] rounded-full ${reducedMotion ? "" : "animate-float"}`}
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${10 + Math.random() * 20}s`,
+              left: `${p.left}%`,
+              top: `${p.top}%`,
+              animationDelay: `${p.delay}s`,
+              animationDuration: `${p.duration}s`,
             }}
           ></div>
         ))}

@@ -1371,10 +1371,6 @@ export default function Dashboard() {
         </main>
       </div>
 
-      {/* Help Button */}
-      <button className="fixed bottom-8 right-8 w-12 h-12 bg-white/[0.08] hover:bg-white/[0.12] backdrop-blur-xl rounded-full flex items-center justify-center border border-white/[0.1] transition-all duration-200 z-50 hover:scale-105">
-        <span className="text-white/60 text-lg">?</span>
-      </button>
     </div>
   );
 }

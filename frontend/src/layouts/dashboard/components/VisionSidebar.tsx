@@ -84,19 +84,6 @@ export function VisionSidebar({ isOpen, onClose, activeSection, onSectionChange 
           })}
         </nav>
 
-        {/* Bottom Help Section */}
-        <div className="absolute bottom-8 left-4 right-4">
-          <div className="bg-gradient-to-br from-[#5B8DEF]/10 to-[#4169E1]/10 border border-[#5B8DEF]/20 rounded-xl p-5">
-            <div className="w-9 h-9 rounded-lg bg-white/[0.08] flex items-center justify-center mb-3">
-              <Sparkles className="w-4 h-4 text-white/60" />
-            </div>
-            <p className="text-white text-sm mb-1">Ai nevoie de ajutor?</p>
-            <p className="text-white/40 text-xs mb-4">Consultă documentația</p>
-            <button className="w-full bg-white/[0.08] hover:bg-white/[0.12] text-white text-xs py-2.5 rounded-lg transition-all duration-200">
-              Documentație
-            </button>
-          </div>
-        </div>
       </aside>
     </>
   );
