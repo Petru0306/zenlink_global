@@ -1,21 +1,114 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { VisionSidebar } from './components/VisionSidebar';
-import { VisionTopBar } from './components/VisionTopBar';
 import { PatientHeader } from './components/PatientHeader';
 import { PatientOverviewStats } from './components/PatientOverviewStats';
-import { 
-  Calendar, Clock, FileText, Download, Upload, CheckCircle, 
-  XCircle, AlertCircle, Stethoscope, Mail, Phone, Edit,
-  User, History, CreditCard, Bot, Sparkles, Pill
+import {
+  Calendar,
+  Clock,
+  FileText,
+  Download,
+  Upload,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Stethoscope,
+  Mail,
+  Phone,
+  Edit,
+  User,
+  History,
+  CreditCard,
+  Bot,
+  Sparkles,
+  Pill,
+  Save,
+  Pencil,
+  Eye,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Edit3,
 } from 'lucide-react';
+import { Input } from '../../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('profile');
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingMedical, setSavingMedical] = useState(false);
+  const [profileEditing, setProfileEditing] = useState(false);
+  const [medicalEditing, setMedicalEditing] = useState(false);
+  const [files, setFiles] = useState([]);
+  const [previewFile, setPreviewFile] = useState(null);
+  const [renamingId, setRenamingId] = useState(null);
+  const [renamingValue, setRenamingValue] = useState('');
+
+  const [profileForm, setProfileForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    age: '',
+  });
+
+  const [medicalForm, setMedicalForm] = useState({
+    bloodType: '',
+    allergies: '',
+    chronicConditions: '',
+    medications: '',
+    insuranceNumber: '',
+    weightKg: '',
+    weightChange: '',
+    weightDate: '',
+    heightCm: '',
+    glucose: '',
+    glucoseDate: '',
+    bloodPressure: '',
+    bpDate: '',
+  });
+
+  // Load user-bound medical data from localStorage
+  useEffect(() => {
+    if (!user) return;
+
+    setProfileForm({
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      age: '',
+    });
+
+    const stored = localStorage.getItem(`patientMedicalData-${user.id}`);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setMedicalForm((prev) => ({ ...prev, ...parsed }));
+      } catch (e) {
+        console.error('Failed to parse stored medical data', e);
+      }
+    }
+
+    const storedFiles = localStorage.getItem(`patientFiles-${user.id}`);
+    if (storedFiles) {
+      try {
+        setFiles(JSON.parse(storedFiles));
+      } catch (e) {
+        console.error('Failed to parse stored files', e);
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     // Fetch real appointments from backend
@@ -76,64 +169,174 @@ export default function Dashboard() {
     return { active, completed };
   }, [appointments]);
 
-  // Use real user data
   const patientProfile = {
-    firstName: user?.firstName || 'N/A',
-    lastName: user?.lastName || 'N/A',
-    email: user?.email || 'N/A',
-    phone: user?.phone || 'N/A',
-    age: 0 // TODO: Add age field to user profile
+    firstName: profileForm.firstName || 'Completează',
+    lastName: profileForm.lastName || '',
+    email: profileForm.email || '—',
+    phone: profileForm.phone || '—',
+    age: profileForm.age || '',
   };
 
   const medicalProfile = {
-    bloodType: 'A+',
-    allergies: 'Polen, Penicilină',
-    chronicConditions: 'Hipertensiune',
-    medications: 'Aspirin 100mg zilnic',
-    insuranceNumber: 'RO123456789'
+    bloodType: medicalForm.bloodType || '—',
+    allergies: medicalForm.allergies || '',
+    chronicConditions: medicalForm.chronicConditions || '—',
+    medications: medicalForm.medications || '',
+    insuranceNumber: medicalForm.insuranceNumber || '',
   };
 
-  const files = [
-    { id: 1, name: 'Analize Sange 2024.pdf', date: '15.01.2024', type: 'Analize', size: '2.4 MB', category: 'analize', starred: true },
-    { id: 2, name: 'Radiografie Torace.jpg', date: '10.12.2023', type: 'Imagini', size: '5.2 MB', category: 'imagistica', starred: false },
-    { id: 3, name: 'Rezultate EKG.pdf', date: '05.11.2023', type: 'Teste', size: '1.8 MB', category: 'analize', starred: false }
-  ];
-
-  const ongoingTreatments = [
-    { 
-      id: 1, 
-      name: 'Tratament Hipertensiune', 
-      medication: 'Aspirină',
-      dosage: '100mg',
-      doctor: 'Dr. Alina Ion',
-      startDate: '01.12.2023',
-      progress: 75,
-      nextCheckup: '15.02.2024',
-      frequency: '1x/zi',
-      timing: 'Dimineața'
-    }
-  ];
-
-  const consultations = [
-    { 
-      id: 1, 
-      doctor: 'Dr. Alina Ion', 
-      date: '15.01.2024', 
-      diagnosis: 'Hipertensiune arterială ușoară',
-      notes: 'Tensiune arterială: 140/90. Recomandat tratament și monitorizare.',
-      prescription: 'Aspirin 100mg zilnic, măsurători zilnice'
-    }
-  ];
-
+  const ongoingTreatments = [];
+  const consultations = [];
   const subscription = {
-    hasAISubscription: true,
-    plan: 'Premium',
+    hasAISubscription: false,
+    plan: 'Standard',
     price: '99',
-    startDate: '01.01.2024',
-    endDate: '31.12.2024',
-    renewalDate: '15 Dec 2024',
-    features: ['Chat AI', 'Analiză Profil Medical', 'Analiză Tratament', 'Analiză Fisiere', 'Consultații telemedicină nelimitate']
+    startDate: '',
+    endDate: '',
+    renewalDate: '',
+    features: ['Chat AI', 'Analiză Profil Medical', 'Analiză Tratament', 'Analiză Fisiere', 'Consultații telemedicină nelimitate'],
   };
+
+  const healthMetrics = {
+    weight: medicalForm.weightKg,
+    weightChange: medicalForm.weightChange,
+    weightDate: medicalForm.weightDate,
+    height: medicalForm.heightCm,
+    glucose: medicalForm.glucose,
+    glucoseDate: medicalForm.glucoseDate,
+    bloodPressure: medicalForm.bloodPressure,
+    bpDate: medicalForm.bpDate,
+  };
+
+  const handleProfileSave = async () => {
+    if (!user?.id) return;
+    setSavingProfile(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/users/${user.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: profileForm.firstName,
+          lastName: profileForm.lastName,
+          email: profileForm.email,
+          phone: profileForm.phone,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      const updatedUser = await response.json();
+      const newUserData = {
+        ...user,
+        firstName: updatedUser.firstName || profileForm.firstName,
+        lastName: updatedUser.lastName || profileForm.lastName,
+        phone: updatedUser.phone || profileForm.phone,
+        email: updatedUser.email || profileForm.email,
+      };
+      setUser(newUserData);
+      localStorage.setItem('user', JSON.stringify(newUserData));
+      setProfileEditing(false);
+    } catch (err) {
+      console.error('Error updating patient profile:', err);
+      alert('Nu am putut salva profilul. Încearcă din nou.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleMedicalSave = () => {
+    if (!user?.id) return;
+    try {
+      localStorage.setItem(`patientMedicalData-${user.id}`, JSON.stringify(medicalForm));
+      setMedicalEditing(false);
+    } catch (err) {
+      console.error('Failed to save medical data', err);
+      alert('Nu am putut salva datele medicale.');
+    } finally {
+      setSavingMedical(false);
+    }
+  };
+
+  const persistFiles = (nextFiles) => {
+    if (!user?.id) return;
+    setFiles(nextFiles);
+    localStorage.setItem(`patientFiles-${user.id}`, JSON.stringify(nextFiles));
+  };
+
+  const handleFileUpload = (fileList) => {
+    if (!fileList?.length) return;
+    const uploads = Array.from(fileList);
+    uploads.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result;
+        const next = [
+          {
+            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            name: file.name,
+            type: file.type || 'application/octet-stream',
+            size: file.size,
+            uploadedAt: new Date().toISOString(),
+            dataUrl,
+          },
+          ...files,
+        ];
+        persistFiles(next);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleDeleteFile = (id) => {
+    const next = files.filter((f) => f.id !== id);
+    persistFiles(next);
+    if (previewFile?.id === id) setPreviewFile(null);
+  };
+
+  const handleRename = (id) => {
+    if (!renamingValue.trim()) {
+      setRenamingId(null);
+      return;
+    }
+    const next = files.map((f) => (f.id === id ? { ...f, name: renamingValue } : f));
+    persistFiles(next);
+    setRenamingId(null);
+    setRenamingValue('');
+  };
+
+  const moveFile = (id, direction) => {
+    const index = files.findIndex((f) => f.id === id);
+    if (index === -1) return;
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= files.length) return;
+    const next = [...files];
+    const [item] = next.splice(index, 1);
+    next.splice(targetIndex, 0, item);
+    persistFiles(next);
+  };
+
+  const formatSize = (size) => {
+    if (!size && size !== 0) return '';
+    const kb = size / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    return `${(kb / 1024).toFixed(1)} MB`;
+  };
+
+  const renderMetric = (label, value, unit, change, date) => (
+    <div>
+      <p className="text-white/40 text-sm mb-3">{label}</p>
+      <div className="flex items-baseline gap-1.5 mb-2">
+        <span className="text-white text-3xl">{value || '—'}</span>
+        {unit && <span className="text-white/30 text-sm">{unit}</span>}
+      </div>
+      {change && <p className={`text-xs mb-1 ${Number(change) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{change}</p>}
+      {date && <p className="text-white/20 text-xs">{date}</p>}
+    </div>
+  );
 
   const renderContent = () => {
     switch (activeSection) {
@@ -158,6 +361,240 @@ export default function Dashboard() {
               />
             </div>
 
+            {/* Editable profile & medical data */}
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-white/60 text-sm">Date personale</p>
+                    <h3 className="text-white text-lg font-semibold">Profil pacient</h3>
+                  </div>
+                  <button
+                    onClick={() => setProfileEditing((v) => !v)}
+                    className="px-3 py-1 text-xs rounded-full bg-white/5 text-white/80 flex items-center gap-2 hover:bg-white/10 transition"
+                  >
+                    <Pencil className="w-4 h-4" /> {profileEditing ? 'Anulează' : 'Editare'}
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-white/50 text-xs mb-1 block">Prenume</label>
+                      <Input
+                        disabled={!profileEditing}
+                        value={profileForm.firstName}
+                        onChange={(e) => setProfileForm((p) => ({ ...p, firstName: e.target.value }))}
+                        placeholder="Prenume"
+                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-white/50 text-xs mb-1 block">Nume</label>
+                      <Input
+                        disabled={!profileEditing}
+                        value={profileForm.lastName}
+                        onChange={(e) => setProfileForm((p) => ({ ...p, lastName: e.target.value }))}
+                        placeholder="Nume"
+                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-white/50 text-xs mb-1 block">Email</label>
+                      <Input
+                        disabled={!profileEditing}
+                        type="email"
+                        value={profileForm.email}
+                        onChange={(e) => setProfileForm((p) => ({ ...p, email: e.target.value }))}
+                        placeholder="Email"
+                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-white/50 text-xs mb-1 block">Telefon</label>
+                      <Input
+                        disabled={!profileEditing}
+                        value={profileForm.phone}
+                        onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))}
+                        placeholder="+40 ..."
+                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-white/50 text-xs mb-1 block">Vârstă</label>
+                      <Input
+                        disabled={!profileEditing}
+                        type="number"
+                        value={profileForm.age}
+                        onChange={(e) => setProfileForm((p) => ({ ...p, age: e.target.value }))}
+                        placeholder="Ani"
+                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+                  {profileEditing && (
+                    <button
+                      onClick={handleProfileSave}
+                      disabled={savingProfile}
+                      className="w-full mt-2 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-4 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60"
+                    >
+                      <Save className="w-4 h-4" />
+                      {savingProfile ? 'Se salvează...' : 'Salvează profilul'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-white/60 text-sm">Date medicale</p>
+                    <h3 className="text-white text-lg font-semibold">Istoric medical</h3>
+                  </div>
+                  <button
+                    onClick={() => setMedicalEditing((v) => !v)}
+                    className="px-3 py-1 text-xs rounded-full bg-white/5 text-white/80 flex items-center gap-2 hover:bg-white/10 transition"
+                  >
+                    <Pencil className="w-4 h-4" /> {medicalEditing ? 'Anulează' : 'Editare'}
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-white/50 text-xs mb-1 block">Grupă sangvină</label>
+                      <Select
+                        value={medicalForm.bloodType}
+                        onValueChange={(val) => setMedicalForm((p) => ({ ...p, bloodType: val }))}
+                        disabled={!medicalEditing}
+                      >
+                        <SelectTrigger className="bg-white/[0.04] border-white/[0.08] text-white rounded-xl disabled:opacity-60">
+                          <SelectValue placeholder="Selectează grupa" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0f1f3d] text-white border-[#2d4a7c]">
+                          {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', '0+', '0-'].map((bt) => (
+                            <SelectItem key={bt} value={bt}>{bt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-white/50 text-xs mb-1 block">Număr asigurare</label>
+                      <Input
+                        disabled={!medicalEditing}
+                        value={medicalForm.insuranceNumber}
+                        onChange={(e) => setMedicalForm((p) => ({ ...p, insuranceNumber: e.target.value }))}
+                        placeholder="ID asigurare"
+                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-white/50 text-xs mb-1 block">Alergii</label>
+                    <textarea
+                      disabled={!medicalEditing}
+                      value={medicalForm.allergies}
+                      onChange={(e) => setMedicalForm((p) => ({ ...p, allergies: e.target.value }))}
+                      placeholder="Listează alergiile separate prin virgulă"
+                      className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] text-white px-3 py-2 text-sm outline-none focus:border-blue-500 disabled:opacity-60"
+                      rows={2}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white/50 text-xs mb-1 block">Condiții cronice</label>
+                    <textarea
+                      disabled={!medicalEditing}
+                      value={medicalForm.chronicConditions}
+                      onChange={(e) => setMedicalForm((p) => ({ ...p, chronicConditions: e.target.value }))}
+                      placeholder="ex: Hipertensiune"
+                      className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] text-white px-3 py-2 text-sm outline-none focus:border-blue-500 disabled:opacity-60"
+                      rows={2}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white/50 text-xs mb-1 block">Medicație curentă</label>
+                    <textarea
+                      disabled={!medicalEditing}
+                      value={medicalForm.medications}
+                      onChange={(e) => setMedicalForm((p) => ({ ...p, medications: e.target.value }))}
+                      placeholder="ex: Aspirin 100mg zilnic"
+                      className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] text-white px-3 py-2 text-sm outline-none focus:border-blue-500 disabled:opacity-60"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-white/50 text-xs mb-1 block">Greutate (kg)</label>
+                      <Input
+                        disabled={!medicalEditing}
+                        value={medicalForm.weightKg}
+                        onChange={(e) => setMedicalForm((p) => ({ ...p, weightKg: e.target.value }))}
+                        placeholder="ex: 68"
+                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-white/50 text-xs mb-1 block">Variație greutate</label>
+                      <Input
+                        disabled={!medicalEditing}
+                        value={medicalForm.weightChange}
+                        onChange={(e) => setMedicalForm((p) => ({ ...p, weightChange: e.target.value }))}
+                        placeholder="ex: -0.5 kg"
+                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-white/50 text-xs mb-1 block">Înălțime (cm)</label>
+                      <Input
+                        disabled={!medicalEditing}
+                        value={medicalForm.heightCm}
+                        onChange={(e) => setMedicalForm((p) => ({ ...p, heightCm: e.target.value }))}
+                        placeholder="ex: 175"
+                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-white/50 text-xs mb-1 block">Glicemie (mg/dL)</label>
+                      <Input
+                        disabled={!medicalEditing}
+                        value={medicalForm.glucose}
+                        onChange={(e) => setMedicalForm((p) => ({ ...p, glucose: e.target.value }))}
+                        placeholder="ex: 95"
+                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-white/50 text-xs mb-1 block">Tensiune (mmHg)</label>
+                      <Input
+                        disabled={!medicalEditing}
+                        value={medicalForm.bloodPressure}
+                        onChange={(e) => setMedicalForm((p) => ({ ...p, bloodPressure: e.target.value }))}
+                        placeholder="ex: 125/80"
+                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+                  {medicalEditing && (
+                    <button
+                      onClick={handleMedicalSave}
+                      disabled={savingMedical}
+                      className="w-full mt-2 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-4 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60"
+                    >
+                      <Save className="w-4 h-4" />
+                      {savingMedical ? 'Se salvează...' : 'Salvează datele medicale'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Overview Stats */}
             <div className="mb-8">
               <PatientOverviewStats 
@@ -177,40 +614,10 @@ export default function Dashboard() {
                 <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
                   <h3 className="text-white mb-6">Metrici de sănătate</h3>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div>
-                      <p className="text-white/40 text-sm mb-3">Greutate</p>
-                      <div className="flex items-baseline gap-1.5 mb-2">
-                        <span className="text-white text-3xl">68</span>
-                        <span className="text-white/30 text-sm">kg</span>
-                      </div>
-                      <p className="text-emerald-400 text-xs mb-1">-2.5 kg</p>
-                      <p className="text-white/20 text-xs">15 Oct 2024</p>
-                    </div>
-                    <div>
-                      <p className="text-white/40 text-sm mb-3">IMC</p>
-                      <div className="flex items-baseline gap-1.5 mb-2">
-                        <span className="text-white text-3xl">24.9</span>
-                        <span className="text-white/30 text-sm">kg/m²</span>
-                      </div>
-                      <p className="text-emerald-400 text-xs mb-1">-1.2</p>
-                      <p className="text-white/20 text-xs">15 Oct 2024</p>
-                    </div>
-                    <div>
-                      <p className="text-white/40 text-sm mb-3">Glicemie</p>
-                      <div className="flex items-baseline gap-1.5 mb-2">
-                        <span className="text-white text-3xl">95</span>
-                        <span className="text-white/30 text-sm">mg/dL</span>
-                      </div>
-                      <p className="text-white/20 text-xs">10 Oct 2024</p>
-                    </div>
-                    <div>
-                      <p className="text-white/40 text-sm mb-3">Presiune</p>
-                      <div className="flex items-baseline gap-1.5 mb-2">
-                        <span className="text-white text-3xl">125/80</span>
-                        <span className="text-white/30 text-sm">mmHg</span>
-                      </div>
-                      <p className="text-white/20 text-xs">15 Oct 2024</p>
-                    </div>
+                  {renderMetric('Greutate', healthMetrics.weight, 'kg', healthMetrics.weightChange, healthMetrics.weightDate)}
+                  {renderMetric('Înălțime', healthMetrics.height, 'cm', '', '')}
+                  {renderMetric('Glicemie', healthMetrics.glucose, 'mg/dL', '', healthMetrics.glucoseDate)}
+                  {renderMetric('Presiune', healthMetrics.bloodPressure, 'mmHg', '', healthMetrics.bpDate)}
                   </div>
                 </div>
 
@@ -258,37 +665,64 @@ export default function Dashboard() {
                 <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-white">Documente</h3>
-                    <button className="text-white/40 hover:text-white text-sm transition-colors">
+                    <button
+                      className="text-white/40 hover:text-white text-sm transition-colors"
+                      onClick={() => setActiveSection('files')}
+                    >
                       Vezi toate
                     </button>
                   </div>
-                  <div className="space-y-2">
-                    {files.slice(0, 4).map((file) => (
-                      <div
-                        key={file.id}
-                        className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-all duration-200 group"
-                      >
-                        <div className="flex-shrink-0">
-                          <div className="w-9 h-9 rounded-lg bg-white/[0.05] flex items-center justify-center">
-                            <FileText className="w-4 h-4 text-white/40" />
+                  {files.length === 0 ? (
+                    <p className="text-white/40 text-sm">Nu ai încărcat documente încă.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {files.slice(0, 4).map((file) => {
+                        const isImage = file.type?.startsWith('image/');
+                        const isPdf = file.type?.includes('pdf');
+                        return (
+                          <div
+                            key={file.id}
+                            className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/[0.03] transition-all duration-200 group cursor-pointer"
+                            onClick={() => setPreviewFile(file)}
+                          >
+                            <div className="flex-shrink-0">
+                              <div className="w-12 h-12 rounded-lg bg-white/[0.05] flex items-center justify-center overflow-hidden">
+                                {isImage ? (
+                                  <img src={file.dataUrl} alt={file.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="flex flex-col items-center justify-center text-white/50 text-[11px]">
+                                    <FileText className="w-4 h-4 text-white/60" />
+                                    {isPdf ? 'PDF' : 'DOC'}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="text-white text-sm truncate">{file.name}</p>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-white/40">
+                                <span className="truncate">{file.type || 'fișier'}</span>
+                                <span>•</span>
+                                <span>{new Date(file.uploadedAt).toLocaleDateString('ro-RO')}</span>
+                                <span>•</span>
+                                <span>{formatSize(file.size)}</span>
+                              </div>
+                            </div>
+                            <button
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-white/[0.05] rounded-lg"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewFile(file);
+                              }}
+                            >
+                              <Eye className="w-4 h-4 text-white/60" />
+                            </button>
                           </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <p className="text-white text-sm truncate">{file.name}</p>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-white/30">
-                            <span>{file.type}</span>
-                            <span>•</span>
-                            <span>{file.date}</span>
-                          </div>
-                        </div>
-                        <button className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-white/[0.05] rounded-lg">
-                          <Download className="w-4 h-4 text-white/40" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -318,22 +752,25 @@ export default function Dashboard() {
                   <h4 className="text-white text-sm mb-4">Condiții medicale</h4>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02]">
-                      <span className="text-white/80 text-sm">{medicalProfile.chronicConditions}</span>
+                      <span className="text-white/80 text-sm">{medicalProfile.chronicConditions || 'Necompletat'}</span>
                       <span className="text-white/30 text-xs">Controlată</span>
                     </div>
                   </div>
                   <div className="mt-4">
                     <h4 className="text-white text-sm mb-4">Alergii</h4>
                     <div className="space-y-2">
-                      {medicalProfile.allergies.split(', ').map((allergy, idx) => (
+                      {(medicalProfile.allergies ? medicalProfile.allergies.split(',') : []).map((allergy, idx) => (
                         <div
                           key={idx}
                           className="flex items-center gap-2 p-3 rounded-lg bg-red-500/5 border border-red-500/10"
                         >
                           <AlertCircle className="w-4 h-4 text-red-400" />
-                          <span className="text-white/80 text-sm">{allergy}</span>
+                          <span className="text-white/80 text-sm">{allergy.trim()}</span>
                         </div>
                       ))}
+                      {!medicalProfile.allergies && (
+                        <div className="text-white/40 text-sm">Nu ai adăugat alergii</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -395,7 +832,10 @@ export default function Dashboard() {
             </div>
 
             <div className="mb-8">
-              <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05] border-dashed hover:border-white/10 transition-all duration-200 cursor-pointer">
+              <div
+                className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05] border-dashed hover:border-white/10 transition-all duration-200 cursor-pointer"
+                onClick={() => document.getElementById('file-upload-input')?.click()}
+              >
                 <div className="flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 rounded-2xl bg-white/[0.05] flex items-center justify-center mb-4">
                     <Upload className="w-8 h-8 text-white/40" />
@@ -405,36 +845,161 @@ export default function Dashboard() {
                   <button className="px-4 py-2 bg-white/[0.08] hover:bg-white/[0.12] text-white rounded-xl text-sm transition-all duration-200">
                     Selectează fișiere
                   </button>
+                  <input
+                    id="file-upload-input"
+                    type="file"
+                    multiple
+                    accept="image/*,.pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      handleFileUpload(e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {files.map((file) => (
-                <div
-                  key={file.id}
-                  className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05] hover:bg-white/[0.04] transition-all duration-200 group"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                      <FileText className="w-6 h-6 text-blue-400" />
+            {files.length === 0 ? (
+              <div className="text-white/60 text-center py-10 bg-white/[0.02] rounded-2xl border border-white/[0.05]">
+                Nu ai încărcat documente încă.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {files.map((file, idx) => {
+                  const isImage = file.type?.startsWith('image/');
+                  const isPdf = file.type?.includes('pdf');
+                  return (
+                    <div
+                      key={file.id}
+                      className="bg-white/[0.02] rounded-2xl p-4 border border-white/[0.05] hover:bg-white/[0.04] transition-all duration-200 group flex flex-col gap-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-blue-400" />
+                          </div>
+                          <div>
+                            {renamingId === file.id ? (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={renamingValue}
+                                  onChange={(e) => setRenamingValue(e.target.value)}
+                                  className="bg-white/[0.04] border-white/[0.08] text-white h-9"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => handleRename(file.id)}
+                                  className="px-2 py-1 text-xs rounded-lg bg-white/10 text-white hover:bg-white/20"
+                                >
+                                  OK
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="text-white text-sm font-semibold truncate max-w-[150px]" title={file.name}>
+                                {file.name}
+                              </div>
+                            )}
+                            <div className="text-white/40 text-xs">
+                              {formatSize(file.size)} • {new Date(file.uploadedAt).toLocaleDateString('ro-RO')}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                          <button
+                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10"
+                            onClick={() => moveFile(file.id, 'up')}
+                            disabled={idx === 0}
+                          >
+                            <ArrowUp className="w-4 h-4 text-white/70" />
+                          </button>
+                          <button
+                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10"
+                            onClick={() => moveFile(file.id, 'down')}
+                            disabled={idx === files.length - 1}
+                          >
+                            <ArrowDown className="w-4 h-4 text-white/70" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div
+                        className="rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.05] h-40 flex items-center justify-center cursor-pointer"
+                        onClick={() => setPreviewFile(file)}
+                      >
+                        {isImage ? (
+                          <img src={file.dataUrl} alt={file.name} className="w-full h-full object-cover" />
+                        ) : isPdf ? (
+                          <div className="flex flex-col items-center justify-center text-white/60 text-sm gap-2">
+                            <FileText className="w-8 h-8" />
+                            <span>PDF</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-white/60 text-sm gap-2">
+                            <FileText className="w-8 h-8" />
+                            <span>Fișier</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 flex items-center gap-1 text-white/80 text-xs"
+                            onClick={() => setPreviewFile(file)}
+                          >
+                            <Eye className="w-4 h-4" /> Vizualizează
+                          </button>
+                          <button
+                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 flex items-center gap-1 text-white/80 text-xs"
+                            onClick={() => {
+                              setRenamingId(file.id);
+                              setRenamingValue(file.name);
+                            }}
+                          >
+                            <Edit3 className="w-4 h-4" /> Redenumește
+                          </button>
+                        </div>
+                        <button
+                          className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-300"
+                          onClick={() => handleDeleteFile(file.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <h4 className="text-white text-sm mb-2">{file.name}</h4>
-                  <div className="flex items-center gap-2 text-xs text-white/40 mb-4">
-                    <span>{file.type}</span>
-                    <span>•</span>
-                    <span>{file.date}</span>
-                  </div>
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="flex-1 p-2 bg-white/[0.05] hover:bg-white/[0.08] rounded-lg transition-all flex items-center justify-center gap-2">
-                      <Download className="w-3 h-3 text-white/60" />
-                      <span className="text-white/80 text-xs">Descarcă</span>
+                  );
+                })}
+              </div>
+            )}
+
+            {previewFile && (
+              <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[80] flex items-center justify-center p-6">
+                <div className="bg-[#0b1437] border border-white/10 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                    <div>
+                      <p className="text-white font-semibold">{previewFile.name}</p>
+                      <p className="text-white/40 text-xs">{formatSize(previewFile.size)}</p>
+                    </div>
+                    <button
+                      className="text-white/60 hover:text-white"
+                      onClick={() => setPreviewFile(null)}
+                    >
+                      Înapoi
                     </button>
                   </div>
+                  <div className="flex-1 bg-black/30 flex items-center justify-center overflow-auto">
+                    {previewFile.type?.startsWith('image/') ? (
+                      <img src={previewFile.dataUrl} alt={previewFile.name} className="max-h-[80vh] object-contain" />
+                    ) : previewFile.type?.includes('pdf') ? (
+                      <iframe src={previewFile.dataUrl} title={previewFile.name} className="w-full h-[80vh]" />
+                    ) : (
+                      <div className="text-white/60 p-6">Previzualizare indisponibilă pentru acest tip de fișier.</div>
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         );
 
@@ -797,10 +1362,7 @@ export default function Dashboard() {
       />
 
       {/* Main Content */}
-      <div className="lg:pl-[280px] min-h-screen relative z-10">
-        {/* Top Bar */}
-        <VisionTopBar onMenuClick={() => setSidebarOpen(true)} />
-
+      <div className="lg:pl-[280px] min-h-screen relative z-10 pt-8 lg:pt-10">
         {/* Main Content Area */}
         <main className="p-8 lg:p-12 max-w-[1600px] mx-auto">
           {renderContent()}

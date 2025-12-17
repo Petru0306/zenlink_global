@@ -34,7 +34,7 @@ export function VisionSidebar({ isOpen, onClose, activeSection, onSectionChange 
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 h-full w-[280px] z-50
+          fixed left-0 top-0 h-full w-[280px] z-50
           bg-[#0B1437]/80 backdrop-blur-2xl
           border-r border-white/[0.05]
           transition-transform duration-300 ease-in-out

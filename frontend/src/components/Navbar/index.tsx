@@ -7,6 +7,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
+  const onDashboard = location.pathname.startsWith('/dashboard');
 
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -29,17 +30,23 @@ export default function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 backdrop-blur-xl bg-[#0b1437]/80 border-b border-[#2d4a7c]/50">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        {/* Logo and Site Name */}
-        <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#5B8DEF] to-[#4169E1] flex items-center justify-center">
-            <Brain className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-xl font-semibold text-white">ZenLink</span>
-        </Link>
+      <div
+        className={`py-4 flex items-center w-full relative ${
+          onDashboard ? 'pl-[300px] pr-6' : 'max-w-7xl mx-auto px-6 justify-between'
+        }`}
+      >
+        {/* Logo and Site Name (hidden on dashboard view) */}
+        {!onDashboard && (
+          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#5B8DEF] to-[#4169E1] flex items-center justify-center">
+              <Brain className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-semibold text-white">ZenLink</span>
+          </Link>
+        )}
 
         {/* Navigation Links */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
           {navLinks.map((link) => (
             <Link
               key={link.path}
@@ -56,11 +63,19 @@ export default function Navbar() {
         </div>
 
         {/* Auth Section */}
-        <div className="flex items-center gap-4">
+        <div
+          className={`flex items-center gap-4 ${
+            onDashboard ? 'ml-auto' : ''
+          }`}
+          style={onDashboard ? { position: 'relative', zIndex: 5 } : {}}
+        >
           {isAuthenticated ? (
             <>
               {/* User Info */}
-              <div className="hidden sm:flex items-center gap-3 px-4 py-2 rounded-xl bg-[#1a2f5c] border border-[#2d4a7c]">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="hidden sm:flex items-center gap-3 px-4 py-2 rounded-xl bg-[#1a2f5c] border border-[#2d4a7c] hover:border-blue-500 transition"
+              >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#5B8DEF] to-[#4169E1] flex items-center justify-center">
                   <User className="w-4 h-4 text-white" />
                 </div>
@@ -70,7 +85,7 @@ export default function Navbar() {
                   </span>
                   <span className="text-[#a3aed0] text-xs">{user?.email}</span>
                 </div>
-              </div>
+              </button>
               
               {/* Logout Button */}
               <Button
