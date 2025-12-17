@@ -39,11 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import {
-  putPatientFileContent,
-  getPatientFileContent,
-  deletePatientFileContent,
-} from '../../utils/patientFilesStore';
+const API_BASE = 'http://localhost:8080';
 import { AiChat } from '../../components/AiChat';
 
 export default function Dashboard() {
@@ -85,6 +81,48 @@ export default function Dashboard() {
     bpDate: '',
   });
 
+  const normalizeServerFiles = (serverList, prevFiles = []) => {
+    const dataUrlById = new Map((prevFiles || []).map((f) => [String(f.id), f.dataUrl || null]));
+    return (Array.isArray(serverList) ? serverList : []).map((f) => ({
+      id: String(f.id),
+      name: f.name,
+      type: f.contentType,
+      size: f.size,
+      uploadedAt: f.uploadedAt,
+      sortRank: f.sortRank,
+      dataUrl: dataUrlById.get(String(f.id)) || null,
+    }));
+  };
+
+  const fetchPatientFiles = async () => {
+    if (!user?.id) return;
+    const res = await fetch(`${API_BASE}/api/patient-files/patient/${user.id}`);
+    if (!res.ok) throw new Error('Failed to load files');
+    const list = await res.json();
+    setFiles((prev) => normalizeServerFiles(list, prev));
+  };
+
+  const ensureFileDataUrl = async (file) => {
+    if (!file?.id) return null;
+    if (file.dataUrl) return file.dataUrl;
+    const res = await fetch(`${API_BASE}/api/patient-files/${file.id}/content`);
+    if (!res.ok) throw new Error('Failed to load file content');
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    setFiles((prev) => prev.map((f) => (String(f.id) === String(file.id) ? { ...f, dataUrl: objectUrl } : f)));
+    return objectUrl;
+  };
+
+  const openPreview = async (file) => {
+    try {
+      const dataUrl = await ensureFileDataUrl(file);
+      setPreviewFile({ ...file, dataUrl });
+    } catch (err) {
+      console.error(err);
+      alert('Nu am putut încărca fișierul pentru previzualizare.');
+    }
+  };
+
   // Load user-bound medical data from localStorage
   useEffect(() => {
     if (!user) return;
@@ -107,62 +145,24 @@ export default function Dashboard() {
       }
     }
 
-    const storedFiles = localStorage.getItem(`patientFiles-${user.id}`);
-    if (storedFiles) {
-      try {
-        const parsedList = JSON.parse(storedFiles);
-        Promise.all(
-          (Array.isArray(parsedList) ? parsedList : []).map(async (f) => {
-            // Backward compatible: if older data already has content in localStorage, keep it
-            if (typeof f?.dataUrl === 'string' && f.dataUrl.length > 0) {
-              try {
-                await putPatientFileContent(user.id, f.id, f.dataUrl);
-              } catch (err) {
-                console.warn('Failed to migrate file content to IndexedDB', err);
-              }
-              return f;
-            }
-            try {
-              const dataUrl = await getPatientFileContent(user.id, f.id);
-              return { ...f, dataUrl: dataUrl || null };
-            } catch (err) {
-              console.warn('Failed to load file content from IndexedDB', err);
-              return { ...f, dataUrl: null };
-            }
-          })
-        ).then((hydrated) => setFiles(hydrated));
-      } catch (e) {
-        console.error('Failed to parse stored files', e);
-      }
-    }
+    fetchPatientFiles().catch((err) => {
+      console.error('Failed to load files from backend:', err);
+    });
   }, [user]);
 
-  // Cross-tab sync: if another tab updates patientFiles-{userId}, reload list + hydrate from IndexedDB
+  // Cleanup object URLs (avoid memory leaks)
   useEffect(() => {
-    if (!user?.id) return;
-    const key = `patientFiles-${user.id}`;
-    const handler = (e) => {
-      if (e.key !== key) return;
-      try {
-        const parsedList = e.newValue ? JSON.parse(e.newValue) : [];
-        Promise.all(
-          (Array.isArray(parsedList) ? parsedList : []).map(async (f) => {
-            try {
-              const dataUrl = await getPatientFileContent(user.id, f.id);
-              return { ...f, dataUrl: dataUrl || null };
-            } catch (err) {
-              console.warn('Failed to load file content from IndexedDB', err);
-              return { ...f, dataUrl: null };
-            }
-          })
-        ).then((hydrated) => setFiles(hydrated));
-      } catch (err) {
-        console.warn('Failed to sync files from storage event', err);
-      }
+    return () => {
+      files.forEach((f) => {
+        if (typeof f?.dataUrl === 'string' && f.dataUrl.startsWith('blob:')) {
+          try {
+            URL.revokeObjectURL(f.dataUrl);
+          } catch {}
+        }
+      });
     };
-    window.addEventListener('storage', handler);
-    return () => window.removeEventListener('storage', handler);
-  }, [user?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     // Fetch real appointments from backend
@@ -408,69 +408,69 @@ export default function Dashboard() {
     }
   };
 
-  const persistFilesList = (nextFiles) => {
-    if (!user?.id) return;
-    // Store only metadata in localStorage (content goes to IndexedDB)
-    const list = nextFiles.map(({ dataUrl, ...meta }) => meta);
-    localStorage.setItem(`patientFiles-${user.id}`, JSON.stringify(list));
-  };
-
   const handleFileUpload = (fileList) => {
     if (!fileList?.length) return;
     const uploads = Array.from(fileList);
     uploads.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const dataUrl = e.target?.result;
-        const nextFile = {
-          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-          name: file.name,
-          type: file.type || 'application/octet-stream',
-          size: file.size,
-          uploadedAt: new Date().toISOString(),
-          dataUrl,
-        };
-
-        try {
-          if (user?.id && typeof dataUrl === 'string') {
-            await putPatientFileContent(user.id, nextFile.id, dataUrl);
-          }
-        } catch (err) {
-          console.error('Failed to persist file content to IndexedDB', err);
-          alert('Nu am putut salva fișierul local. Încearcă din nou.');
-          return;
-        }
-
-        setFiles((prev) => {
-          const next = [nextFile, ...prev];
-          try {
-            persistFilesList(next);
-          } catch (err) {
-            console.error('Failed to persist file list to localStorage', err);
-          }
-          return next;
-        });
+      const clientId = `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const placeholder = {
+        id: clientId,
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+        uploadedAt: new Date().toISOString(),
+        dataUrl: null,
+        uploading: true,
       };
-      reader.readAsDataURL(file);
+
+      setFiles((prev) => [placeholder, ...prev]);
+
+      // Optional: show immediate preview for images (DataURL) while upload runs
+      if (file.type?.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result;
+          if (typeof dataUrl === 'string') {
+            setFiles((prev) => prev.map((f) => (f.id === clientId ? { ...f, dataUrl } : f)));
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+
+      (async () => {
+        try {
+          if (!user?.id) throw new Error('Not logged in');
+          const fd = new FormData();
+          fd.append('file', file);
+          const res = await fetch(`${API_BASE}/api/patient-files/patient/${user.id}`, {
+            method: 'POST',
+            body: fd,
+          });
+          if (!res.ok) throw new Error('Upload failed');
+          const saved = await res.json();
+          const savedNormalized = normalizeServerFiles([saved], [])[0];
+          setFiles((prev) => prev.map((f) => (f.id === clientId ? { ...savedNormalized, dataUrl: f.dataUrl } : f)));
+        } catch (err) {
+          console.error(err);
+          alert('Nu am putut încărca fișierul. Încearcă din nou.');
+          setFiles((prev) => prev.filter((f) => f.id !== clientId));
+        }
+      })();
     });
   };
 
   const handleDeleteFile = (id) => {
-    setFiles((prev) => {
-      const next = prev.filter((f) => f.id !== id);
+    (async () => {
       try {
-        persistFilesList(next);
+        const res = await fetch(`${API_BASE}/api/patient-files/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Delete failed');
+        setFiles((prev) => prev.filter((f) => String(f.id) !== String(id)));
+        if (previewFile?.id === id) setPreviewFile(null);
       } catch (err) {
-        console.error('Failed to persist file list to localStorage', err);
+        console.error(err);
+        alert('Nu am putut șterge fișierul.');
       }
-      return next;
-    });
-    if (previewFile?.id === id) setPreviewFile(null);
-    if (user?.id) {
-      deletePatientFileContent(user.id, id).catch((err) => {
-        console.warn('Failed to delete file content from IndexedDB', err);
-      });
-    }
+    })();
   };
 
   const handleRename = (id) => {
@@ -478,17 +478,27 @@ export default function Dashboard() {
       setRenamingId(null);
       return;
     }
-    setFiles((prev) => {
-      const next = prev.map((f) => (f.id === id ? { ...f, name: renamingValue } : f));
+    (async () => {
       try {
-        persistFilesList(next);
+        const res = await fetch(`${API_BASE}/api/patient-files/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: renamingValue.trim() }),
+        });
+        if (!res.ok) throw new Error('Rename failed');
+        const updated = await res.json();
+        setFiles((prev) => {
+          const next = normalizeServerFiles([updated], prev);
+          return prev.map((f) => (String(f.id) === String(id) ? { ...f, ...next[0] } : f));
+        });
+        if (previewFile?.id === id) setPreviewFile((prev) => (prev ? { ...prev, name: renamingValue.trim() } : prev));
+        setRenamingId(null);
+        setRenamingValue('');
       } catch (err) {
-        console.error('Failed to persist file list to localStorage', err);
+        console.error(err);
+        alert('Nu am putut redenumi fișierul.');
       }
-      return next;
-    });
-    setRenamingId(null);
-    setRenamingValue('');
+    })();
   };
 
   const moveFile = (id, direction) => {
@@ -500,10 +510,15 @@ export default function Dashboard() {
       const next = [...prev];
       const [item] = next.splice(index, 1);
       next.splice(targetIndex, 0, item);
-      try {
-        persistFilesList(next);
-      } catch (err) {
-        console.error('Failed to persist file list to localStorage', err);
+      if (user?.id) {
+        fetch(`${API_BASE}/api/patient-files/patient/${user.id}/order`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderedIds: next.map((f) => f.id).filter((x) => !String(x).startsWith('client-')) }),
+        })
+          .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Order save failed'))))
+          .then((serverList) => setFiles((prev2) => normalizeServerFiles(serverList, prev2)))
+          .catch((err) => console.warn(err));
       }
       return next;
     });
@@ -1115,10 +1130,17 @@ export default function Dashboard() {
 
                       <div
                         className="rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.05] h-40 flex items-center justify-center cursor-pointer"
-                        onClick={() => setPreviewFile(file)}
+                        onClick={() => openPreview(file)}
                       >
                         {isImage ? (
-                          <img src={file.dataUrl} alt={file.name} className="w-full h-full object-cover" />
+                          file.dataUrl ? (
+                            <img src={file.dataUrl} alt={file.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center text-white/60 text-sm gap-2">
+                              <FileText className="w-8 h-8" />
+                              <span>Imagine</span>
+                            </div>
+                          )
                         ) : isPdf ? (
                           <div className="flex flex-col items-center justify-center text-white/60 text-sm gap-2">
                             <FileText className="w-8 h-8" />
@@ -1136,7 +1158,7 @@ export default function Dashboard() {
                         <div className="flex items-center gap-2">
                           <button
                             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 flex items-center gap-1 text-white/80 text-xs"
-                            onClick={() => setPreviewFile(file)}
+                            onClick={() => openPreview(file)}
                           >
                             <Eye className="w-4 h-4" /> Vizualizează
                           </button>
@@ -1188,9 +1210,17 @@ export default function Dashboard() {
                       <Brain className="w-5 h-5" />
                     </button>
                     {previewFile.type?.startsWith('image/') ? (
-                      <img src={previewFile.dataUrl} alt={previewFile.name} className="max-h-[80vh] object-contain" />
+                      previewFile.dataUrl ? (
+                        <img src={previewFile.dataUrl} alt={previewFile.name} className="max-h-[80vh] object-contain" />
+                      ) : (
+                        <div className="text-white/60 p-6">Se încarcă...</div>
+                      )
                     ) : previewFile.type?.includes('pdf') ? (
-                      <iframe src={previewFile.dataUrl} title={previewFile.name} className="w-full h-[80vh]" />
+                      previewFile.dataUrl ? (
+                        <iframe src={previewFile.dataUrl} title={previewFile.name} className="w-full h-[80vh]" />
+                      ) : (
+                        <div className="text-white/60 p-6">Se încarcă...</div>
+                      )
                     ) : (
                       <div className="text-white/60 p-6">Previzualizare indisponibilă pentru acest tip de fișier.</div>
                     )}
