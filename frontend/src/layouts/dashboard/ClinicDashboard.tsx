@@ -15,29 +15,12 @@ export default function ClinicDashboard() {
   // Real data - fetched from backend
   const [doctors, setDoctors] = useState<any[]>([]);
   const [clinicPatients, setClinicPatients] = useState<any[]>([]);
-  const [_loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Fetch doctors from backend
-    fetch('http://localhost:8080/api/users/doctors')
-      .then(res => res.json())
-      .then((users: any[]) => {
-        const transformedDoctors = users.map(user => ({
-          id: user.id,
-          name: `Dr. ${user.firstName} ${user.lastName}`,
-          specialization: 'General Medicine', // Default until profile is completed
-          email: user.email,
-          phone: user.phone || 'N/A',
-        }));
-        setDoctors(transformedDoctors);
-        // TODO: Fetch clinic's patients when endpoint is ready
-        setClinicPatients([]);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error fetching doctors:', err);
-        setLoading(false);
-      });
+    // Future: replace with GET /clinics/{id}/invites or /clinics/{id}/doctors
+    setDoctors([]);
+    setClinicPatients([]);
   }, []);
 
   const subscriptions = {
@@ -50,7 +33,7 @@ export default function ClinicDashboard() {
 
   const sidebarItems = [
     { id: 'overview', label: 'Clinic Overview', icon: Building2 },
-    { id: 'doctors', label: 'Our Doctors', icon: UserCheck },
+    { id: 'doctors', label: 'Doctors', icon: UserCheck },
     { id: 'patients', label: 'Patients', icon: Users },
     { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
     { id: 'ai', label: 'AI Assistant', icon: Bot },
