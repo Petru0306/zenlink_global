@@ -10,21 +10,46 @@ export function HomePage() {
   const heroRef = useRef(null);
   const orbTopRightRef = useRef(null);
   const orbBottomLeftRef = useRef(null);
+  const particlesFarRef = useRef(null);
+  const particlesMidRef = useRef(null);
+  const particlesNearRef = useRef(null);
   const mouseTargetRef = useRef({ x: 0, y: 0 }); // normalized [-1..1]
   const mouseCurrentRef = useRef({ x: 0, y: 0 }); // smoothed [-1..1]
   const rafIdRef = useRef(null);
   const [reducedMotion, setReducedMotion] = useState(false);
 
   const particles = useMemo(() => {
-    const count = 20;
+    const count = 40;
+    const pickDepth = () => {
+      // Weighted: far 45%, mid 35%, near 20%
+      const r = Math.random();
+      if (r < 0.45) return 0;
+      if (r < 0.8) return 1;
+      return 2;
+    };
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       left: Math.random() * 100,
       top: Math.random() * 100,
       delay: Math.random() * 5,
       duration: 10 + Math.random() * 20,
+      depth: pickDepth(), // 0=far, 1=mid, 2=near
+      twinkleDelay: Math.random() * 6,
+      twinkleDuration: 3.5 + Math.random() * 4.5,
     }));
   }, []);
+
+  const particlesByDepth = useMemo(() => {
+    const far = [];
+    const mid = [];
+    const near = [];
+    for (const p of particles) {
+      if (p.depth === 0) far.push(p);
+      else if (p.depth === 1) mid.push(p);
+      else near.push(p);
+    }
+    return { far, mid, near };
+  }, [particles]);
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -49,38 +74,64 @@ export function HomePage() {
     const lerp = (a, b, t) => a + (b - a) * t;
 
     const updateFromClientXY = (clientX, clientY) => {
-      const nx = (clientX / window.innerWidth - 0.5) * 2; // -1..1
-      const ny = (clientY / window.innerHeight - 0.5) * 2; // -1..1
-      mouseTargetRef.current = { x: nx, y: ny };
+      const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+      const rect = heroRef.current?.getBoundingClientRect?.();
+
+      // Use hero section bounds so the parallax feels intentional and less twitchy.
+      // When the pointer is outside the hero area, ease back to neutral.
+      if (!rect) {
+        const nx = (clientX / window.innerWidth - 0.5) * 2; // -1..1
+        const ny = (clientY / window.innerHeight - 0.5) * 2; // -1..1
+        mouseTargetRef.current = { x: clamp(nx, -1, 1), y: clamp(ny, -1, 1) };
+        return;
+      }
+
+      const inside =
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom;
+
+      if (!inside) {
+        mouseTargetRef.current = { x: 0, y: 0 };
+        return;
+      }
+
+      const nx = ((clientX - rect.left) / rect.width - 0.5) * 2;
+      const ny = ((clientY - rect.top) / rect.height - 0.5) * 2;
+      mouseTargetRef.current = { x: clamp(nx, -1, 1), y: clamp(ny, -1, 1) };
     };
     const handlePointerMove = (e) => updateFromClientXY(e.clientX, e.clientY);
     const handleMouseMove = (e) => updateFromClientXY(e.clientX, e.clientY);
 
+    const runningRef = { current: true };
+
     const animate = (now) => {
+      if (!runningRef.current) return;
       const t = now; // ms
 
-      // Smooth mouse movement so it feels “floaty”, not twitchy
+      // Smooth mouse movement so it feels calm/premium, not twitchy.
       const current = mouseCurrentRef.current;
       const target = mouseTargetRef.current;
       const next = {
-        x: lerp(current.x, target.x, 0.12),
-        y: lerp(current.y, target.y, 0.12),
+        x: lerp(current.x, target.x, 0.085),
+        y: lerp(current.y, target.y, 0.085),
       };
       mouseCurrentRef.current = next;
 
       // Ambient drift (subtle, always-on)
       const ambient1 = {
-        x: Math.sin(t * 0.00012) * 28 + Math.cos(t * 0.00008) * 16,
-        y: Math.cos(t * 0.0001) * 22 + Math.sin(t * 0.00007) * 14,
+        x: Math.sin(t * 0.00008) * 18 + Math.cos(t * 0.00006) * 10,
+        y: Math.cos(t * 0.00007) * 14 + Math.sin(t * 0.00005) * 9,
       };
       const ambient2 = {
-        x: Math.cos(t * 0.00011) * 22 + Math.sin(t * 0.00006) * 12,
-        y: Math.sin(t * 0.00009) * 18 + Math.cos(t * 0.00005) * 10,
+        x: Math.cos(t * 0.000075) * 14 + Math.sin(t * 0.00005) * 8,
+        y: Math.sin(t * 0.000065) * 12 + Math.cos(t * 0.000045) * 7,
       };
 
-      // Mouse parallax overlay (intentionally noticeable; tweak if you want subtler)
-      const mouse1 = { x: next.x * 70, y: next.y * 70 };
-      const mouse2 = { x: next.x * -55, y: next.y * -55 };
+      // Mouse parallax overlay (subtle/premium, but clearly perceptible)
+      const mouse1 = { x: next.x * 42, y: next.y * 42 };
+      const mouse2 = { x: next.x * -30, y: next.y * -30 };
 
       const orb1 = orbTopRightRef.current;
       if (orb1) {
@@ -92,17 +143,57 @@ export function HomePage() {
         orb2.style.transform = `translate3d(${ambient2.x + mouse2.x}px, ${ambient2.y + mouse2.y}px, 0)`;
       }
 
+      // Starfield / particles parallax (Depth field: far/mid/near)
+      const farEl = particlesFarRef.current;
+      const midEl = particlesMidRef.current;
+      const nearEl = particlesNearRef.current;
+      if (farEl) {
+        const ax = Math.sin(t * 0.000035) * 10 + Math.cos(t * 0.00002) * 6;
+        const ay = Math.cos(t * 0.00003) * 7 + Math.sin(t * 0.000018) * 5;
+        const mx = next.x * 10;
+        const my = next.y * 10;
+        farEl.style.transform = `translate3d(${ax + mx}px, ${ay + my}px, 0)`;
+      }
+      if (midEl) {
+        const ax = Math.cos(t * 0.00003) * 14 + Math.sin(t * 0.000022) * 8;
+        const ay = Math.sin(t * 0.000028) * 10 + Math.cos(t * 0.000019) * 6;
+        const mx = next.x * 16;
+        const my = next.y * 16;
+        midEl.style.transform = `translate3d(${ax + mx}px, ${ay + my}px, 0)`;
+      }
+      if (nearEl) {
+        const ax = Math.sin(t * 0.000028) * 18 + Math.cos(t * 0.00002) * 10;
+        const ay = Math.cos(t * 0.000026) * 12 + Math.sin(t * 0.000017) * 8;
+        const mx = next.x * 22;
+        const my = next.y * 22;
+        nearEl.style.transform = `translate3d(${ax + mx}px, ${ay + my}px, 0)`;
+      }
+
       rafIdRef.current = requestAnimationFrame(animate);
     };
 
     // Some environments don’t reliably bubble pointer events to window; document capture is the most robust.
     document.addEventListener("pointermove", handlePointerMove, { passive: true, capture: true });
     document.addEventListener("mousemove", handleMouseMove, { passive: true, capture: true });
+
+    const onVisibilityChange = () => {
+      const isHidden = document.visibilityState === "hidden";
+      runningRef.current = !isHidden;
+      if (isHidden) {
+        if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      } else if (!rafIdRef.current) {
+        rafIdRef.current = requestAnimationFrame(animate);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange, { passive: true });
+
     rafIdRef.current = requestAnimationFrame(animate);
 
     return () => {
       document.removeEventListener("pointermove", handlePointerMove, { capture: true });
       document.removeEventListener("mousemove", handleMouseMove, { capture: true });
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = null;
     };
@@ -111,35 +202,127 @@ export function HomePage() {
   return (
     <div className="min-h-screen bg-[hsl(240,10%,3%)] text-[hsl(220,12%,98%)] relative overflow-x-hidden">
       {/* Animated background gradient orbs */}
-      <div 
+      <div
         ref={orbTopRightRef}
-        className="fixed top-0 right-0 w-[800px] h-[800px] bg-[hsl(217,80%,55%)] rounded-full blur-[120px] opacity-20 pointer-events-none animate-pulse"
+        className="fixed top-0 right-0 w-[800px] h-[800px] bg-[hsl(217,80%,55%)] rounded-full blur-[120px] opacity-[0.16] pointer-events-none animate-[pulse_10s_ease-in-out_infinite]"
         style={{ willChange: "transform" }}
       ></div>
-      <div 
+      <div
         ref={orbBottomLeftRef}
-        className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-[hsl(217,80%,50%)] rounded-full blur-[120px] opacity-20 pointer-events-none animate-pulse"
+        className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-[hsl(217,80%,50%)] rounded-full blur-[120px] opacity-[0.14] pointer-events-none animate-[pulse_12s_ease-in-out_infinite]"
         style={{ willChange: "transform" }}
       ></div>
 
       {/* Floating particles animation */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {particles.map((p) => (
-          <div
-            key={p.id}
-            className={`absolute w-1 h-1 bg-[hsl(217,80%,55%)] rounded-full ${reducedMotion ? "" : "animate-float"}`}
-            style={{
-              left: `${p.left}%`,
-              top: `${p.top}%`,
-              animationDelay: `${p.delay}s`,
-              animationDuration: `${p.duration}s`,
-            }}
-          ></div>
-        ))}
-      </div>
+      <>
+        {/* Far layer */}
+        <div
+          ref={particlesFarRef}
+          className="fixed inset-0 pointer-events-none overflow-hidden"
+          style={{ willChange: "transform" }}
+        >
+          {particlesByDepth.far.map((p) => (
+            <div
+              key={p.id}
+              className={`absolute ${reducedMotion ? "" : "animate-float-soft"}`}
+              style={{
+                left: `${p.left}%`,
+                top: `${p.top}%`,
+                animationDelay: `${p.delay}s`,
+                animationDuration: `${16 + p.duration * 0.9}s`,
+              }}
+            >
+              <div
+                className={`${reducedMotion ? "" : "animate-twinkle"}`}
+                style={{
+                  width: "2px",
+                  height: "2px",
+                  borderRadius: "9999px",
+                  backgroundColor: "hsl(217,80%,55%)",
+                  boxShadow: "0 0 6px rgba(91, 141, 239, 0.35)",
+                  "--twinkle-min": 0.22,
+                  "--twinkle-max": 0.6,
+                  animationDelay: `${p.twinkleDelay}s`,
+                  animationDuration: `${p.twinkleDuration + 1.5}s`,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Mid layer */}
+        <div
+          ref={particlesMidRef}
+          className="fixed inset-0 pointer-events-none overflow-hidden"
+          style={{ willChange: "transform" }}
+        >
+          {particlesByDepth.mid.map((p) => (
+            <div
+              key={p.id}
+              className={`absolute ${reducedMotion ? "" : "animate-float-soft"}`}
+              style={{
+                left: `${p.left}%`,
+                top: `${p.top}%`,
+                animationDelay: `${p.delay}s`,
+                animationDuration: `${14 + p.duration * 0.75}s`,
+              }}
+            >
+              <div
+                className={`${reducedMotion ? "" : "animate-twinkle"}`}
+                style={{
+                  width: "2.5px",
+                  height: "2.5px",
+                  borderRadius: "9999px",
+                  backgroundColor: "hsl(217,80%,58%)",
+                  boxShadow: "0 0 8px rgba(91, 141, 239, 0.4)",
+                  "--twinkle-min": 0.28,
+                  "--twinkle-max": 0.78,
+                  animationDelay: `${p.twinkleDelay}s`,
+                  animationDuration: `${p.twinkleDuration}s`,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Near layer */}
+        <div
+          ref={particlesNearRef}
+          className="fixed inset-0 pointer-events-none overflow-hidden"
+          style={{ willChange: "transform" }}
+        >
+          {particlesByDepth.near.map((p) => (
+            <div
+              key={p.id}
+              className={`absolute ${reducedMotion ? "" : "animate-float-soft"}`}
+              style={{
+                left: `${p.left}%`,
+                top: `${p.top}%`,
+                animationDelay: `${p.delay}s`,
+                animationDuration: `${12 + p.duration * 0.6}s`,
+              }}
+            >
+              <div
+                className={`${reducedMotion ? "" : "animate-twinkle"}`}
+                style={{
+                  width: "3px",
+                  height: "3px",
+                  borderRadius: "9999px",
+                  backgroundColor: "hsl(217,80%,62%)",
+                  boxShadow: "0 0 10px rgba(91, 141, 239, 0.5)",
+                  "--twinkle-min": 0.35,
+                  "--twinkle-max": 0.95,
+                  animationDelay: `${p.twinkleDelay}s`,
+                  animationDuration: `${Math.max(2.8, p.twinkleDuration - 0.8)}s`,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      </>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center px-6 py-20 pt-32">
+      <section ref={heroRef} className="relative min-h-screen flex items-center px-6 py-20 pt-32">
         <div className="max-w-[75rem] mx-auto w-full">
           <div className="grid md:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Left Column - Text Content */}
