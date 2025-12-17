@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SearchFilters } from '../components/SearchFilters';
-import { StatsGrid } from '../components/StatsGrid';
 import { ClinicCard } from '../components/ClinicCard';
 import type { Clinic } from '../types/clinic';
 
@@ -32,7 +31,7 @@ export default function ClinicsPage() {
         const transformedClinics: Clinic[] = users.map(user => ({
           id: user.id,
           name: `${user.firstName} ${user.lastName} Clinic`,
-          image: undefined,
+          image: '',
           location: 'Location not set',
           distance: '',
           rating: 0,
@@ -85,7 +84,7 @@ export default function ClinicsPage() {
     });
   }, [clinics, searchTerm, specialtyFilter, locationFilter, ratingFilter]);
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const handleViewClinic = (clinicId: number) => {
     navigate(`/clinic/${clinicId}`);
@@ -102,53 +101,65 @@ export default function ClinicsPage() {
           </p>
         </div>
 
-        {/* Stats Grid */}
-        <StatsGrid />
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 items-start">
+          {/* Search and Filters */}
+          <SearchFilters onViewChange={setViewType} currentView={viewType} onSearch={handleSearch} />
 
-        {/* Search and Filters */}
-        <SearchFilters onViewChange={setViewType} currentView={viewType} onSearch={handleSearch} />
+          <div className="space-y-4">
+            {/* Results Header */}
+            <div className="bg-gradient-to-br from-[#111c44] to-[#0b1437] border border-[#2d4a7c] rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-lg">
+              <div className="text-white">
+                Showing <span className="text-blue-400">{filteredClinics.length}</span> results
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-[#a3aed0] text-sm bg-white/5 px-3 py-2 rounded-xl border border-[#2d4a7c]">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span>{clinics.filter(c => c.featured).length} Featured Clinics</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#0b1437] border border-[#2d4a7c] rounded-xl px-3 py-2 text-sm text-[#a3aed0]">
+                  <span className="text-[#6b7bb5]">Sort:</span>
+                  <select className="bg-transparent outline-none text-white">
+                    <option>Rating</option>
+                    <option>Distance</option>
+                    <option>Reviews</option>
+                    <option>Name</option>
+                  </select>
+                </div>
+              </div>
+            </div>
 
-        {/* Results Header */}
-        <div className="flex items-center justify-between">
-          <div className="text-white">
-            Showing <span className="text-blue-400">{filteredClinics.length}</span> results
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-[#a3aed0] text-sm">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span>{clinics.filter(c => c.featured).length} Featured Clinics</span>
+            {/* Clinic Cards Grid */}
+            {loading ? (
+              <div className="text-white text-center py-12">Loading clinics...</div>
+            ) : filteredClinics.length === 0 ? (
+              <div className="text-white text-center py-12">No clinics found. Be the first to register!</div>
+            ) : (
+              <div
+                className={`${
+                  viewType === 'grid'
+                    ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+                    : 'space-y-4'
+                }`}
+              >
+                {filteredClinics.map((clinic, index) => (
+                  <div
+                    key={clinic.id}
+                    className="animate-fade-in-up"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <ClinicCard {...clinic} onViewClinic={handleViewClinic} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Load More */}
+            <div className="flex justify-center pt-4">
+              <button className="bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] text-white px-10 py-4 rounded-xl border border-[#2d4a7c] hover:border-blue-500 transition-all shadow-lg hover:shadow-blue-500/20 hover:scale-105 transform duration-300">
+                Load More Clinics
+              </button>
             </div>
           </div>
-        </div>
-
-        {/* Clinic Cards Grid */}
-        {loading ? (
-          <div className="text-white text-center py-12">Loading clinics...</div>
-        ) : filteredClinics.length === 0 ? (
-          <div className="text-white text-center py-12">No clinics found. Be the first to register!</div>
-        ) : (
-          <div className={`${
-            viewType === 'grid' 
-              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' 
-              : 'space-y-4'
-          }`}>
-            {filteredClinics.map((clinic, index) => (
-            <div
-              key={clinic.id}
-              className="animate-fade-in-up"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <ClinicCard {...clinic} onViewClinic={handleViewClinic} />
-            </div>
-          ))}
-          </div>
-        )}
-
-        {/* Load More */}
-        <div className="flex justify-center pt-4">
-          <button className="bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] text-white px-10 py-4 rounded-xl border border-[#2d4a7c] hover:border-blue-500 transition-all shadow-lg hover:shadow-blue-500/20 hover:scale-105 transform duration-300">
-            Load More Clinics
-          </button>
         </div>
       </div>
     </div>

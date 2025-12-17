@@ -1,10 +1,9 @@
-import { useState, useMemo, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import FiltersBar from '../components/FiltersBar'
-import { DoctorCard } from '../components/DoctorCard'
-import { StatsGrid } from '../components/StatsGrid'
-import { Button } from '../components/ui/button'
-import type { Doctor } from '../types/doctor'
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import FiltersBar from '../components/FiltersBar';
+import { DoctorCard } from '../components/DoctorCard';
+import { Button } from '../components/ui/button';
+import type { Doctor } from '../types/doctor';
 
 interface User {
   id: number;
@@ -80,7 +79,7 @@ export default function DoctorsPage() {
     });
   }, [doctors, searchTerm, locationFilter, specializationFilter]);
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const handleViewDoctor = (doctorId: number) => {
     navigate(`/doctor/${doctorId}`);
@@ -97,47 +96,57 @@ export default function DoctorsPage() {
           </p>
         </div>
 
-        {/* Stats Grid */}
-        <StatsGrid />
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 items-start">
+          <FiltersBar onSearch={handleSearch} />
 
-        <FiltersBar onSearch={handleSearch} />
-        
-        {/* Results Header */}
-        <div className="flex items-center justify-between">
-          <div className="text-white">
-            Showing <span className="text-blue-400 font-semibold">{filteredDoctors.length}</span> doctors
-          </div>
-          <Button variant="outline" className="bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-xl text-[#a3aed0] hover:text-white hover:border-blue-500 transition-all">
-            Sort by Rating
-          </Button>
-        </div>
-
-        {/* Doctor Cards */}
-        {loading ? (
-          <div className="text-white text-center py-12">Loading doctors...</div>
-        ) : filteredDoctors.length === 0 ? (
-          <div className="text-white text-center py-12">No doctors found. Be the first to register!</div>
-        ) : (
           <div className="space-y-4">
-            {filteredDoctors.map((doctor, index) => (
-            <div 
-              key={doctor.id} 
-              className="animate-fade-in-up"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <DoctorCard doctor={doctor} onViewDoctor={handleViewDoctor} />
+            {/* Results Header */}
+            <div className="bg-gradient-to-br from-[#111c44] to-[#0b1437] border border-[#2d4a7c] rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-lg">
+              <div className="text-white">
+                Showing <span className="text-blue-400 font-semibold">{filteredDoctors.length}</span> doctors
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-sm text-[#a3aed0] bg-white/5 px-3 py-2 rounded-xl border border-[#2d4a7c]">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  Updated in real-time
+                </div>
+                <Button
+                  variant="outline"
+                  className="bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-xl text-[#a3aed0] hover:text-white hover:border-blue-500 transition-all"
+                >
+                  Sort by Rating
+                </Button>
+              </div>
             </div>
-          ))}
-          </div>
-        )}
 
-        {/* Load More */}
-        <div className="flex justify-center pt-4">
-          <button className="bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] text-white px-10 py-4 rounded-xl border border-[#2d4a7c] hover:border-blue-500 transition-all shadow-lg hover:shadow-blue-500/20 hover:scale-105 transform duration-300">
-            Load More Doctors
-          </button>
+            {/* Doctor Cards */}
+            {loading ? (
+              <div className="text-white text-center py-12">Loading doctors...</div>
+            ) : filteredDoctors.length === 0 ? (
+              <div className="text-white text-center py-12">No doctors found. Be the first to register!</div>
+            ) : (
+              <div className="space-y-4">
+                {filteredDoctors.map((doctor, index) => (
+                  <div
+                    key={doctor.id}
+                    className="animate-fade-in-up"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <DoctorCard doctor={doctor} onViewDoctor={handleViewDoctor} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Load More */}
+            <div className="flex justify-center pt-4">
+              <button className="bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] text-white px-10 py-4 rounded-xl border border-[#2d4a7c] hover:border-blue-500 transition-all shadow-lg hover:shadow-blue-500/20 hover:scale-105 transform duration-300">
+                Load More Doctors
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
