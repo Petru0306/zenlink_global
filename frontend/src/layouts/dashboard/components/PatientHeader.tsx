@@ -5,7 +5,7 @@ interface PatientHeaderProps {
   lastName?: string;
   email?: string;
   phone?: string;
-  age?: number;
+  age?: number | string;
   bloodType?: string;
 }
 
@@ -17,6 +17,7 @@ export function PatientHeader({
   age = 34,
   bloodType = 'A+'
 }: PatientHeaderProps) {
+  const ageLabel = age === undefined || age === null || age === '' ? '—' : `${age} ani`;
   return (
     <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
       <div className="flex flex-col md:flex-row gap-8 items-start">
@@ -39,7 +40,7 @@ export function PatientHeader({
               </div>
               <div>
                 <p className="text-white/40 text-xs">Vârstă</p>
-                <p className="text-white text-sm">{age} ani</p>
+                <p className="text-white text-sm">{ageLabel}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">

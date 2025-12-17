@@ -29,6 +29,7 @@ import {
   ArrowUp,
   ArrowDown,
   Edit3,
+  Brain,
 } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import {
@@ -38,6 +39,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
+import {
+  putPatientFileContent,
+  getPatientFileContent,
+  deletePatientFileContent,
+} from '../../utils/patientFilesStore';
+import { AiChat } from '../../components/AiChat';
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -87,7 +94,7 @@ export default function Dashboard() {
       lastName: user.lastName || '',
       email: user.email || '',
       phone: user.phone || '',
-      age: '',
+      age: user.age ?? '',
     });
 
     const stored = localStorage.getItem(`patientMedicalData-${user.id}`);
@@ -103,12 +110,59 @@ export default function Dashboard() {
     const storedFiles = localStorage.getItem(`patientFiles-${user.id}`);
     if (storedFiles) {
       try {
-        setFiles(JSON.parse(storedFiles));
+        const parsedList = JSON.parse(storedFiles);
+        Promise.all(
+          (Array.isArray(parsedList) ? parsedList : []).map(async (f) => {
+            // Backward compatible: if older data already has content in localStorage, keep it
+            if (typeof f?.dataUrl === 'string' && f.dataUrl.length > 0) {
+              try {
+                await putPatientFileContent(user.id, f.id, f.dataUrl);
+              } catch (err) {
+                console.warn('Failed to migrate file content to IndexedDB', err);
+              }
+              return f;
+            }
+            try {
+              const dataUrl = await getPatientFileContent(user.id, f.id);
+              return { ...f, dataUrl: dataUrl || null };
+            } catch (err) {
+              console.warn('Failed to load file content from IndexedDB', err);
+              return { ...f, dataUrl: null };
+            }
+          })
+        ).then((hydrated) => setFiles(hydrated));
       } catch (e) {
         console.error('Failed to parse stored files', e);
       }
     }
   }, [user]);
+
+  // Cross-tab sync: if another tab updates patientFiles-{userId}, reload list + hydrate from IndexedDB
+  useEffect(() => {
+    if (!user?.id) return;
+    const key = `patientFiles-${user.id}`;
+    const handler = (e) => {
+      if (e.key !== key) return;
+      try {
+        const parsedList = e.newValue ? JSON.parse(e.newValue) : [];
+        Promise.all(
+          (Array.isArray(parsedList) ? parsedList : []).map(async (f) => {
+            try {
+              const dataUrl = await getPatientFileContent(user.id, f.id);
+              return { ...f, dataUrl: dataUrl || null };
+            } catch (err) {
+              console.warn('Failed to load file content from IndexedDB', err);
+              return { ...f, dataUrl: null };
+            }
+          })
+        ).then((hydrated) => setFiles(hydrated));
+      } catch (err) {
+        console.warn('Failed to sync files from storage event', err);
+      }
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, [user?.id]);
 
   useEffect(() => {
     // Fetch real appointments from backend
@@ -297,6 +351,10 @@ export default function Dashboard() {
     if (!user?.id) return;
     setSavingProfile(true);
     try {
+      const ageNumber =
+        profileForm.age === '' || profileForm.age === null || profileForm.age === undefined
+          ? null
+          : Number(profileForm.age);
       const response = await fetch(`http://localhost:8080/api/users/${user.id}`, {
         method: 'PUT',
         headers: {
@@ -307,6 +365,7 @@ export default function Dashboard() {
           lastName: profileForm.lastName,
           email: profileForm.email,
           phone: profileForm.phone,
+          age: Number.isFinite(ageNumber) ? ageNumber : null,
         }),
       });
 
@@ -321,6 +380,9 @@ export default function Dashboard() {
         lastName: updatedUser.lastName || profileForm.lastName,
         phone: updatedUser.phone || profileForm.phone,
         email: updatedUser.email || profileForm.email,
+        age:
+          updatedUser.age ??
+          (Number.isFinite(ageNumber) ? ageNumber : user.age),
       };
       setUser(newUserData);
       localStorage.setItem('user', JSON.stringify(newUserData));
@@ -346,10 +408,11 @@ export default function Dashboard() {
     }
   };
 
-  const persistFiles = (nextFiles) => {
+  const persistFilesList = (nextFiles) => {
     if (!user?.id) return;
-    setFiles(nextFiles);
-    localStorage.setItem(`patientFiles-${user.id}`, JSON.stringify(nextFiles));
+    // Store only metadata in localStorage (content goes to IndexedDB)
+    const list = nextFiles.map(({ dataUrl, ...meta }) => meta);
+    localStorage.setItem(`patientFiles-${user.id}`, JSON.stringify(list));
   };
 
   const handleFileUpload = (fileList) => {
@@ -357,29 +420,57 @@ export default function Dashboard() {
     const uploads = Array.from(fileList);
     uploads.forEach((file) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const dataUrl = e.target?.result;
-        const next = [
-          {
-            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-            name: file.name,
-            type: file.type || 'application/octet-stream',
-            size: file.size,
-            uploadedAt: new Date().toISOString(),
-            dataUrl,
-          },
-          ...files,
-        ];
-        persistFiles(next);
+        const nextFile = {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          name: file.name,
+          type: file.type || 'application/octet-stream',
+          size: file.size,
+          uploadedAt: new Date().toISOString(),
+          dataUrl,
+        };
+
+        try {
+          if (user?.id && typeof dataUrl === 'string') {
+            await putPatientFileContent(user.id, nextFile.id, dataUrl);
+          }
+        } catch (err) {
+          console.error('Failed to persist file content to IndexedDB', err);
+          alert('Nu am putut salva fișierul local. Încearcă din nou.');
+          return;
+        }
+
+        setFiles((prev) => {
+          const next = [nextFile, ...prev];
+          try {
+            persistFilesList(next);
+          } catch (err) {
+            console.error('Failed to persist file list to localStorage', err);
+          }
+          return next;
+        });
       };
       reader.readAsDataURL(file);
     });
   };
 
   const handleDeleteFile = (id) => {
-    const next = files.filter((f) => f.id !== id);
-    persistFiles(next);
+    setFiles((prev) => {
+      const next = prev.filter((f) => f.id !== id);
+      try {
+        persistFilesList(next);
+      } catch (err) {
+        console.error('Failed to persist file list to localStorage', err);
+      }
+      return next;
+    });
     if (previewFile?.id === id) setPreviewFile(null);
+    if (user?.id) {
+      deletePatientFileContent(user.id, id).catch((err) => {
+        console.warn('Failed to delete file content from IndexedDB', err);
+      });
+    }
   };
 
   const handleRename = (id) => {
@@ -387,21 +478,35 @@ export default function Dashboard() {
       setRenamingId(null);
       return;
     }
-    const next = files.map((f) => (f.id === id ? { ...f, name: renamingValue } : f));
-    persistFiles(next);
+    setFiles((prev) => {
+      const next = prev.map((f) => (f.id === id ? { ...f, name: renamingValue } : f));
+      try {
+        persistFilesList(next);
+      } catch (err) {
+        console.error('Failed to persist file list to localStorage', err);
+      }
+      return next;
+    });
     setRenamingId(null);
     setRenamingValue('');
   };
 
   const moveFile = (id, direction) => {
-    const index = files.findIndex((f) => f.id === id);
-    if (index === -1) return;
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= files.length) return;
-    const next = [...files];
-    const [item] = next.splice(index, 1);
-    next.splice(targetIndex, 0, item);
-    persistFiles(next);
+    setFiles((prev) => {
+      const index = prev.findIndex((f) => f.id === id);
+      if (index === -1) return prev;
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.splice(targetIndex, 0, item);
+      try {
+        persistFilesList(next);
+      } catch (err) {
+        console.error('Failed to persist file list to localStorage', err);
+      }
+      return next;
+    });
   };
 
   const formatSize = (size) => {
@@ -1073,7 +1178,15 @@ export default function Dashboard() {
                       Înapoi
                     </button>
                   </div>
-                  <div className="flex-1 bg-black/30 flex items-center justify-center overflow-auto">
+                  <div className="flex-1 bg-black/30 flex items-center justify-center overflow-auto relative">
+                    <button
+                      type="button"
+                      aria-label="AI"
+                      className="absolute bottom-4 left-4 z-10 w-12 h-12 rounded-full bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.12] text-white flex items-center justify-center"
+                      onClick={() => {}}
+                    >
+                      <Brain className="w-5 h-5" />
+                    </button>
                     {previewFile.type?.startsWith('image/') ? (
                       <img src={previewFile.dataUrl} alt={previewFile.name} className="max-h-[80vh] object-contain" />
                     ) : previewFile.type?.includes('pdf') ? (
@@ -1324,45 +1437,13 @@ export default function Dashboard() {
             </div>
 
             {subscription.hasAISubscription ? (
-              <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#5B8DEF] to-[#4169E1] flex items-center justify-center">
-                    <Bot className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-white text-xl font-semibold">Chat AI</h3>
-                    <p className="text-white/40">Pune întrebări despre profilul tău medical</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4 mb-6">
-                  <div className="bg-white/[0.05] rounded-2xl p-4">
-                    <p className="text-white">Bună! Sunt asistentul tău AI medical. Cu ce te pot ajuta?</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <button className="w-full justify-start px-4 py-3 bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.05] text-white/80 rounded-xl text-sm">
-                      Analizează profilul meu medical
-                    </button>
-                    <button className="w-full justify-start px-4 py-3 bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.05] text-white/80 rounded-xl text-sm">
-                      Analizează tratamentul meu curent
-                    </button>
-                  </div>
-                </div>
-
-                <div className="border-t border-white/[0.05] pt-4">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Scrie întrebarea ta..."
-                      className="flex-1 bg-white/[0.05] border border-white/[0.05] rounded-xl px-4 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-blue-500"
-                    />
-                    <button className="px-4 py-2 bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] hover:from-[#5B8DEF]/90 hover:to-[#4169E1]/90 text-white rounded-xl">
-                      Trimite
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <AiChat
+                userId={String(user?.id || '')}
+                userRole={user?.role || 'PATIENT'}
+                title="Chat AI"
+                subtitle="Pune întrebări despre sănătate (fără fișiere încă). Răspunsurile sunt în română."
+                initialMessage="Bună! Sunt asistentul tău AI medical. Cu ce te pot ajuta?"
+              />
             ) : (
               <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05] text-center">
                 <Bot className="w-16 h-16 text-white/40 mx-auto mb-4" />

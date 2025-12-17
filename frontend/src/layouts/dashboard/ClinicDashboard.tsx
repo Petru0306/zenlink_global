@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { VisionSidebar } from './components/VisionSidebar';
 import { 
   Building2, Users, UserCheck, CreditCard, Bot, 
   Mail, Phone, Edit, Calendar, Stethoscope
 } from 'lucide-react';
+import { AiChat } from '../../components/AiChat';
 
 export default function ClinicDashboard() {
   const { user } = useAuth();
@@ -13,7 +15,7 @@ export default function ClinicDashboard() {
   // Real data - fetched from backend
   const [doctors, setDoctors] = useState<any[]>([]);
   const [clinicPatients, setClinicPatients] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Fetch doctors from backend
@@ -309,11 +311,12 @@ export default function ClinicDashboard() {
                 </div>
               </div>
 
-              <div className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
-                <p className="text-white/60 text-center py-12">
-                  AI Assistant feature coming soon...
-                </p>
-              </div>
+              <AiChat
+                userId={String(user?.id || '')}
+                userRole={(user?.role || 'CLINIC') as any}
+                title="ZenLink AI Assistant"
+                subtitle="Întrebări despre gestionare clinică și suport medical (mod chat)"
+              />
             </div>
           </div>
         );
@@ -332,39 +335,16 @@ export default function ClinicDashboard() {
       </div>
 
       {/* Sidebar */}
-      <div className={`fixed left-0 top-0 h-full w-64 bg-white/[0.02] backdrop-blur-xl border-r border-white/[0.05] z-40 transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-white font-semibold">Clinic Portal</span>
-          </div>
-
-          <nav className="space-y-2">
-            {sidebarItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveSection(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    activeSection === item.id
-                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                      : 'text-white/60 hover:text-white hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
+      <VisionSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        menuItems={sidebarItems}
+      />
 
       {/* Main Content */}
-      <div className="lg:pl-64 min-h-screen relative z-10">
+      <div className="lg:pl-[280px] min-h-screen relative z-10">
         {/* Top Bar */}
         <div className="sticky top-0 z-30 bg-white/[0.02] backdrop-blur-xl border-b border-white/[0.05] px-6 py-4">
           <div className="flex items-center justify-between">

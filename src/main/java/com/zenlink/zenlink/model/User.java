@@ -31,6 +31,8 @@ public class User {
 
     private String phone;
 
+    private Integer age;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;

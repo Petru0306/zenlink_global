@@ -22,9 +22,21 @@ export function ClinicCard({
   onViewClinic,
 }: ClinicCardProps) {
   return (
-    <div className={`bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] rounded-3xl overflow-hidden border border-[#2d4a7c] transition-all hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-600/20 transform duration-300 ${
+    <div
+      className={`bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] rounded-3xl overflow-hidden border border-[#2d4a7c] transition-all hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-600/20 transform duration-300 ${
       featured ? 'ring-2 ring-blue-500/50' : ''
-    }`}>
+    } ${onViewClinic ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1437]' : ''}`}
+      role={onViewClinic ? 'button' : undefined}
+      tabIndex={onViewClinic ? 0 : undefined}
+      onClick={() => onViewClinic?.(id)}
+      onKeyDown={(e) => {
+        if (!onViewClinic) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onViewClinic(id);
+        }
+      }}
+    >
       {/* Image */}
       <div className="relative h-52 overflow-hidden group">
         <ImageWithFallback
@@ -113,7 +125,11 @@ export function ClinicCard({
             <span>View Details</span>
             <ArrowUpRight className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
           </button>
-          <button className="p-3 bg-[#2d4a7c] hover:bg-[#3d5a8c] text-white rounded-xl transition-all hover:scale-110 transform duration-200">
+          <button
+            className="p-3 bg-[#2d4a7c] hover:bg-[#3d5a8c] text-white rounded-xl transition-all hover:scale-110 transform duration-200"
+            onClick={(e) => e.stopPropagation()}
+            type="button"
+          >
             <Phone className="w-5 h-5" />
           </button>
         </div>

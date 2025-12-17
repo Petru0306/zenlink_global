@@ -2,6 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SearchFilters } from '../components/SearchFilters';
 import { ClinicCard } from '../components/ClinicCard';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import type { Clinic } from '../types/clinic';
 
 interface User {
@@ -21,6 +28,7 @@ export default function ClinicsPage() {
   const [specialtyFilter, setSpecialtyFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [ratingFilter, setRatingFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'rating' | 'reviews' | 'name'>('rating');
 
   useEffect(() => {
     // Fetch real clinics from backend
@@ -84,6 +92,24 @@ export default function ClinicsPage() {
     });
   }, [clinics, searchTerm, specialtyFilter, locationFilter, ratingFilter]);
 
+  const sortedClinics = useMemo(() => {
+    const decorated = filteredClinics.map((clinic, idx) => ({ clinic, idx }));
+    decorated.sort((a, b) => {
+      if (sortBy === 'rating') {
+        const diff = (b.clinic.rating ?? 0) - (a.clinic.rating ?? 0);
+        return diff !== 0 ? diff : a.idx - b.idx;
+      }
+      if (sortBy === 'reviews') {
+        const diff = (b.clinic.reviews ?? 0) - (a.clinic.reviews ?? 0);
+        return diff !== 0 ? diff : a.idx - b.idx;
+      }
+      // name A -> Z
+      const nameDiff = a.clinic.name.localeCompare(b.clinic.name, undefined, { sensitivity: 'base' });
+      return nameDiff !== 0 ? nameDiff : a.idx - b.idx;
+    });
+    return decorated.map((x) => x.clinic);
+  }, [filteredClinics, sortBy]);
+
   const navigate = useNavigate();
 
   const handleViewClinic = (clinicId: number) => {
@@ -109,7 +135,7 @@ export default function ClinicsPage() {
             {/* Results Header */}
             <div className="bg-gradient-to-br from-[#111c44] to-[#0b1437] border border-[#2d4a7c] rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-lg">
               <div className="text-white">
-                Showing <span className="text-blue-400">{filteredClinics.length}</span> results
+                Showing <span className="text-blue-400">{sortedClinics.length}</span> results
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 text-[#a3aed0] text-sm bg-white/5 px-3 py-2 rounded-xl border border-[#2d4a7c]">
@@ -118,12 +144,19 @@ export default function ClinicsPage() {
                 </div>
                 <div className="flex items-center gap-2 bg-[#0b1437] border border-[#2d4a7c] rounded-xl px-3 py-2 text-sm text-[#a3aed0]">
                   <span className="text-[#6b7bb5]">Sort:</span>
-                  <select className="bg-transparent outline-none text-white">
-                    <option>Rating</option>
-                    <option>Distance</option>
-                    <option>Reviews</option>
-                    <option>Name</option>
-                  </select>
+                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                    <SelectTrigger
+                      size="sm"
+                      className="h-auto border-0 bg-transparent hover:border-0 px-0 py-0 text-white shadow-none focus-visible:ring-0"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rating">Rating</SelectItem>
+                      <SelectItem value="reviews">Reviews</SelectItem>
+                      <SelectItem value="name">Name</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
@@ -131,7 +164,7 @@ export default function ClinicsPage() {
             {/* Clinic Cards Grid */}
             {loading ? (
               <div className="text-white text-center py-12">Loading clinics...</div>
-            ) : filteredClinics.length === 0 ? (
+            ) : sortedClinics.length === 0 ? (
               <div className="text-white text-center py-12">No clinics found. Be the first to register!</div>
             ) : (
               <div
@@ -141,7 +174,7 @@ export default function ClinicsPage() {
                     : 'space-y-4'
                 }`}
               >
-                {filteredClinics.map((clinic, index) => (
+                {sortedClinics.map((clinic, index) => (
                   <div
                     key={clinic.id}
                     className="animate-fade-in-up"

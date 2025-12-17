@@ -7,6 +7,7 @@ import {
 import { Calendar } from '../../components/Calendar';
 import { VisionSidebar } from './components/VisionSidebar';
 import { Input } from '../../components/ui/input';
+import { AiChat } from '../../components/AiChat';
 
 export default function DoctorDashboard() {
   const { user, setUser } = useAuth();
@@ -606,11 +607,12 @@ export default function DoctorDashboard() {
                 </div>
               </div>
 
-              <div className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
-                <p className="text-white/60 text-center py-12">
-                  AI Assistant feature coming soon...
-                </p>
-              </div>
+              <AiChat
+                userId={String(user?.id || '')}
+                userRole={(user?.role || 'DOCTOR') as any}
+                title="ZenLink AI Assistant"
+                subtitle="Întrebări medicale generale (mod chat, fără fișiere pacient încă)"
+              />
             </div>
           </div>
         );

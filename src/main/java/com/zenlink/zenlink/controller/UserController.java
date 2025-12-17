@@ -1,6 +1,5 @@
 package com.zenlink.zenlink.controller;
 
-import com.zenlink.zenlink.dto.UpdateProfileRequest;
 import com.zenlink.zenlink.dto.UserResponse;
 import com.zenlink.zenlink.model.User;
 import com.zenlink.zenlink.model.UserRole;
@@ -9,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -88,7 +88,7 @@ public class UserController {
      * Update user profile
      */
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponse> updateProfile(
+    public ResponseEntity<?> updateProfile(
             @PathVariable Long id,
             @RequestBody com.zenlink.zenlink.dto.UpdateProfileRequest request) {
         return userRepository.findById(id)
@@ -99,8 +99,20 @@ public class UserController {
                     if (request.getLastName() != null) {
                         user.setLastName(request.getLastName());
                     }
+                    if (request.getEmail() != null) {
+                        String nextEmail = request.getEmail().trim();
+                        if (!nextEmail.isEmpty() && !nextEmail.equalsIgnoreCase(user.getEmail())) {
+                            if (userRepository.existsByEmail(nextEmail)) {
+                                return ResponseEntity.badRequest().body(Map.of("message", "Email already in use"));
+                            }
+                            user.setEmail(nextEmail);
+                        }
+                    }
                     if (request.getPhone() != null) {
                         user.setPhone(request.getPhone());
+                    }
+                    if (request.getAge() != null) {
+                        user.setAge(request.getAge());
                     }
                     User updatedUser = userRepository.save(user);
                     return ResponseEntity.ok(new UserResponse(updatedUser));

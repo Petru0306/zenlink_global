@@ -2,7 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FiltersBar from '../components/FiltersBar';
 import { DoctorCard } from '../components/DoctorCard';
-import { Button } from '../components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import type { Doctor } from '../types/doctor';
 
 interface User {
@@ -20,6 +26,7 @@ export default function DoctorsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [specializationFilter, setSpecializationFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'rating' | 'reviews' | 'name'>('rating');
 
   useEffect(() => {
     // Fetch real doctors from backend
@@ -79,6 +86,24 @@ export default function DoctorsPage() {
     });
   }, [doctors, searchTerm, locationFilter, specializationFilter]);
 
+  const sortedDoctors = useMemo(() => {
+    const decorated = filteredDoctors.map((doctor, idx) => ({ doctor, idx }));
+    decorated.sort((a, b) => {
+      if (sortBy === 'rating') {
+        const diff = (b.doctor.rating ?? 0) - (a.doctor.rating ?? 0);
+        return diff !== 0 ? diff : a.idx - b.idx;
+      }
+      if (sortBy === 'reviews') {
+        const diff = (b.doctor.reviewsCount ?? 0) - (a.doctor.reviewsCount ?? 0);
+        return diff !== 0 ? diff : a.idx - b.idx;
+      }
+      // name A -> Z
+      const nameDiff = a.doctor.name.localeCompare(b.doctor.name, undefined, { sensitivity: 'base' });
+      return nameDiff !== 0 ? nameDiff : a.idx - b.idx;
+    });
+    return decorated.map((x) => x.doctor);
+  }, [filteredDoctors, sortBy]);
+
   const navigate = useNavigate();
 
   const handleViewDoctor = (doctorId: number) => {
@@ -103,30 +128,40 @@ export default function DoctorsPage() {
             {/* Results Header */}
             <div className="bg-gradient-to-br from-[#111c44] to-[#0b1437] border border-[#2d4a7c] rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-lg">
               <div className="text-white">
-                Showing <span className="text-blue-400 font-semibold">{filteredDoctors.length}</span> doctors
+                Showing <span className="text-blue-400 font-semibold">{sortedDoctors.length}</span> doctors
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 text-sm text-[#a3aed0] bg-white/5 px-3 py-2 rounded-xl border border-[#2d4a7c]">
                   <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                   Updated in real-time
                 </div>
-                <Button
-                  variant="outline"
-                  className="bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-xl text-[#a3aed0] hover:text-white hover:border-blue-500 transition-all"
-                >
-                  Sort by Rating
-                </Button>
+                <div className="flex items-center gap-2 bg-[#0b1437] border border-[#2d4a7c] rounded-xl px-3 py-2 text-sm text-[#a3aed0]">
+                  <span className="text-[#6b7bb5]">Sort:</span>
+                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                    <SelectTrigger
+                      size="sm"
+                      className="h-auto border-0 bg-transparent hover:border-0 px-0 py-0 text-white shadow-none focus-visible:ring-0"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rating">Rating</SelectItem>
+                      <SelectItem value="reviews">Reviews</SelectItem>
+                      <SelectItem value="name">Name</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
             {/* Doctor Cards */}
             {loading ? (
               <div className="text-white text-center py-12">Loading doctors...</div>
-            ) : filteredDoctors.length === 0 ? (
+            ) : sortedDoctors.length === 0 ? (
               <div className="text-white text-center py-12">No doctors found. Be the first to register!</div>
             ) : (
               <div className="space-y-4">
-                {filteredDoctors.map((doctor, index) => (
+                {sortedDoctors.map((doctor, index) => (
                   <div
                     key={doctor.id}
                     className="animate-fade-in-up"

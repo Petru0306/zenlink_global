@@ -16,6 +16,7 @@ public class UserResponse {
     private String firstName;
     private String lastName;
     private String phone;
+    private Integer age;
     private UserRole role;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -27,6 +28,7 @@ public class UserResponse {
         this.firstName = user.getFirstName();
         this.lastName = user.getLastName();
         this.phone = user.getPhone();
+        this.age = user.getAge();
         this.role = user.getRole();
         this.createdAt = user.getCreatedAt();
         this.updatedAt = user.getUpdatedAt();

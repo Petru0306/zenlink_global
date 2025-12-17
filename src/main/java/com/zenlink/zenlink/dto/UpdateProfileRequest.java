@@ -6,7 +6,9 @@ import lombok.Data;
 public class UpdateProfileRequest {
     private String firstName;
     private String lastName;
+    private String email;
     private String phone;
+    private Integer age;
     // Add more fields as needed (specialization, bio, etc.)
 }
 

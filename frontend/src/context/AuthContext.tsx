@@ -8,6 +8,7 @@ export interface User {
   firstName: string;
   lastName: string;
   phone?: string;
+  age?: number;
   role?: UserRole;
   token?: string;
 }
