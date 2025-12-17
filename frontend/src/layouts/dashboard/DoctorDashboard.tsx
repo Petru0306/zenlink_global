@@ -93,18 +93,32 @@ export default function DoctorDashboard() {
     const map = new Map();
     upcomingAppointments.forEach((apt) => {
       const key = apt.patientName || `patient-${apt.id}`;
-      if (!map.has(key)) {
+      const existing = map.get(key);
+      const aptInfo = {
+        date: apt.date,
+        time: apt.time,
+        status: apt.status,
+      };
+      if (!existing) {
         map.set(key, {
           id: key,
           name: apt.patientName || 'Patient',
           email: apt.raw?.patientEmail || 'N/A',
           phone: apt.raw?.patientPhone || 'N/A',
-          nextAppointment: {
-            date: apt.date,
-            time: apt.time,
-            status: apt.status,
+          medical: {
+            bloodType: apt.raw?.patientBloodType || apt.raw?.bloodType || 'N/A',
+            allergies: apt.raw?.patientAllergies || apt.raw?.allergies || '',
+            chronic: apt.raw?.patientChronic || apt.raw?.chronicConditions || '',
+            medications: apt.raw?.patientMedications || apt.raw?.medications || '',
+            insurance: apt.raw?.patientInsurance || apt.raw?.insuranceNumber || '',
           },
+          nextAppointment: aptInfo,
+          appointments: [aptInfo],
+          files: apt.raw?.patientFiles || apt.raw?.files || [],
+          profile: apt.raw?.patientProfile || null,
         });
+      } else {
+        existing.appointments.push(aptInfo);
       }
     });
     return Array.from(map.values());
@@ -646,7 +660,7 @@ export default function DoctorDashboard() {
 
       {actionModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-6">
-          <div className="bg-[#0b1437] border border-white/10 rounded-2xl max-w-lg w-full p-6 space-y-4">
+          <div className="bg-[#0b1437] border border-white/10 rounded-2xl max-w-3xl w-full p-6 space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-white text-lg font-semibold">
@@ -663,11 +677,84 @@ export default function DoctorDashboard() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 text-white/70 text-sm">
-              {actionModal.type === 'files'
-                ? 'Patient file viewer will be available in the doctor portal. For now, patient files cannot be opened directly from here.'
-                : 'Patient medical profile will be available in the doctor portal. For now, it cannot be opened directly from here.'}
-            </div>
+
+            {actionModal.type === 'files' ? (
+              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 text-white/70 text-sm space-y-3">
+                {actionModal.patient?.files && actionModal.patient.files.length > 0 ? (
+                  actionModal.patient.files.map((file: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white">{file.name || 'Fișier'}</p>
+                        <p className="text-white/40 text-xs">
+                          {file.type || 'N/A'} {file.size ? `• ${file.size}` : ''}
+                        </p>
+                      </div>
+                      <span className="text-white/50 text-xs">nu poate fi deschis aici</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-white/60">Niciun fișier disponibil pentru acest pacient.</p>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 text-white/70 text-sm space-y-3">
+                <div>
+                  <p className="text-white text-sm">Email</p>
+                  <p className="text-white/60 text-sm">{actionModal.patient?.email || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-white text-sm">Telefon</p>
+                  <p className="text-white/60 text-sm">{actionModal.patient?.phone || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-white text-sm">Grupă sangvină</p>
+                  <p className="text-white/60 text-sm">{actionModal.patient?.medical?.bloodType || 'N/A'}</p>
+                </div>
+                {actionModal.patient?.medical?.allergies && (
+                  <div>
+                    <p className="text-white text-sm">Alergii</p>
+                    <p className="text-white/60 text-sm">{actionModal.patient.medical.allergies}</p>
+                  </div>
+                )}
+                {actionModal.patient?.medical?.chronic && (
+                  <div>
+                    <p className="text-white text-sm">Condiții cronice</p>
+                    <p className="text-white/60 text-sm">{actionModal.patient.medical.chronic}</p>
+                  </div>
+                )}
+                {actionModal.patient?.medical?.medications && (
+                  <div>
+                    <p className="text-white text-sm">Medicație</p>
+                    <p className="text-white/60 text-sm">{actionModal.patient.medical.medications}</p>
+                  </div>
+                )}
+                {actionModal.patient?.medical?.insurance && (
+                  <div>
+                    <p className="text-white text-sm">Asigurare</p>
+                    <p className="text-white/60 text-sm">{actionModal.patient.medical.insurance}</p>
+                  </div>
+                )}
+                {actionModal.patient?.appointments && actionModal.patient.appointments.length > 0 && (
+                  <div>
+                    <p className="text-white text-sm mb-2">Programări viitoare</p>
+                    <div className="space-y-2">
+                      {actionModal.patient.appointments.map((apt: any, idx: number) => (
+                        <div key={idx} className="flex items-center gap-3 text-white/70 text-sm">
+                          <span className="flex items-center gap-1">
+                            <CalendarIcon className="w-4 h-4" />
+                            {apt.date} {apt.time}
+                          </span>
+                          <span className="px-2 py-1 bg-green-500/15 text-green-300 rounded-lg text-xs">
+                            {apt.status || 'upcoming'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex justify-end">
               <button
                 onClick={() => setActionModal(null)}

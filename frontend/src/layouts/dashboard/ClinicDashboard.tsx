@@ -4,6 +4,7 @@ import {
   Building2, Users, UserCheck, CreditCard, Bot, 
   Mail, Phone, Edit, Calendar, Stethoscope
 } from 'lucide-react';
+import { VisionSidebar } from './components/VisionSidebar';
 
 export default function ClinicDashboard() {
   const { user } = useAuth();
@@ -13,29 +14,12 @@ export default function ClinicDashboard() {
   // Real data - fetched from backend
   const [doctors, setDoctors] = useState<any[]>([]);
   const [clinicPatients, setClinicPatients] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Fetch doctors from backend
-    fetch('http://localhost:8080/api/users/doctors')
-      .then(res => res.json())
-      .then((users: any[]) => {
-        const transformedDoctors = users.map(user => ({
-          id: user.id,
-          name: `Dr. ${user.firstName} ${user.lastName}`,
-          specialization: 'General Medicine', // Default until profile is completed
-          email: user.email,
-          phone: user.phone || 'N/A',
-        }));
-        setDoctors(transformedDoctors);
-        // TODO: Fetch clinic's patients when endpoint is ready
-        setClinicPatients([]);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error fetching doctors:', err);
-        setLoading(false);
-      });
+    // Future: replace with GET /clinics/{id}/invites or /clinics/{id}/doctors
+    setDoctors([]);
+    setClinicPatients([]);
   }, []);
 
   const subscriptions = {
@@ -48,7 +32,7 @@ export default function ClinicDashboard() {
 
   const sidebarItems = [
     { id: 'overview', label: 'Clinic Overview', icon: Building2 },
-    { id: 'doctors', label: 'Our Doctors', icon: UserCheck },
+    { id: 'doctors', label: 'Doctors', icon: UserCheck },
     { id: 'patients', label: 'Patients', icon: Users },
     { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
     { id: 'ai', label: 'AI Assistant', icon: Bot },
@@ -331,56 +315,15 @@ export default function ClinicDashboard() {
         <div className="absolute -bottom-[15%] -left-[5%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-[#0e7490]/25 via-[#0891b2]/15 to-transparent blur-[80px]" />
       </div>
 
-      {/* Sidebar */}
-      <div className={`fixed left-0 top-0 h-full w-64 bg-white/[0.02] backdrop-blur-xl border-r border-white/[0.05] z-40 transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-white font-semibold">Clinic Portal</span>
-          </div>
+      <VisionSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        menuItems={sidebarItems}
+      />
 
-          <nav className="space-y-2">
-            {sidebarItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveSection(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    activeSection === item.id
-                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                      : 'text-white/60 hover:text-white hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="lg:pl-64 min-h-screen relative z-10">
-        {/* Top Bar */}
-        <div className="sticky top-0 z-30 bg-white/[0.02] backdrop-blur-xl border-b border-white/[0.05] px-6 py-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden text-white/60 hover:text-white"
-            >
-              Menu
-            </button>
-            <div className="flex items-center gap-4">
-              <span className="text-white/60">{user?.firstName} {user?.lastName} Clinic</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Content Area */}
+      <div className="lg:pl-[280px] min-h-screen relative z-10 pt-12 lg:pt-16">
         <main className="p-8 lg:p-12 max-w-[1600px] mx-auto">
           {renderContent()}
         </main>
