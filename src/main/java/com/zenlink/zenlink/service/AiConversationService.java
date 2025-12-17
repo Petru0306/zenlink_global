@@ -27,17 +27,19 @@ public class AiConversationService {
     }
 
     @Transactional
-    public AiConversation createConversation(Long userId, UserRole userRole) {
+    public AiConversation createConversation(Long userId, UserRole userRole, String scopeType, String scopeId) {
         AiConversation c = new AiConversation();
         c.setUserId(userId);
         c.setUserRole(userRole);
         c.setTitle(null);
+        c.setScopeType(scopeType);
+        c.setScopeId(scopeId);
         return conversationRepository.save(c);
     }
 
     @Transactional(readOnly = true)
-    public List<AiConversation> listConversations(Long userId, UserRole userRole) {
-        return conversationRepository.findByUserIdAndUserRoleOrderByUpdatedAtDesc(userId, userRole);
+    public List<AiConversation> listConversations(Long userId, UserRole userRole, String scopeType, String scopeId) {
+        return conversationRepository.findByUserIdAndUserRoleAndScopeTypeAndScopeIdOrderByUpdatedAtDesc(userId, userRole, scopeType, scopeId);
     }
 
     @Transactional(readOnly = true)
@@ -46,8 +48,8 @@ public class AiConversationService {
     }
 
     @Transactional(readOnly = true)
-    public AiConversation requireConversation(Long conversationId, Long userId, UserRole userRole) {
-        return conversationRepository.findByIdAndUserIdAndUserRole(conversationId, userId, userRole)
+    public AiConversation requireConversation(Long conversationId, Long userId, UserRole userRole, String scopeType, String scopeId) {
+        return conversationRepository.findByIdAndUserIdAndUserRoleAndScopeTypeAndScopeId(conversationId, userId, userRole, scopeType, scopeId)
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
     }
 
@@ -77,7 +79,13 @@ public class AiConversationService {
 
     @Transactional
     public void deleteConversation(Long conversationId, Long userId, UserRole userRole) {
-        AiConversation c = requireConversation(conversationId, userId, userRole);
+        // Delete is now scoped; callers should pass correct scope.
+        throw new UnsupportedOperationException("Use deleteConversationScoped");
+    }
+
+    @Transactional
+    public void deleteConversationScoped(Long conversationId, Long userId, UserRole userRole, String scopeType, String scopeId) {
+        AiConversation c = requireConversation(conversationId, userId, userRole, scopeType, scopeId);
         conversationRepository.delete(c);
     }
 

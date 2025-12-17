@@ -24,6 +24,13 @@ public class AiConversation {
     @Column
     private String title;
 
+    // Keep nullable to avoid breaking existing rows on ddl-auto=update.
+    @Column(name = "scope_type")
+    private String scopeType = "GENERAL"; // GENERAL|PATIENT|FILE
+
+    @Column(name = "scope_id")
+    private String scopeId; // patientId (Long) or fileId (UUID) as string
+
     @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AiChatMessage> messages = new ArrayList<>();
 
@@ -81,6 +88,22 @@ public class AiConversation {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getScopeType() {
+        return scopeType;
+    }
+
+    public void setScopeType(String scopeType) {
+        this.scopeType = scopeType;
+    }
+
+    public String getScopeId() {
+        return scopeId;
+    }
+
+    public void setScopeId(String scopeId) {
+        this.scopeId = scopeId;
     }
 }
 

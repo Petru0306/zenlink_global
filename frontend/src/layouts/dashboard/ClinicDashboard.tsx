@@ -11,6 +11,7 @@ export default function ClinicDashboard() {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState<string>('');
 
   // Real data - fetched from backend
   const [doctors, setDoctors] = useState<any[]>([]);
@@ -22,6 +23,19 @@ export default function ClinicDashboard() {
     setDoctors([]);
     setClinicPatients([]);
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (activeSection !== 'ai') return;
+
+    fetch(`http://localhost:8080/api/clinics/${user.id}/patients`)
+      .then((r) => r.json())
+      .then((list) => setClinicPatients(Array.isArray(list) ? list : []))
+      .catch((err) => {
+        console.error('Error fetching clinic patients:', err);
+        setClinicPatients([]);
+      });
+  }, [activeSection, user?.id]);
 
   const subscriptions = {
     plan: 'Premium',
@@ -294,12 +308,41 @@ export default function ClinicDashboard() {
                 </div>
               </div>
 
-              <AiChat
-                userId={String(user?.id || '')}
-                userRole={(user?.role || 'CLINIC') as any}
-                title="ZenLink AI Assistant"
-                subtitle="Întrebări despre gestionare clinică și suport medical (mod chat)"
-              />
+              <div className="mb-4">
+                <label className="block text-white/60 text-sm mb-2">Selectează pacientul</label>
+                <select
+                  value={selectedPatientId}
+                  onChange={(e) => setSelectedPatientId(e.target.value)}
+                  className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2 text-white text-sm"
+                >
+                  <option value="">— alege pacient —</option>
+                  {clinicPatients.map((p: any) => (
+                    <option key={String(p.id)} value={String(p.id)}>
+                      {p.name || `Patient ${p.id}`}
+                    </option>
+                  ))}
+                </select>
+                {clinicPatients.length === 0 && (
+                  <p className="text-white/40 text-xs mt-2">
+                    Nu există pacienți disponibili. Un clinic vede pacienții doar dacă are doctori asociați (și acei doctori au programări).
+                  </p>
+                )}
+              </div>
+
+              {selectedPatientId ? (
+                <AiChat
+                  userId={String(user?.id || '')}
+                  userRole={(user?.role || 'CLINIC') as any}
+                  scopeType="PATIENT"
+                  scopeId={selectedPatientId}
+                  title="ZenLink AI Assistant"
+                  subtitle="Întrebări despre pacientul selectat (cu citări din fișierele pacientului)."
+                />
+              ) : (
+                <div className="text-white/50 text-sm bg-white/[0.02] border border-white/[0.05] rounded-xl p-4">
+                  Selectează un pacient ca să poți folosi AI cu fișierele lui.
+                </div>
+              )}
             </div>
           </div>
         );

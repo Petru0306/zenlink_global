@@ -41,6 +41,10 @@ public class OllamaChatService {
     }
 
     public String streamChat(List<com.zenlink.zenlink.dto.AiMessage> userMessages, OutputStream outputStream) throws Exception {
+        return streamChat(userMessages, null, outputStream);
+    }
+
+    public String streamChat(List<com.zenlink.zenlink.dto.AiMessage> userMessages, String extraSystemContext, OutputStream outputStream) throws Exception {
         StringBuilder assistantText = new StringBuilder();
 
         List<Map<String, String>> messages = new ArrayList<>();
@@ -53,8 +57,14 @@ public class OllamaChatService {
                 - Semnalează urgențe / semne de alarmă când e cazul.
                 - Separă clar: fapte vs ipoteze.
                 - Nu pretinde că ești medic și recomandă consult medical pentru decizii finale.
+                - Răspunsul trebuie să fie STRUCTURAT: Rezumat, Fapte extrase, Semne de alarmă, Diagnostic diferențial, Pași următori.
+                - Include CITĂRI OBLIGATORII pentru fiecare afirmație factuală: (Fișier, pagină, citat).
                 """
         ));
+
+        if (extraSystemContext != null && !extraSystemContext.trim().isEmpty()) {
+            messages.add(Map.of("role", "system", "content", extraSystemContext));
+        }
 
         if (userMessages != null) {
             for (com.zenlink.zenlink.dto.AiMessage m : userMessages) {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Plus, Trash2 } from 'lucide-react';
 
 type ChatRole = 'user' | 'assistant';
 
@@ -11,10 +11,13 @@ type ChatMessage = {
 type Props = {
   userId: string;
   userRole: 'PATIENT' | 'DOCTOR' | 'CLINIC';
+  scopeType: 'GENERAL' | 'PATIENT' | 'FILE';
+  scopeId?: string | null;
   title?: string;
   subtitle?: string;
   backendBaseUrl?: string;
   initialMessage?: string;
+  layout?: 'split' | 'stacked';
 };
 
 function defaultBackendBaseUrl() {
@@ -25,10 +28,13 @@ function defaultBackendBaseUrl() {
 export function AiChat({
   userId,
   userRole,
+  scopeType,
+  scopeId,
   title = 'Chat AI',
   subtitle = 'Pune întrebări și primește răspunsuri în timp real',
   backendBaseUrl,
   initialMessage = 'Bună! Sunt asistentul tău AI. Cu ce te pot ajuta?',
+  layout = 'split',
 }: Props) {
   const baseUrl = backendBaseUrl || defaultBackendBaseUrl();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -52,7 +58,7 @@ export function AiChat({
       const res = await fetch(
         `${baseUrl}/api/ai/conversations?userId=${encodeURIComponent(String(Number(userId)))}&userRole=${encodeURIComponent(
           userRole
-        )}`
+        )}&scopeType=${encodeURIComponent(scopeType)}&scopeId=${encodeURIComponent(scopeId ? String(scopeId) : '')}`
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -89,7 +95,9 @@ export function AiChat({
       const res = await fetch(
         `${baseUrl}/api/ai/conversations/${conversationId}/messages?userId=${encodeURIComponent(
           String(Number(userId))
-        )}&userRole=${encodeURIComponent(userRole)}`
+        )}&userRole=${encodeURIComponent(userRole)}&scopeType=${encodeURIComponent(scopeType)}&scopeId=${encodeURIComponent(
+          scopeId ? String(scopeId) : ''
+        )}`
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -116,7 +124,7 @@ export function AiChat({
     const res = await fetch(`${baseUrl}/api/ai/conversations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: Number(userId), userRole }),
+      body: JSON.stringify({ userId: Number(userId), userRole, scopeType, scopeId: scopeId ? String(scopeId) : null }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const c = await res.json();
@@ -131,7 +139,7 @@ export function AiChat({
     const res = await fetch(
       `${baseUrl}/api/ai/conversations/${id}?userId=${encodeURIComponent(String(Number(userId)))}&userRole=${encodeURIComponent(
         userRole
-      )}`,
+      )}&scopeType=${encodeURIComponent(scopeType)}&scopeId=${encodeURIComponent(scopeId ? String(scopeId) : '')}`,
       { method: 'DELETE' }
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -168,6 +176,8 @@ export function AiChat({
           conversationId,
           userId: Number(userId),
           userRole,
+          scopeType,
+          scopeId: scopeId ? String(scopeId) : null,
           userMessage: text,
         }),
         signal: abort.signal,
@@ -212,6 +222,8 @@ export function AiChat({
     abortRef.current?.abort();
   }
 
+  const isStacked = layout === 'stacked';
+
   return (
     <div className="bg-white/[0.02] rounded-2xl border border-white/[0.05] overflow-hidden">
       <div className="p-6 border-b border-white/[0.05]">
@@ -221,12 +233,32 @@ export function AiChat({
             <p className="text-white/40 text-sm">{subtitle}</p>
           </div>
           <div className="flex items-center gap-2">
+            {scopeType === 'PATIENT' && scopeId && (
+              <button
+                onClick={() => {
+                  fetch(`${baseUrl}/api/ai/rag/patient/${encodeURIComponent(String(scopeId))}/index-all`, { method: 'POST' })
+                    .then((r) => {
+                      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                      // Reload messages; indexing may take time but this triggers the job.
+                    })
+                    .catch(() => {});
+                }}
+                className="px-3 py-2 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl text-sm border border-white/[0.05]"
+                title="Index all files for this patient"
+              >
+                Index all
+              </button>
+            )}
             <button
               onClick={() => setSidebarOpen((v) => !v)}
               className="px-3 py-2 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl text-sm border border-white/[0.05]"
               title={sidebarOpen ? 'Ascunde conversațiile' : 'Arată conversațiile'}
             >
-              {sidebarOpen ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+              {isStacked ? (
+                sidebarOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+              ) : (
+                sidebarOpen ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />
+              )}
             </button>
             {isStreaming && (
               <button
@@ -240,8 +272,62 @@ export function AiChat({
         </div>
       </div>
 
-      <div className="flex">
-        <div className="flex-1 p-6">
+      <div className={isStacked ? 'p-4' : 'flex'}>
+        <div className={isStacked ? '' : 'flex-1 p-6'}>
+          {isStacked && sidebarOpen && (
+            <div className="mb-4 bg-white/[0.02] border border-white/[0.05] rounded-xl p-3">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="text-white/80 text-sm font-semibold">Conversații</div>
+                <button
+                  onClick={() =>
+                    createConversation().catch((e) => {
+                      setMessages([{ role: 'assistant', content: `Eroare la creare conversație: ${String(e?.message || e)}` }]);
+                    })
+                  }
+                  className="px-2 py-2 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl border border-white/[0.05]"
+                  title="Conversație nouă"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-2 max-h-[180px] overflow-auto pr-1">
+                {conversations.length === 0 && (
+                  <div className="text-white/40 text-sm">Nu ai conversații încă. Apasă „+” pentru a începe.</div>
+                )}
+                {conversations.map((c) => {
+                  const selected = c.id === conversationId;
+                  return (
+                    <div
+                      key={c.id}
+                      className={[
+                        'group flex items-center gap-2 px-3 py-2 rounded-xl border text-sm cursor-pointer',
+                        selected
+                          ? 'bg-white/[0.08] border-white/[0.15] text-white'
+                          : 'bg-white/[0.02] hover:bg-white/[0.05] border-white/[0.05] text-white/80',
+                      ].join(' ')}
+                      onClick={() => setConversationId(c.id)}
+                    >
+                      <div className="flex-1 truncate">{c.title && c.title.trim().length > 0 ? c.title : 'Conversație nouă'}</div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteConversation(c.id).catch((err) => {
+                            setMessages([{ role: 'assistant', content: `Eroare la ștergere: ${String(err?.message || err)}` }]);
+                          });
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-white/50 hover:text-white"
+                        title="Șterge conversația"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="bg-white/[0.03] rounded-xl border border-white/[0.05] p-4 max-h-[420px] overflow-auto space-y-3">
             {messages.length === 0 && (
               <div className="text-white/50 text-sm">
@@ -292,7 +378,7 @@ export function AiChat({
           </div>
         </div>
 
-        {sidebarOpen && (
+        {!isStacked && sidebarOpen && (
           <div className="w-[280px] border-l border-white/[0.05] p-4 bg-white/[0.01]">
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="text-white/80 text-sm font-semibold">Conversații</div>

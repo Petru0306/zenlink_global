@@ -10,8 +10,20 @@ import java.util.Optional;
 
 @Repository
 public interface AiConversationRepository extends JpaRepository<AiConversation, Long> {
-    List<AiConversation> findByUserIdAndUserRoleOrderByUpdatedAtDesc(Long userId, UserRole userRole);
-    Optional<AiConversation> findByIdAndUserIdAndUserRole(Long id, Long userId, UserRole userRole);
+    List<AiConversation> findByUserIdAndUserRoleAndScopeTypeAndScopeIdOrderByUpdatedAtDesc(
+            Long userId,
+            UserRole userRole,
+            String scopeType,
+            String scopeId
+    );
+
+    Optional<AiConversation> findByIdAndUserIdAndUserRoleAndScopeTypeAndScopeId(
+            Long id,
+            Long userId,
+            UserRole userRole,
+            String scopeType,
+            String scopeId
+    );
 }
 
 

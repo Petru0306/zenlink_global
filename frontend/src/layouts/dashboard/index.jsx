@@ -11,6 +11,7 @@ import {
   Upload,
   CheckCircle,
   XCircle,
+  X,
   AlertCircle,
   Stethoscope,
   Mail,
@@ -54,6 +55,7 @@ export default function Dashboard() {
   const [medicalEditing, setMedicalEditing] = useState(false);
   const [files, setFiles] = useState([]);
   const [previewFile, setPreviewFile] = useState(null);
+  const [previewAiOpen, setPreviewAiOpen] = useState(false);
   const [renamingId, setRenamingId] = useState(null);
   const [renamingValue, setRenamingValue] = useState('');
 
@@ -122,6 +124,11 @@ export default function Dashboard() {
       alert('Nu am putut încărca fișierul pentru previzualizare.');
     }
   };
+
+  // If the preview closes, close the AI overlay as well.
+  useEffect(() => {
+    if (!previewFile) setPreviewAiOpen(false);
+  }, [previewFile]);
 
   // Load user-bound medical data from localStorage
   useEffect(() => {
@@ -1195,7 +1202,10 @@ export default function Dashboard() {
                     </div>
                     <button
                       className="text-white/60 hover:text-white"
-                      onClick={() => setPreviewFile(null)}
+                      onClick={() => {
+                        setPreviewAiOpen(false);
+                        setPreviewFile(null);
+                      }}
                     >
                       Înapoi
                     </button>
@@ -1205,10 +1215,44 @@ export default function Dashboard() {
                       type="button"
                       aria-label="AI"
                       className="absolute bottom-4 left-4 z-10 w-12 h-12 rounded-full bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.12] text-white flex items-center justify-center"
-                      onClick={() => {}}
+                      onClick={() => setPreviewAiOpen(true)}
                     >
                       <Brain className="w-5 h-5" />
                     </button>
+                    {previewAiOpen && (
+                      <div className="absolute inset-y-0 right-0 w-[360px] max-w-[90vw] bg-[#0b1437]/95 backdrop-blur-md border-l border-white/10 z-20 flex flex-col">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center">
+                              <Brain className="w-4 h-4 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-white font-semibold leading-tight">AI</p>
+                              <p className="text-white/40 text-xs leading-tight">Pentru fișierul curent</p>
+                            </div>
+                          </div>
+                          <button
+                            className="text-white/60 hover:text-white"
+                            onClick={() => setPreviewAiOpen(false)}
+                            aria-label="Închide AI"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <div className="flex-1 overflow-auto p-3">
+                          <AiChat
+                            userId={String(user?.id || '')}
+                            userRole={user?.role || 'PATIENT'}
+                            scopeType="FILE"
+                            scopeId={String(previewFile?.id || '')}
+                            layout="stacked"
+                            title="Chat document"
+                            subtitle="Întrebări doar despre acest fișier (cu citări)."
+                          />
+                        </div>
+                      </div>
+                    )}
                     {previewFile.type?.startsWith('image/') ? (
                       previewFile.dataUrl ? (
                         <img src={previewFile.dataUrl} alt={previewFile.name} className="max-h-[80vh] object-contain" />
@@ -1470,6 +1514,8 @@ export default function Dashboard() {
               <AiChat
                 userId={String(user?.id || '')}
                 userRole={user?.role || 'PATIENT'}
+                scopeType="PATIENT"
+                scopeId={String(user?.id || '')}
                 title="Chat AI"
                 subtitle="Pune întrebări despre sănătate (fără fișiere încă). Răspunsurile sunt în română."
                 initialMessage="Bună! Sunt asistentul tău AI medical. Cu ce te pot ajuta?"
