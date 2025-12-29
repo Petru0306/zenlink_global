@@ -117,55 +117,71 @@ export default function ClinicsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b1437]">
-      <div className="p-8 space-y-6">
+    <div className="min-h-screen bg-[#0a0e1a] relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-[20%] -right-[10%] w-[800px] h-[800px] rounded-full bg-gradient-to-br from-purple-500/30 via-purple-600/20 to-transparent blur-[100px]" />
+        <div className="absolute -bottom-[15%] -left-[5%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-purple-400/25 via-purple-500/15 to-transparent blur-[80px]" />
+        <div className="absolute top-[40%] right-[30%] w-[400px] h-[400px] rounded-full bg-gradient-to-br from-purple-400/20 to-transparent blur-[90px]" />
+      </div>
+
+      <div className="p-8 space-y-6 relative z-10">
         {/* Header */}
-        <div className="animate-fade-in">
-          <h1 className="text-white text-4xl mb-2 font-semibold">Clinics Directory</h1>
-          <p className="text-[#a3aed0]">
+        <div className="animate-fade-in-up">
+          <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent tracking-tight">
+            Clinics Directory
+          </h1>
+          <p className="text-white/60 text-lg font-light tracking-wide">
             Browse and manage {clinics.length} medical facilities in your network
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8 items-start">
           {/* Search and Filters */}
           <SearchFilters onViewChange={setViewType} currentView={viewType} onSearch={handleSearch} />
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Results Header */}
-            <div className="bg-gradient-to-br from-[#111c44] to-[#0b1437] border border-[#2d4a7c] rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-lg">
-              <div className="text-white">
-                Showing <span className="text-blue-400">{sortedClinics.length}</span> results
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-[#a3aed0] text-sm bg-white/5 px-3 py-2 rounded-xl border border-[#2d4a7c]">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span>{clinics.filter(c => c.featured).length} Featured Clinics</span>
+            <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30 animate-fade-in-up">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="text-white">
+                  Showing <span className="text-purple-300 font-bold text-lg">{sortedClinics.length}</span> results
                 </div>
-                <div className="flex items-center gap-2 bg-[#0b1437] border border-[#2d4a7c] rounded-xl px-3 py-2 text-sm text-[#a3aed0]">
-                  <span className="text-[#6b7bb5]">Sort:</span>
-                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-                    <SelectTrigger
-                      size="sm"
-                      className="h-auto border-0 bg-transparent hover:border-0 px-0 py-0 text-white shadow-none focus-visible:ring-0"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="rating">Rating</SelectItem>
-                      <SelectItem value="reviews">Reviews</SelectItem>
-                      <SelectItem value="name">Name</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-purple-200/70 text-sm bg-white/5 px-4 py-2 rounded-xl border border-white/10 backdrop-blur-sm">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                    <span>{clinics.filter(c => c.featured).length} Featured Clinics</span>
+                  </div>
+                  <div className="flex items-center gap-2 backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white">
+                    <span className="text-purple-200/70">Sort:</span>
+                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                      <SelectTrigger
+                        size="sm"
+                        className="h-auto border-0 bg-transparent hover:border-0 px-0 py-0 text-white shadow-none focus-visible:ring-0"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-black/90 backdrop-blur-xl text-white border-purple-500/30">
+                        <SelectItem value="rating" className="hover:bg-purple-500/20">Rating</SelectItem>
+                        <SelectItem value="reviews" className="hover:bg-purple-500/20">Reviews</SelectItem>
+                        <SelectItem value="name" className="hover:bg-purple-500/20">Name</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Clinic Cards Grid */}
             {loading ? (
-              <div className="text-white text-center py-12">Loading clinics...</div>
+              <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-12 border border-white/10 text-center">
+                <p className="text-white/60 text-lg">Loading clinics...</p>
+              </div>
             ) : sortedClinics.length === 0 ? (
-              <div className="text-white text-center py-12">No clinics found. Be the first to register!</div>
+              <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-12 border border-white/10 text-center">
+                <p className="text-white/60 text-lg">No clinics found. Be the first to register!</p>
+              </div>
             ) : (
               <div
                 className={`${
@@ -188,7 +204,7 @@ export default function ClinicsPage() {
 
             {/* Load More */}
             <div className="flex justify-center pt-4">
-              <button className="bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] text-white px-10 py-4 rounded-xl border border-[#2d4a7c] hover:border-blue-500 transition-all shadow-lg hover:shadow-blue-500/20 hover:scale-105 transform duration-300">
+              <button className="px-10 py-4 backdrop-blur-xl bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-xl border border-purple-500/30 transition-all shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transform duration-300 font-semibold">
                 Load More Clinics
               </button>
             </div>

@@ -1075,41 +1075,55 @@ export default function Dashboard() {
 
       case 'medical':
         return (
-          <div className="space-y-8">
-            <div className="mb-12">
-              <h1 className="text-white mb-2">Profil Medical</h1>
-              <p className="text-white/40">Informații medicale detaliate și istoric complet</p>
+          <div className="relative space-y-8 animate-fade-in-up">
+            {/* Animated Background Elements */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+              <div className="absolute top-1/2 right-1/4 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
+            </div>
+
+            <div className="mb-12 relative z-10">
+              <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent tracking-tight">
+                Profil Medical
+              </h1>
+              <p className="text-white/60 text-lg font-light tracking-wide">Informații medicale detaliate și istoric complet</p>
             </div>
             
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
-                <h3 className="text-white text-lg font-semibold mb-4">Date inițiale</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-white/40 text-sm">Grupă Sânge</label>
-                    <p className="text-white">{medicalProfile.bloodType}</p>
-                  </div>
-                  <div>
-                    <label className="text-white/40 text-sm">Alergii</label>
-                    <p className="text-white">{medicalProfile.allergies}</p>
-                  </div>
-                  <div>
-                    <label className="text-white/40 text-sm">Condiții Cronice</label>
-                    <p className="text-white">{medicalProfile.chronicConditions}</p>
+            <div className="grid md:grid-cols-2 gap-8 relative z-10">
+              <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                <div className="relative z-10">
+                  <h3 className="text-white text-2xl font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Date inițiale</h3>
+                  <div className="space-y-5">
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300">
+                      <label className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2 block">Grupă Sânge</label>
+                      <p className="text-white text-lg font-semibold">{medicalProfile.bloodType || '—'}</p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300">
+                      <label className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2 block">Alergii</label>
+                      <p className="text-white text-lg font-semibold">{medicalProfile.allergies || '—'}</p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300">
+                      <label className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2 block">Condiții Cronice</label>
+                      <p className="text-white text-lg font-semibold">{medicalProfile.chronicConditions || '—'}</p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
-                <h3 className="text-white text-lg font-semibold mb-4">Date introduse de medic</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-white/40 text-sm">Medicație Curentă</label>
-                    <p className="text-white">{medicalProfile.medications}</p>
-                  </div>
-                  <div>
-                    <label className="text-white/40 text-sm">Număr Asigurare</label>
-                    <p className="text-white">{medicalProfile.insuranceNumber}</p>
+              <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                <div className="relative z-10">
+                  <h3 className="text-white text-2xl font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Date introduse de medic</h3>
+                  <div className="space-y-5">
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300">
+                      <label className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2 block">Medicație Curentă</label>
+                      <p className="text-white text-lg font-semibold">{medicalProfile.medications || '—'}</p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300">
+                      <label className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2 block">Număr Asigurare</label>
+                      <p className="text-white text-lg font-semibold">{medicalProfile.insuranceNumber || '—'}</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1119,24 +1133,33 @@ export default function Dashboard() {
 
       case 'files':
         return (
-          <div className="space-y-6">
-            <div className="mb-12">
-              <h1 className="text-white mb-2">Fișiere Medicale</h1>
-              <p className="text-white/40">Gestionează documentele și rezultatele medicale</p>
+          <div className="relative space-y-8 animate-fade-in-up">
+            {/* Animated Background Elements */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+              <div className="absolute top-1/2 right-1/4 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
             </div>
 
-            <div className="mb-8">
+            <div className="mb-12 relative z-10">
+              <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent tracking-tight">
+                Fișiere Medicale
+              </h1>
+              <p className="text-white/60 text-lg font-light tracking-wide">Gestionează documentele și rezultatele medicale</p>
+            </div>
+
+            <div className="mb-8 relative z-10">
               <div
-                className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05] border-dashed hover:border-white/10 transition-all duration-200 cursor-pointer"
+                className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-10 border-2 border-dashed border-white/20 hover:border-purple-500/40 transition-all duration-500 cursor-pointer hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/20"
                 onClick={() => document.getElementById('file-upload-input')?.click()}
               >
-                <div className="flex flex-col items-center justify-center text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-white/[0.05] flex items-center justify-center mb-4">
-                    <Upload className="w-8 h-8 text-white/40" />
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                <div className="relative z-10 flex flex-col items-center justify-center text-center">
+                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border-2 border-purple-400/50 flex items-center justify-center mb-6 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform duration-300">
+                    <Upload className="w-10 h-10 text-purple-200" />
                   </div>
-                  <h3 className="text-white mb-2">Încarcă documente noi</h3>
-                  <p className="text-white/40 text-sm mb-4">PDF, JPG, PNG până la 10MB</p>
-                  <button className="px-4 py-2 bg-white/[0.08] hover:bg-white/[0.12] text-white rounded-xl text-sm transition-all duration-200">
+                  <h3 className="text-white text-2xl font-bold mb-3">Încarcă documente noi</h3>
+                  <p className="text-purple-200/70 text-sm mb-6">PDF, JPG, PNG până la 10MB</p>
+                  <button className="px-6 py-3 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-xl text-sm font-semibold transition-all duration-300 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105">
                     Selectează fișiere
                   </button>
                   <input
@@ -1155,89 +1178,94 @@ export default function Dashboard() {
             </div>
 
             {files.length === 0 ? (
-              <div className="text-white/60 text-center py-10 bg-white/[0.02] rounded-2xl border border-white/[0.05]">
-                Nu ai încărcat documente încă.
+              <div className="relative z-10 text-white/60 text-center py-16 backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl border border-white/10">
+                <FileText className="w-16 h-16 text-purple-200/40 mx-auto mb-4" />
+                <p className="text-lg">Nu ai încărcat documente încă.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
                 {files.map((file, idx) => {
                   const isImage = file.type?.startsWith('image/');
                   const isPdf = file.type?.includes('pdf');
                   return (
                     <div
                       key={file.id}
-                      className="bg-white/[0.02] rounded-2xl p-4 border border-white/[0.05] hover:bg-white/[0.04] transition-all duration-200 group flex flex-col gap-3"
+                      className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.05] hover:border-purple-500/30 flex flex-col gap-4 animate-fade-in-up"
+                      style={{ animationDelay: `${0.1 * idx}s` }}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-blue-400" />
+                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                      <div className="relative z-10 flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                            <FileText className="w-6 h-6 text-purple-200" />
                           </div>
-                          <div>
+                          <div className="flex-1 min-w-0">
                             {renamingId === file.id ? (
                               <div className="flex items-center gap-2">
                                 <Input
                                   value={renamingValue}
                                   onChange={(e) => setRenamingValue(e.target.value)}
-                                  className="bg-white/[0.04] border-white/[0.08] text-white h-9"
+                                  className="bg-white/5 border-white/10 text-white h-9 focus:border-purple-500/50"
                                   autoFocus
                                 />
                                 <button
                                   onClick={() => handleRename(file.id)}
-                                  className="px-2 py-1 text-xs rounded-lg bg-white/10 text-white hover:bg-white/20"
+                                  className="px-3 py-1.5 text-xs rounded-lg bg-gradient-to-r from-purple-500/20 to-purple-600/20 border border-purple-500/30 text-purple-200 hover:from-purple-500/30 hover:to-purple-600/30 transition-all"
                                 >
                                   OK
                                 </button>
                               </div>
                             ) : (
-                              <div className="text-white text-sm font-semibold truncate max-w-[150px]" title={file.name}>
-                                {file.name}
-                              </div>
+                              <>
+                                <div className="text-white text-sm font-semibold truncate" title={file.name}>
+                                  {file.name}
+                                </div>
+                                <div className="text-purple-200/60 text-xs">
+                                  {formatSize(file.size)} • {new Date(file.uploadedAt).toLocaleDateString('ro-RO')}
+                                </div>
+                              </>
                             )}
-                            <div className="text-white/40 text-xs">
-                              {formatSize(file.size)} • {new Date(file.uploadedAt).toLocaleDateString('ro-RO')}
-                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
                           <button
-                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10"
+                            className="p-2 rounded-lg bg-white/5 hover:bg-purple-500/20 border border-white/10 hover:border-purple-500/30 transition-all"
                             onClick={() => moveFile(file.id, 'up')}
                             disabled={idx === 0}
                           >
-                            <ArrowUp className="w-4 h-4 text-white/70" />
+                            <ArrowUp className="w-4 h-4 text-purple-200" />
                           </button>
                           <button
-                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10"
+                            className="p-2 rounded-lg bg-white/5 hover:bg-purple-500/20 border border-white/10 hover:border-purple-500/30 transition-all"
                             onClick={() => moveFile(file.id, 'down')}
                             disabled={idx === files.length - 1}
                           >
-                            <ArrowDown className="w-4 h-4 text-white/70" />
+                            <ArrowDown className="w-4 h-4 text-purple-200" />
                           </button>
                         </div>
                       </div>
 
                       <div
-                        className="rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.05] h-40 flex items-center justify-center cursor-pointer"
-                        onClick={() => openPreview(file)}
+                        className="rounded-2xl overflow-hidden bg-white/5 border border-white/10 h-48 flex items-center justify-center cursor-pointer hover:border-purple-500/30 transition-all duration-300"
+                        onClick={() => setPreviewFile(file)}
                       >
                         {isImage ? (
                           file.dataUrl ? (
                             <img src={file.dataUrl} alt={file.name} className="w-full h-full object-cover" />
                           ) : (
-                            <div className="flex flex-col items-center justify-center text-white/60 text-sm gap-2">
-                              <FileText className="w-8 h-8" />
+                            <div className="flex flex-col items-center justify-center text-purple-200/60 text-sm gap-2">
+                              <FileText className="w-10 h-10" />
                               <span>Imagine</span>
                             </div>
                           )
                         ) : isPdf ? (
-                          <div className="flex flex-col items-center justify-center text-white/60 text-sm gap-2">
-                            <FileText className="w-8 h-8" />
+                          <div className="flex flex-col items-center justify-center text-purple-200/60 text-sm gap-2">
+                            <FileText className="w-10 h-10" />
                             <span>PDF</span>
                           </div>
                         ) : (
-                          <div className="flex flex-col items-center justify-center text-white/60 text-sm gap-2">
-                            <FileText className="w-8 h-8" />
+                          <div className="flex flex-col items-center justify-center text-purple-200/60 text-sm gap-2">
+                            <FileText className="w-10 h-10" />
                             <span>Fișier</span>
                           </div>
                         )}
@@ -1246,13 +1274,13 @@ export default function Dashboard() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <button
-                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 flex items-center gap-1 text-white/80 text-xs"
-                            onClick={() => openPreview(file)}
+                            className="px-3 py-2 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 hover:border-purple-500/30 flex items-center gap-1 text-purple-200 text-xs font-medium transition-all duration-300"
+                            onClick={() => setPreviewFile(file)}
                           >
                             <Eye className="w-4 h-4" /> Vizualizează
                           </button>
                           <button
-                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 flex items-center gap-1 text-white/80 text-xs"
+                            className="px-3 py-2 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 hover:border-purple-500/30 flex items-center gap-1 text-purple-200 text-xs font-medium transition-all duration-300"
                             onClick={() => {
                               setRenamingId(file.id);
                               setRenamingValue(file.name);
@@ -1262,7 +1290,7 @@ export default function Dashboard() {
                           </button>
                         </div>
                         <button
-                          className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-300"
+                          className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 transition-all duration-300 hover:scale-110"
                           onClick={() => handleDeleteFile(file.id)}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1275,46 +1303,48 @@ export default function Dashboard() {
             )}
 
             {previewFile && (
-              <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[80] flex items-center justify-center p-6">
-                <div className="bg-[#0b1437] border border-white/10 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <div className="fixed inset-0 bg-black/70 backdrop-blur-xl z-[80] flex items-center justify-center p-6">
+                <div className="relative backdrop-blur-xl bg-gradient-to-br from-black/90 via-black/80 to-black/90 border border-white/20 rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl shadow-purple-500/20">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-purple-600/10 to-purple-500/10 opacity-50 blur-2xl" />
+                  <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/10">
                     <div>
-                      <p className="text-white font-semibold">{previewFile.name}</p>
-                      <p className="text-white/40 text-xs">{formatSize(previewFile.size)}</p>
+                      <p className="text-white text-lg font-bold">{previewFile.name}</p>
+                      <p className="text-purple-200/70 text-xs font-medium">{formatSize(previewFile.size)}</p>
                     </div>
                     <button
-                      className="text-white/60 hover:text-white"
+                      className="px-4 py-2 rounded-xl bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/30 text-white/80 hover:text-white transition-all duration-300 font-medium"
                       onClick={() => {
                         setPreviewAiOpen(false);
                         setPreviewFile(null);
                       }}
                     >
-                      Înapoi
+                      Închide
                     </button>
                   </div>
                   <div className="flex-1 bg-black/30 flex items-center justify-center overflow-auto relative">
                     <button
                       type="button"
                       aria-label="AI"
-                      className="absolute bottom-4 left-4 z-10 w-12 h-12 rounded-full bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.12] text-white flex items-center justify-center"
+                      className="absolute bottom-6 left-6 z-10 w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border-2 border-purple-400/50 hover:border-purple-300/70 text-white flex items-center justify-center shadow-2xl shadow-purple-500/50 hover:scale-110 transition-all duration-300"
                       onClick={() => setPreviewAiOpen(true)}
                     >
-                      <Brain className="w-5 h-5" />
+                      <Brain className="w-6 h-6" />
                     </button>
                     {previewAiOpen && (
-                      <div className="absolute inset-y-0 right-0 w-[360px] max-w-[90vw] bg-[#0b1437]/95 backdrop-blur-md border-l border-white/10 z-20 flex flex-col">
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center">
-                              <Brain className="w-4 h-4 text-white" />
+                      <div className="absolute inset-y-0 right-0 w-[360px] max-w-[90vw] backdrop-blur-xl bg-gradient-to-br from-black/90 via-black/80 to-black/90 border-l border-purple-500/30 z-20 flex flex-col shadow-2xl shadow-purple-500/20">
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-purple-600/10 to-purple-500/10 opacity-50 blur-2xl" />
+                        <div className="relative z-10 flex items-center justify-between px-4 py-3 border-b border-white/10">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                              <Brain className="w-5 h-5 text-purple-200" />
                             </div>
                             <div>
-                              <p className="text-white font-semibold leading-tight">AI</p>
-                              <p className="text-white/40 text-xs leading-tight">Pentru fișierul curent</p>
+                              <p className="text-white font-bold leading-tight">AI</p>
+                              <p className="text-purple-200/70 text-xs leading-tight font-medium">Pentru fișierul curent</p>
                             </div>
                           </div>
                           <button
-                            className="text-white/60 hover:text-white"
+                            className="px-3 py-2 rounded-xl bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/30 text-white/80 hover:text-white transition-all duration-300"
                             onClick={() => setPreviewAiOpen(false)}
                             aria-label="Închide AI"
                           >
@@ -1359,21 +1389,30 @@ export default function Dashboard() {
 
       case 'appointments':
         return (
-          <div className="space-y-6">
-            <div className="mb-12">
-              <h1 className="text-white mb-2">Programări</h1>
-              <p className="text-white/40">Gestionează consultațiile și programările medicale</p>
+          <div className="relative space-y-8 animate-fade-in-up">
+            {/* Animated Background Elements */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+              <div className="absolute top-1/2 right-1/4 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-blue-400" />
+            <div className="mb-12 relative z-10">
+              <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent tracking-tight">
+                Programări
+              </h1>
+              <p className="text-white/60 text-lg font-light tracking-wide">Gestionează consultațiile și programările medicale</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 relative z-10">
+              <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.05] hover:border-purple-500/30 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                <div className="relative z-10 flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                    <Calendar className="w-7 h-7 text-purple-200" />
                   </div>
                   <div>
-                    <p className="text-white/40 text-xs">Următoarea</p>
-                    <p className="text-white">
+                    <p className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-1">Următoarea</p>
+                    <p className="text-white text-lg font-bold">
                       {appointmentsData.active.length > 0 
                         ? `${formatDate(appointmentsData.active[0].date)}, ${appointmentsData.active[0].time}`
                         : 'Niciuna'}
@@ -1381,81 +1420,90 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-              <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-purple-400" />
+              <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.05] hover:border-purple-500/30 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                <div className="relative z-10 flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                    <Clock className="w-7 h-7 text-purple-200" />
                   </div>
                   <div>
-                    <p className="text-white/40 text-xs">Programări luna aceasta</p>
-                    <p className="text-white text-2xl">{appointments.length}</p>
+                    <p className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-1">Programări luna aceasta</p>
+                    <p className="text-white text-4xl font-bold">{appointments.length}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div>
-              <h3 className="text-white mb-6 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-yellow-400" />
+            <div className="relative z-10">
+              <h3 className="text-white text-2xl font-bold mb-6 flex items-center gap-3">
+                <AlertCircle className="w-6 h-6 text-yellow-400" />
                 Active ({appointmentsData.active.length})
               </h3>
               {appointmentsData.active.length === 0 ? (
-                <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05] text-center">
-                  <p className="text-white/40">Nu ai programări active</p>
+                <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 text-center">
+                  <p className="text-white/60 text-lg">Nu ai programări active</p>
                 </div>
               ) : (
-                appointmentsData.active.map((apt) => (
-                  <div
-                    key={apt.id}
-                    className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05] mb-4 hover:bg-white/[0.04] transition-all"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="text-white text-lg font-semibold mb-2">{apt.doctorName}</h4>
-                        <div className="space-y-1">
-                          <p className="text-white/40">Data: {formatDate(apt.date)}</p>
-                          <p className="text-white/40">Ora: {apt.time}</p>
-                          {apt.notes && (
-                            <p className="text-blue-400 text-sm mt-2">Note: {apt.notes}</p>
-                          )}
+                <div className="space-y-4">
+                  {appointmentsData.active.map((apt, idx) => (
+                    <div
+                      key={apt.id}
+                      className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up"
+                      style={{ animationDelay: `${0.3 + idx * 0.1}s` }}
+                    >
+                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                      <div className="relative z-10 flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="text-white text-xl font-bold mb-3">{apt.doctorName}</h4>
+                          <div className="space-y-2">
+                            <p className="text-purple-200/70 text-sm">Data: <span className="text-white font-semibold">{formatDate(apt.date)}</span></p>
+                            <p className="text-purple-200/70 text-sm">Ora: <span className="text-white font-semibold">{apt.time}</span></p>
+                            {apt.notes && (
+                              <p className="text-purple-300 text-sm mt-3 p-3 rounded-xl bg-purple-500/10 border border-purple-500/30">Note: {apt.notes}</p>
+                            )}
+                          </div>
                         </div>
+                        <span className="px-4 py-2 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-200 rounded-xl text-xs font-bold border border-emerald-500/30 shadow-lg shadow-emerald-500/20">
+                          Confirmat
+                        </span>
                       </div>
-                      <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs border border-emerald-500/20">
-                        Confirmat
-                      </span>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
 
-            <div>
-              <h3 className="text-white mb-6 flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-400" />
+            <div className="relative z-10">
+              <h3 className="text-white text-2xl font-bold mb-6 flex items-center gap-3">
+                <CheckCircle className="w-6 h-6 text-green-400" />
                 Finalizate ({appointmentsData.completed.length})
               </h3>
               {appointmentsData.completed.length === 0 ? (
-                <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05] text-center opacity-75">
-                  <p className="text-white/40">Nu ai programări finalizate</p>
+                <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 text-center opacity-75">
+                  <p className="text-white/60 text-lg">Nu ai programări finalizate</p>
                 </div>
               ) : (
-                appointmentsData.completed.map((apt) => (
-                  <div
-                    key={apt.id}
-                    className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05] mb-4 opacity-75"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="text-white text-lg font-semibold mb-2">{apt.doctorName}</h4>
-                        <div className="space-y-1">
-                          <p className="text-white/40">Data: {formatDate(apt.date)}</p>
-                          <p className="text-white/40">Ora: {apt.time}</p>
+                <div className="space-y-4">
+                  {appointmentsData.completed.map((apt, idx) => (
+                    <div
+                      key={apt.id}
+                      className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl opacity-75 hover:opacity-100 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up"
+                      style={{ animationDelay: `${0.4 + idx * 0.1}s` }}
+                    >
+                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                      <div className="relative z-10 flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="text-white text-xl font-bold mb-3">{apt.doctorName}</h4>
+                          <div className="space-y-2">
+                            <p className="text-purple-200/70 text-sm">Data: <span className="text-white font-semibold">{formatDate(apt.date)}</span></p>
+                            <p className="text-purple-200/70 text-sm">Ora: <span className="text-white font-semibold">{apt.time}</span></p>
+                          </div>
                         </div>
+                        <CheckCircle className="w-8 h-8 text-green-400" />
                       </div>
-                      <CheckCircle className="w-6 h-6 text-green-400" />
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -1463,122 +1511,154 @@ export default function Dashboard() {
 
       case 'history':
         return (
-          <div className="space-y-6">
-            <div className="mb-12">
-              <h1 className="text-white mb-2">Istoric Medical</h1>
-              <p className="text-white/40">Cronologia completă a activității medicale</p>
+          <div className="relative space-y-8 animate-fade-in-up">
+            {/* Animated Background Elements */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+              <div className="absolute top-1/2 right-1/4 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
             </div>
 
-            {consultations.map((consult) => (
-              <div
-                key={consult.id}
-                className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-white text-xl font-semibold mb-1">{consult.doctor}</h3>
-                    <p className="text-white/40">{consult.date}</p>
-                  </div>
-                </div>
+            <div className="mb-12 relative z-10">
+              <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent tracking-tight">
+                Istoric Medical
+              </h1>
+              <p className="text-white/60 text-lg font-light tracking-wide">Cronologia completă a activității medicale</p>
+            </div>
 
-                <div className="space-y-4 pt-4 border-t border-white/[0.05]">
-                  <div>
-                    <label className="text-white/40 text-sm">Diagnostic</label>
-                    <p className="text-white">{consult.diagnosis}</p>
-                  </div>
-                  <div>
-                    <label className="text-white/40 text-sm">Notițe</label>
-                    <p className="text-white">{consult.notes}</p>
-                  </div>
-                  <div>
-                    <label className="text-white/40 text-sm">Prescripție</label>
-                    <p className="text-white">{consult.prescription}</p>
-                  </div>
-                </div>
+            {consultations.length === 0 ? (
+              <div className="relative z-10 text-white/60 text-center py-16 backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl border border-white/10">
+                <History className="w-16 h-16 text-purple-200/40 mx-auto mb-4" />
+                <p className="text-lg">Nu există istoric medical încă.</p>
               </div>
-            ))}
+            ) : (
+              <div className="space-y-6 relative z-10">
+                {consultations.map((consult, idx) => (
+                  <div
+                    key={consult.id}
+                    className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up"
+                    style={{ animationDelay: `${0.1 * idx}s` }}
+                  >
+                    <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between mb-6">
+                        <div>
+                          <h3 className="text-white text-2xl font-bold mb-2">{consult.doctor}</h3>
+                          <p className="text-purple-200/70 text-sm font-medium">{consult.date}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-5 pt-6 border-t border-white/10">
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300">
+                          <label className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2 block">Diagnostic</label>
+                          <p className="text-white text-lg font-semibold">{consult.diagnosis}</p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300">
+                          <label className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2 block">Notițe</label>
+                          <p className="text-white text-lg font-semibold">{consult.notes}</p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300">
+                          <label className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2 block">Prescripție</label>
+                          <p className="text-white text-lg font-semibold">{consult.prescription}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
 
       case 'subscription':
         return (
-          <div className="space-y-6">
-            <div className="mb-12">
-              <h1 className="text-white mb-2">Abonament</h1>
-              <p className="text-white/40">Gestionează planul și beneficiile tale</p>
+          <div className="relative space-y-8 animate-fade-in-up">
+            {/* Animated Background Elements */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+              <div className="absolute top-1/2 right-1/4 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
             </div>
 
-            <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl p-8 border border-blue-500/20">
-              <div className="flex items-start justify-between mb-6">
+            <div className="mb-12 relative z-10">
+              <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent tracking-tight">
+                Abonament
+              </h1>
+              <p className="text-white/60 text-lg font-light tracking-wide">Gestionează planul și beneficiile tale</p>
+            </div>
+
+            <div className="relative group backdrop-blur-xl bg-gradient-to-br from-purple-500/20 via-purple-600/20 to-purple-700/20 rounded-3xl p-10 border border-purple-500/30 shadow-2xl hover:shadow-purple-500/40 transition-all duration-500 hover:scale-[1.02] animate-fade-in-up">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/10 via-purple-600/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl" />
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-8">
+                  <div className="flex items-center gap-6">
+                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-purple-500/30 via-purple-600/30 to-purple-700/30 border-2 border-purple-400/50 flex items-center justify-center shadow-2xl shadow-purple-500/50">
+                      <CreditCard className="w-10 h-10 text-white" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h2 className="text-white text-3xl font-bold">Plan {subscription.plan}</h2>
+                        {subscription.hasAISubscription ? (
+                          <span className="px-4 py-2 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-200 rounded-xl text-sm font-bold border border-emerald-500/30 shadow-lg shadow-emerald-500/20">
+                            Activ
+                          </span>
+                        ) : (
+                          <span className="px-4 py-2 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 text-yellow-200 rounded-xl text-sm font-bold border border-yellow-500/30 shadow-lg shadow-yellow-500/20">
+                            Neactivat
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-purple-200/80 text-base">
+                        Acces la AI și analiză medicală. {subscription.hasAISubscription ? 'Reînnoire automată lunar.' : 'Activează pentru a porni accesul.'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-purple-200/70 text-sm font-medium uppercase tracking-wide mb-2">Preț lunar</p>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-white text-5xl font-bold">{subscription.price}</span>
+                      <span className="text-purple-200/70 text-lg">{subscription.currency}/lună</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                  {subscription.features.map((feature, index) => (
+                    <div key={index} className="flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-500/30 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                        <CheckCircle className="w-5 h-5 text-emerald-200" />
+                      </div>
+                      <span className="text-white text-base font-semibold">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-white/[0.08] flex items-center justify-center">
-                    <CreditCard className="w-8 h-8 text-yellow-400" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h2 className="text-white">Plan {subscription.plan}</h2>
-                      {subscription.hasAISubscription ? (
-                        <span className="px-2 py-1 bg-emerald-500/20 text-emerald-300 rounded-lg text-xs border border-emerald-500/30">
-                          Activ
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-xs border border-yellow-500/30">
-                          Neactivat
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-white/60">
-                      Acces la AI și analiză medicală. {subscription.hasAISubscription ? 'Reînnoire automată lunar.' : 'Activează pentru a porni accesul.'}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-white/40 text-sm mb-1">Preț lunar</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-white text-3xl">{subscription.price}</span>
-                    <span className="text-white/60">{subscription.currency}/lună</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-                {subscription.features.map((feature, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle className="w-3 h-3 text-emerald-400" />
-                    </div>
-                    <span className="text-white/80 text-sm">{feature}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-3">
-                {subscription.hasAISubscription ? (
-                  <>
+                  {subscription.hasAISubscription ? (
+                    <>
+                      <button
+                        onClick={handleActivateSubscription}
+                        className="px-6 py-4 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-xl shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 font-semibold hover:scale-105"
+                      >
+                        Reînnoiește / menține activ
+                      </button>
+                      <button
+                        onClick={handleCancelSubscription}
+                        className="px-6 py-4 bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-xl border border-red-500/30 shadow-lg shadow-red-500/20 transition-all duration-300 font-semibold hover:scale-105"
+                      >
+                        Anulează abonamentul
+                      </button>
+                      <div className="text-purple-200/70 text-sm font-medium">
+                        Activ din {subscription.startDate ? new Date(subscription.startDate).toLocaleDateString('ro-RO') : '—'}
+                      </div>
+                    </>
+                  ) : (
                     <button
                       onClick={handleActivateSubscription}
-                      className="px-4 py-3 bg-white/10 hover:bg-white/15 text-white rounded-xl shadow-lg shadow-blue-500/20 border border-white/15"
+                      className="px-8 py-4 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-xl shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 font-bold text-lg hover:scale-105"
                     >
-                      Reînnoiește / menține activ
+                      Activează abonament (50€)
                     </button>
-                    <button
-                      onClick={handleCancelSubscription}
-                      className="px-4 py-3 bg-red-500/15 hover:bg-red-500/25 text-red-200 rounded-xl border border-red-500/30"
-                    >
-                      Anulează abonamentul
-                    </button>
-                    <div className="text-white/60 text-sm">
-                      Activ din {subscription.startDate ? new Date(subscription.startDate).toLocaleDateString('ro-RO') : '—'}
-                    </div>
-                  </>
-                ) : (
-                  <button
-                    onClick={handleActivateSubscription}
-                    className="px-4 py-3 bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] hover:from-[#5B8DEF]/90 hover:to-[#4169E1]/90 text-white rounded-xl shadow-lg shadow-blue-500/20"
-                  >
-                    Activează abonament (50€)
-                  </button>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1586,33 +1666,48 @@ export default function Dashboard() {
 
       case 'ai':
         return (
-          <div className="space-y-6">
-            <div className="mb-12">
-              <h1 className="text-white mb-2">Asistent AI</h1>
-              <p className="text-white/40">Asistent medical inteligent pentru răspunsuri rapide</p>
+          <div className="relative space-y-8 animate-fade-in-up">
+            {/* Animated Background Elements */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+              <div className="absolute top-1/2 right-1/4 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
+            </div>
+
+            <div className="mb-12 relative z-10">
+              <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent tracking-tight">
+                Asistent AI
+              </h1>
+              <p className="text-white/60 text-lg font-light tracking-wide">Asistent medical inteligent pentru răspunsuri rapide</p>
             </div>
 
             {subscription.hasAISubscription ? (
-              <AiChat
-                userId={String(user?.id || '')}
-                userRole={user?.role || 'PATIENT'}
-                scopeType="PATIENT"
-                scopeId={String(user?.id || '')}
-                title="Chat AI"
-                subtitle="Pune întrebări despre sănătate (fără fișiere încă). Răspunsurile sunt în română."
-                initialMessage="Bună! Sunt asistentul tău AI medical. Cu ce te pot ajuta?"
-              />
+              <div className="relative z-10">
+                <AiChat
+                  userId={String(user?.id || '')}
+                  userRole={user?.role || 'PATIENT'}
+                  scopeType="PATIENT"
+                  scopeId={String(user?.id || '')}
+                  title="Chat AI"
+                  subtitle="Pune întrebări despre sănătate (fără fișiere încă). Răspunsurile sunt în română."
+                  initialMessage="Bună! Sunt asistentul tău AI medical. Cu ce te pot ajuta?"
+                />
+              </div>
             ) : (
-              <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05] text-center">
-                <Bot className="w-16 h-16 text-white/40 mx-auto mb-4" />
-                <h3 className="text-white text-xl font-semibold mb-2">Ai nevoie de abonament AI</h3>
-                <p className="text-white/40 mb-6">Activează abonamentul de 50€ pentru a accesa Asistent AI</p>
-                <button
-                  className="px-4 py-2 bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] hover:from-[#5B8DEF]/90 hover:to-[#4169E1]/90 text-white rounded-xl"
-                  onClick={() => setActiveSection('subscription')}
-                >
-                  Mergi la abonament
-                </button>
+              <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-12 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 text-center animate-fade-in-up">
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                <div className="relative z-10">
+                  <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-purple-500/20 via-purple-600/20 to-purple-700/20 border-2 border-purple-400/50 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-purple-500/50">
+                    <Bot className="w-12 h-12 text-white" />
+                  </div>
+                  <h3 className="text-white text-3xl font-bold mb-3 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Ai nevoie de abonament AI</h3>
+                  <p className="text-purple-200/70 text-lg mb-8">Activează abonamentul de 50€ pentru a accesa Asistent AI</p>
+                  <button
+                    className="px-8 py-4 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-xl shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 font-bold text-lg hover:scale-105"
+                    onClick={() => setActiveSection('subscription')}
+                  >
+                    Mergi la abonament
+                  </button>
+                </div>
               </div>
             )}
           </div>

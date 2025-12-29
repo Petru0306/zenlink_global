@@ -15,10 +15,15 @@ export default function ClinicProfilePage() {
 
   if (!clinic || !clinicId) {
     return (
-      <div className="min-h-screen bg-[#0b1437] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-white text-2xl mb-4">Clinic not found</h1>
-          <Button onClick={() => navigate('/clinici')}>Back to Clinics</Button>
+          <h1 className="text-white text-3xl font-bold mb-6">Clinic not found</h1>
+          <Button 
+            onClick={() => navigate('/clinici')}
+            className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white"
+          >
+            Back to Clinics
+          </Button>
         </div>
       </div>
     );
@@ -29,147 +34,169 @@ export default function ClinicProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b1437]">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="min-h-screen bg-[#0a0e1a] relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-[20%] -right-[10%] w-[800px] h-[800px] rounded-full bg-gradient-to-br from-purple-500/30 via-purple-600/20 to-transparent blur-[100px]" />
+        <div className="absolute -bottom-[15%] -left-[5%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-purple-400/25 via-purple-500/15 to-transparent blur-[80px]" />
+        <div className="absolute top-[40%] right-[30%] w-[400px] h-[400px] rounded-full bg-gradient-to-br from-purple-400/20 to-transparent blur-[90px]" />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
         {/* Back Button */}
         <Button
           onClick={() => navigate('/clinici')}
           variant="outline"
-          className="mb-6 bg-[#1a2f5c] border-[#2d4a7c] text-[#a3aed0] hover:text-white hover:border-blue-500 transition-all"
+          className="mb-8 backdrop-blur-xl bg-white/5 border-white/10 text-purple-200/70 hover:text-white hover:border-purple-500/30 hover:bg-purple-500/10 transition-all duration-300 rounded-xl"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Clinics
         </Button>
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Clinic Header */}
-          <Card className="p-8 bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-3xl overflow-hidden">
-            {/* Image */}
-            <div className="relative h-64 rounded-2xl overflow-hidden mb-6">
-              <ImageWithFallback
-                src={clinic.image}
-                alt={clinic.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1437] via-transparent to-transparent"></div>
-              {clinic.featured && (
-                <div className="absolute top-4 left-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm flex items-center gap-2 shadow-lg">
-                  <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                  Featured
-                </div>
-              )}
-            </div>
-
-            {/* Clinic Info */}
-            <div className="space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-white text-4xl font-bold">{clinic.name}</h1>
-                    {clinic.verified && (
-                      <CheckCircle2 className="w-8 h-8 text-blue-500 flex-shrink-0" />
-                    )}
+          <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-10 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30 overflow-hidden animate-fade-in-up">
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+            <div className="relative z-10">
+              {/* Image */}
+              <div className="relative h-80 rounded-3xl overflow-hidden mb-8 border-2 border-purple-500/30 shadow-2xl shadow-purple-500/30">
+                <ImageWithFallback
+                  src={clinic.image}
+                  alt={clinic.name}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
+                {clinic.featured && (
+                  <div className="absolute top-6 left-6 bg-gradient-to-r from-purple-600 to-purple-500 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 shadow-2xl shadow-purple-500/50 border border-purple-400/50">
+                    <span className="w-2.5 h-2.5 bg-white rounded-full animate-pulse shadow-lg shadow-white/50"></span>
+                    Featured
                   </div>
-                  <div className="flex items-center gap-2 text-[#a3aed0] mb-4">
-                    <MapPin className="w-5 h-5" />
-                    <span>{clinic.location}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats Row */}
-              <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-[#2d4a7c]">
-                <div className="flex items-center gap-2">
-                  <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                  <span className="text-white font-semibold text-lg">{clinic.rating.toFixed(1)}</span>
-                  <span className="text-[#6b7bb5]">({clinic.reviews} reviews)</span>
-                </div>
-                {clinic.patients && (
-                  <>
-                    <span className="text-[#2d4a7c]">•</span>
-                    <div className="flex items-center gap-2 text-[#a3aed0]">
-                      <Users className="w-5 h-5" />
-                      <span>{clinic.patients.toLocaleString()}+ patients</span>
-                    </div>
-                  </>
-                )}
-                {clinic.openHours && (
-                  <>
-                    <span className="text-[#2d4a7c]">•</span>
-                    <div className="flex items-center gap-2 text-[#a3aed0]">
-                      <Clock className="w-5 h-5 text-green-400" />
-                      <span>{clinic.openHours}</span>
-                    </div>
-                  </>
                 )}
               </div>
 
-              {/* Description */}
-              {clinic.description && (
-                <p className="text-[#a3aed0] leading-relaxed pt-4">{clinic.description}</p>
-              )}
+              {/* Clinic Info */}
+              <div className="space-y-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <h1 className="text-white text-5xl font-bold bg-gradient-to-r from-white via-purple-200 to-purple-300 bg-clip-text text-transparent">{clinic.name}</h1>
+                      {clinic.verified && (
+                        <CheckCircle2 className="w-10 h-10 text-purple-400 flex-shrink-0" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-purple-200/70 mb-6 text-lg font-medium">
+                      <MapPin className="w-6 h-6 text-purple-300" />
+                      <span>{clinic.location}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats Row */}
+                <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-white/10">
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-white/10">
+                    <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+                    <span className="text-white font-bold text-xl">{clinic.rating.toFixed(1)}</span>
+                    <span className="text-purple-200/60">({clinic.reviews} reviews)</span>
+                  </div>
+                  {clinic.patients && (
+                    <>
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-white/10">
+                        <Users className="w-6 h-6 text-purple-300" />
+                        <span className="text-white font-semibold">{clinic.patients.toLocaleString()}+ patients</span>
+                      </div>
+                    </>
+                  )}
+                  {clinic.openHours && (
+                    <>
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-white/10">
+                        <Clock className="w-6 h-6 text-green-400" />
+                        <span className="text-white font-semibold">{clinic.openHours}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Description */}
+                {clinic.description && (
+                  <p className="text-purple-200/80 leading-relaxed pt-4 text-lg">{clinic.description}</p>
+                )}
+              </div>
             </div>
-          </Card>
+          </div>
 
           {/* Specialties */}
           {clinic.specialties && clinic.specialties.length > 0 && (
-            <Card className="p-6 bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-3xl">
-              <h2 className="text-white text-2xl font-semibold mb-4">Specialties</h2>
-              <div className="flex flex-wrap gap-3">
-                {clinic.specialties.map((specialty, index) => (
-                  <span
-                    key={index}
-                    className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-blue-300 px-4 py-2 rounded-full text-sm border border-blue-500/30"
-                  >
-                    {specialty}
-                  </span>
-                ))}
+            <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+              <div className="relative z-10">
+                <h2 className="text-white text-3xl font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Specialties</h2>
+                <div className="flex flex-wrap gap-3">
+                  {clinic.specialties.map((specialty, index) => (
+                    <span
+                      key={index}
+                      className="bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-purple-200 px-5 py-2.5 rounded-full text-sm font-semibold border border-purple-500/30 shadow-lg shadow-purple-500/20"
+                    >
+                      {specialty}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </Card>
+            </div>
           )}
 
           {/* Contact Information */}
-          <Card className="p-8 bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-3xl">
-            <h2 className="text-white text-2xl font-semibold mb-6">Contact Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {clinic.phone && (
-                <div className="flex items-center gap-3 text-[#a3aed0]">
-                  <Phone className="w-5 h-5 text-blue-400" />
-                  <span>{clinic.phone}</span>
+          <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+            <div className="relative z-10">
+              <h2 className="text-white text-3xl font-bold mb-8 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Contact Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {clinic.phone && (
+                  <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                      <Phone className="w-6 h-6 text-purple-200" />
+                    </div>
+                    <span className="text-white font-medium">{clinic.phone}</span>
+                  </div>
+                )}
+                {clinic.email && (
+                  <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                      <Mail className="w-6 h-6 text-purple-200" />
+                    </div>
+                    <span className="text-white font-medium">{clinic.email}</span>
+                  </div>
+                )}
+                {clinic.website && (
+                  <a
+                    href={clinic.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300 group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                      <Globe className="w-6 h-6 text-purple-200" />
+                    </div>
+                    <span className="text-purple-200 group-hover:text-white font-medium transition-colors">Visit Website</span>
+                  </a>
+                )}
+              </div>
+              {clinic.address && (
+                <div className="flex items-start gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300 mt-6">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20 flex-shrink-0">
+                    <MapPin className="w-6 h-6 text-purple-200" />
+                  </div>
+                  <span className="text-white font-medium pt-2">{clinic.address}</span>
                 </div>
-              )}
-              {clinic.email && (
-                <div className="flex items-center gap-3 text-[#a3aed0]">
-                  <Mail className="w-5 h-5 text-blue-400" />
-                  <span>{clinic.email}</span>
-                </div>
-              )}
-              {clinic.website && (
-                <a
-                  href={clinic.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 text-blue-400 hover:text-blue-300 transition-colors"
-                >
-                  <Globe className="w-5 h-5" />
-                  <span>Visit Website</span>
-                </a>
               )}
             </div>
-            {clinic.address && (
-              <div className="flex items-start gap-3 text-[#a3aed0] mt-4 pt-4 border-t border-[#2d4a7c]">
-                <MapPin className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0" />
-                <span>{clinic.address}</span>
-              </div>
-            )}
-          </Card>
+          </div>
 
           {/* Doctors Section */}
           {doctors.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-white text-3xl font-semibold">Our Doctors</h2>
-                <span className="text-[#a3aed0]">{doctors.length} doctor{doctors.length !== 1 ? 's' : ''}</span>
+            <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-white text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-purple-300 bg-clip-text text-transparent">Our Doctors</h2>
+                <span className="text-purple-200/70 text-lg font-semibold">{doctors.length} doctor{doctors.length !== 1 ? 's' : ''}</span>
               </div>
               <div className="space-y-4">
                 {doctors.map((doctor, index) => (
@@ -187,17 +214,20 @@ export default function ClinicProfilePage() {
 
           {/* No Doctors Message */}
           {doctors.length === 0 && (
-            <Card className="p-8 bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] border-[#2d4a7c] rounded-3xl text-center">
-              <Building2 className="w-16 h-16 text-[#6b7bb5] mx-auto mb-4" />
-              <h3 className="text-white text-xl font-semibold mb-2">No Doctors Listed</h3>
-              <p className="text-[#a3aed0]">This clinic doesn't have any doctors listed yet.</p>
-            </Card>
+            <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-12 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 text-center animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+              <div className="relative z-10">
+                <Building2 className="w-20 h-20 text-purple-300 mx-auto mb-6" />
+                <h3 className="text-white text-2xl font-bold mb-3">No Doctors Listed</h3>
+                <p className="text-purple-200/70 text-lg">This clinic doesn't have any doctors listed yet.</p>
+              </div>
+            </div>
           )}
 
           {/* Action Button */}
-          <div className="flex justify-center pt-4">
+          <div className="flex justify-center pt-4 animate-fade-in-up" style={{ animationDelay: '0.25s' }}>
             <Button
-              className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-xl px-10 py-6 text-lg shadow-lg shadow-blue-500/30"
+              className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-xl px-12 py-7 text-xl shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 font-bold hover:scale-105"
             >
               Book Appointment
             </Button>

@@ -200,18 +200,19 @@ export function HomePage() {
   }, [reducedMotion]);
 
   return (
-    <div className="min-h-screen bg-[hsl(240,10%,3%)] text-[hsl(220,12%,98%)] relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#0a0e1a] text-[hsl(220,12%,98%)] relative overflow-x-hidden">
       {/* Animated background gradient orbs */}
       <div
         ref={orbTopRightRef}
-        className="fixed top-0 right-0 w-[800px] h-[800px] bg-[hsl(217,80%,55%)] rounded-full blur-[120px] opacity-[0.16] pointer-events-none animate-[pulse_10s_ease-in-out_infinite]"
+        className="fixed -top-[20%] -right-[10%] w-[800px] h-[800px] rounded-full bg-gradient-to-br from-purple-500/30 via-purple-600/20 to-transparent blur-[100px] pointer-events-none"
         style={{ willChange: "transform" }}
       ></div>
       <div
         ref={orbBottomLeftRef}
-        className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-[hsl(217,80%,50%)] rounded-full blur-[120px] opacity-[0.14] pointer-events-none animate-[pulse_12s_ease-in-out_infinite]"
+        className="fixed -bottom-[15%] -left-[5%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-purple-400/25 via-purple-500/15 to-transparent blur-[80px] pointer-events-none"
         style={{ willChange: "transform" }}
       ></div>
+      <div className="fixed top-[40%] right-[30%] w-[400px] h-[400px] rounded-full bg-gradient-to-br from-purple-400/20 to-transparent blur-[90px] pointer-events-none"></div>
 
       {/* Floating particles animation */}
       <>
@@ -238,8 +239,8 @@ export function HomePage() {
                   width: "2px",
                   height: "2px",
                   borderRadius: "9999px",
-                  backgroundColor: "hsl(217,80%,55%)",
-                  boxShadow: "0 0 6px rgba(91, 141, 239, 0.35)",
+                  backgroundColor: "rgb(168, 85, 247)",
+                  boxShadow: "0 0 6px rgba(168, 85, 247, 0.35)",
                   "--twinkle-min": 0.22,
                   "--twinkle-max": 0.6,
                   animationDelay: `${p.twinkleDelay}s`,
@@ -273,8 +274,8 @@ export function HomePage() {
                   width: "2.5px",
                   height: "2.5px",
                   borderRadius: "9999px",
-                  backgroundColor: "hsl(217,80%,58%)",
-                  boxShadow: "0 0 8px rgba(91, 141, 239, 0.4)",
+                  backgroundColor: "rgb(168, 85, 247)",
+                  boxShadow: "0 0 8px rgba(168, 85, 247, 0.4)",
                   "--twinkle-min": 0.28,
                   "--twinkle-max": 0.78,
                   animationDelay: `${p.twinkleDelay}s`,
@@ -308,8 +309,8 @@ export function HomePage() {
                   width: "3px",
                   height: "3px",
                   borderRadius: "9999px",
-                  backgroundColor: "hsl(217,80%,62%)",
-                  boxShadow: "0 0 10px rgba(91, 141, 239, 0.5)",
+                  backgroundColor: "rgb(168, 85, 247)",
+                  boxShadow: "0 0 10px rgba(168, 85, 247, 0.5)",
                   "--twinkle-min": 0.35,
                   "--twinkle-max": 0.95,
                   animationDelay: `${p.twinkleDelay}s`,
@@ -338,7 +339,7 @@ export function HomePage() {
               <div className="pt-4">
                 <Button
                   onClick={() => navigate('/doctori')}
-                  className="bg-[hsl(217,80%,55%)] hover:bg-[hsl(217,80%,50%)] text-white px-8 py-4 rounded-full shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center gap-2 group"
+                  className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white px-8 py-4 rounded-full shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 hover:scale-105 flex items-center gap-2 group font-semibold"
                 >
                   <span>Explorează Serviciile</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -352,9 +353,9 @@ export function HomePage() {
                 {/* Dark circular background with glow */}
                 <div className="relative w-[20rem] h-[20rem] lg:w-[24rem] lg:h-[24rem] rounded-full bg-[hsl(240,10%,6%)] shadow-2xl flex items-center justify-center overflow-hidden">
                   {/* Animated gradient ring */}
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[hsl(217,80%,65%)] via-[hsl(217,80%,55%)] to-[hsl(217,80%,65%)] opacity-30 animate-spin-slow"
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400 via-purple-500 to-purple-400 opacity-30 animate-spin-slow"
                     style={{ 
-                      background: 'conic-gradient(from 0deg, hsl(217,80%,65%), hsl(217,80%,55%), hsl(217,80%,65%))',
+                      background: 'conic-gradient(from 0deg, rgb(192, 132, 252), rgb(168, 85, 247), rgb(192, 132, 252))',
                     }}
                   ></div>
                   
@@ -370,7 +371,7 @@ export function HomePage() {
                           src="/tooth-logo.png.png" 
                           alt="ZenLink Logo" 
                           className="w-full h-full object-cover animate-float-logo drop-shadow-2xl z-10 relative"
-                          style={{ filter: 'drop-shadow(0 0 20px hsl(217,80%,55%))' }}
+                          style={{ filter: 'drop-shadow(0 0 20px rgb(168, 85, 247))' }}
                           onError={(e) => {
                             e.target.style.display = 'none';
                           }}
@@ -379,9 +380,9 @@ export function HomePage() {
                       
                       {/* Fallback: Animated Tooth/Brain icon with circuit patterns */}
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <Brain className="w-32 h-32 lg:w-40 lg:h-40 text-[hsl(217,80%,55%)] animate-float-logo" 
+                        <Brain className="w-32 h-32 lg:w-40 lg:h-40 text-purple-400 animate-float-logo" 
                           style={{ 
-                            filter: 'drop-shadow(0 0 20px hsl(217,80%,55%))',
+                            filter: 'drop-shadow(0 0 20px rgb(168, 85, 247))',
                             strokeWidth: '1.5'
                           }}
                         />
@@ -392,9 +393,9 @@ export function HomePage() {
                         <svg className="w-full h-full" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet">
                           <defs>
                             <linearGradient id="glowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" stopColor="hsl(217,80%,65%)" stopOpacity="1" />
-                              <stop offset="50%" stopColor="hsl(217,80%,55%)" stopOpacity="0.9" />
-                              <stop offset="100%" stopColor="hsl(217,80%,65%)" stopOpacity="1" />
+                              <stop offset="0%" stopColor="rgb(192, 132, 252)" stopOpacity="1" />
+                              <stop offset="50%" stopColor="rgb(168, 85, 247)" stopOpacity="0.9" />
+                              <stop offset="100%" stopColor="rgb(192, 132, 252)" stopOpacity="1" />
                             </linearGradient>
                             <filter id="glow">
                               <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
@@ -406,7 +407,7 @@ export function HomePage() {
                           </defs>
                           
                           {/* Circuit nodes - glowing points */}
-                          <circle cx="100" cy="50" r="4" fill="hsl(217,80%,65%)" filter="url(#glow)">
+                          <circle cx="100" cy="50" r="4" fill="rgb(192, 132, 252)" filter="url(#glow)">
                             <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" />
                             <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite" />
                           </circle>
@@ -434,7 +435,7 @@ export function HomePage() {
                   </div>
 
                   {/* Outer glow ring */}
-                  <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-[hsl(217,80%,65%)] to-[hsl(217,80%,55%)] opacity-20 blur-xl animate-pulse"></div>
+                  <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-purple-400 to-purple-500 opacity-20 blur-xl animate-pulse"></div>
                 </div>
               </div>
             </div>
@@ -444,16 +445,16 @@ export function HomePage() {
         {/* Social Media Icons - Right Edge */}
         <div className="fixed top-1/2 right-6 lg:right-8 -translate-y-1/2 hidden lg:flex flex-col items-center gap-6 z-10 animate-fade-in-right">
           <div className="w-[1.5px] h-32 bg-[hsl(220,12%,65%)] opacity-50"></div>
-          <a href="#" className="text-[hsl(220,12%,98%)] hover:text-[hsl(217,80%,55%)] transition-colors duration-300 hover:scale-125 transform">
+          <a href="#" className="text-[hsl(220,12%,98%)] hover:text-purple-400 transition-colors duration-300 hover:scale-125 transform">
             <Facebook className="w-5 h-5" />
           </a>
-          <a href="#" className="text-[hsl(220,12%,98%)] hover:text-[hsl(217,80%,55%)] transition-colors duration-300 hover:scale-125 transform">
+          <a href="#" className="text-[hsl(220,12%,98%)] hover:text-purple-400 transition-colors duration-300 hover:scale-125 transform">
             <Instagram className="w-5 h-5" />
           </a>
-          <a href="#" className="text-[hsl(220,12%,98%)] hover:text-[hsl(217,80%,55%)] transition-colors duration-300 hover:scale-125 transform">
+          <a href="#" className="text-[hsl(220,12%,98%)] hover:text-purple-400 transition-colors duration-300 hover:scale-125 transform">
             <Twitter className="w-5 h-5" />
           </a>
-          <a href="#" className="text-[hsl(220,12%,98%)] hover:text-[hsl(217,80%,55%)] transition-colors duration-300 hover:scale-125 transform">
+          <a href="#" className="text-[hsl(220,12%,98%)] hover:text-purple-400 transition-colors duration-300 hover:scale-125 transform">
             <Youtube className="w-5 h-5" />
           </a>
           <div className="w-[1.5px] h-32 bg-[hsl(220,12%,65%)] opacity-50"></div>
@@ -522,10 +523,10 @@ export function HomePage() {
             </p>
           </div>
           
-          <div className="relative aspect-[16/10] max-w-5xl mx-auto rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-[hsl(217,80%,55%)]/20 to-[hsl(217,80%,50%)]/20 backdrop-blur-sm">
+          <div className="relative aspect-[16/10] max-w-5xl mx-auto rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-sm shadow-2xl shadow-purple-500/20">
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-[hsl(217,80%,55%)] to-[hsl(217,80%,50%)] mb-6">
+                <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 mb-6 shadow-2xl shadow-purple-500/50">
                   <Sparkles className="w-12 h-12 text-white" />
                 </div>
                 <p className="text-[hsl(220,12%,85%)] text-lg">Advanced AI diagnostics and patient insights</p>
@@ -535,7 +536,7 @@ export function HomePage() {
           
           <div className="mt-12 text-center">
             <p className="text-[hsl(220,12%,65%)] mb-4">From $99/month</p>
-            <Button className="bg-[hsl(217,80%,55%)] hover:bg-[hsl(217,80%,50%)] text-white">
+            <Button className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 font-semibold">
               Learn More
               <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
@@ -556,33 +557,33 @@ export function HomePage() {
             </p>
             <ul className="space-y-4 mb-8">
               <li className="flex items-center gap-3 text-[hsl(220,12%,90%)]">
-                <div className="w-6 h-6 rounded-full bg-[hsl(217,80%,55%)]/20 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-[hsl(217,80%,55%)]"></div>
+                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
                 </div>
                 Live vital sign tracking
               </li>
               <li className="flex items-center gap-3 text-[hsl(220,12%,90%)]">
-                <div className="w-6 h-6 rounded-full bg-[hsl(217,80%,55%)]/20 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-[hsl(217,80%,55%)]"></div>
+                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
                 </div>
                 Predictive health analytics
               </li>
               <li className="flex items-center gap-3 text-[hsl(220,12%,90%)]">
-                <div className="w-6 h-6 rounded-full bg-[hsl(217,80%,55%)]/20 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-[hsl(217,80%,55%)]"></div>
+                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
                 </div>
                 Automated alert system
               </li>
             </ul>
-            <Button className="bg-[hsl(217,80%,55%)] hover:bg-[hsl(217,80%,50%)] text-white">
+            <Button className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 font-semibold">
               Explore Monitoring
               <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </div>
           
-          <div className="relative aspect-square rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-[hsl(217,80%,50%)]/20 to-[hsl(217,80%,55%)]/20 backdrop-blur-sm">
+          <div className="relative aspect-square rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-sm shadow-2xl shadow-purple-500/20">
             <div className="absolute inset-0 flex items-center justify-center">
-              <Activity className="w-32 h-32 text-[hsl(217,80%,55%)]/40" />
+              <Activity className="w-32 h-32 text-purple-400/40" />
             </div>
           </div>
         </div>
@@ -591,9 +592,9 @@ export function HomePage() {
       {/* Feature Section 3 - Split Reversed */}
       <section className="relative py-32 px-6">
         <div className="max-w-[75rem] mx-auto grid md:grid-cols-2 gap-16 items-center">
-          <div className="order-2 md:order-1 relative aspect-square rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-[hsl(217,80%,55%)]/20 to-[hsl(217,80%,50%)]/20 backdrop-blur-sm">
+          <div className="order-2 md:order-1 relative aspect-square rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-sm shadow-2xl shadow-purple-500/20">
             <div className="absolute inset-0 flex items-center justify-center">
-              <Shield className="w-32 h-32 text-[hsl(217,80%,50%)]/40" />
+              <Shield className="w-32 h-32 text-purple-400/40" />
             </div>
           </div>
           
@@ -607,25 +608,25 @@ export function HomePage() {
             </p>
             <ul className="space-y-4 mb-8">
               <li className="flex items-center gap-3 text-[hsl(220,12%,90%)]">
-                <div className="w-6 h-6 rounded-full bg-[hsl(217,80%,50%)]/20 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-[hsl(217,80%,50%)]"></div>
+                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
                 </div>
                 256-bit encryption
               </li>
               <li className="flex items-center gap-3 text-[hsl(220,12%,90%)]">
-                <div className="w-6 h-6 rounded-full bg-[hsl(217,80%,50%)]/20 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-[hsl(217,80%,50%)]"></div>
+                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
                 </div>
                 HIPAA & GDPR compliant
               </li>
               <li className="flex items-center gap-3 text-[hsl(220,12%,90%)]">
-                <div className="w-6 h-6 rounded-full bg-[hsl(217,80%,50%)]/20 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-[hsl(217,80%,50%)]"></div>
+                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
                 </div>
                 Regular security audits
               </li>
             </ul>
-            <Button className="bg-[hsl(217,80%,55%)] hover:bg-[hsl(217,80%,50%)] text-white">
+            <Button className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 font-semibold">
               Security Details
               <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
@@ -667,7 +668,7 @@ export function HomePage() {
             Join thousands of healthcare providers using ZenLink every day.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-[hsl(217,80%,55%)] hover:bg-[hsl(217,80%,50%)] text-white text-lg px-8 py-6">
+            <Button size="lg" className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white text-lg px-8 py-6 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 font-bold">
               Start Your Free Trial
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
@@ -722,7 +723,7 @@ export function HomePage() {
           
           <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[hsl(217,80%,55%)]"></div>
+              <div className="w-2 h-2 rounded-full bg-purple-400"></div>
               <span className="text-[hsl(220,12%,98%)]">ZenLink</span>
             </div>
             <p className="text-[hsl(220,12%,65%)] text-sm">© 2025 ZenLink. All rights reserved.</p>
