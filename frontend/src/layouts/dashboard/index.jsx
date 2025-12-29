@@ -50,6 +50,7 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('profile');
   const { user, setUser } = useAuth();
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -163,6 +164,18 @@ export default function Dashboard() {
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
   }, [user?.id]);
+
+  // Cursor tracking effect
+  useEffect(() => {
+    if (activeSection !== 'profile') return;
+    
+    const handleMouseMove = (e) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [activeSection]);
 
   useEffect(() => {
     // Fetch real appointments from backend
@@ -517,14 +530,15 @@ export default function Dashboard() {
   };
 
   const renderMetric = (label, value, unit, change, date) => (
-    <div>
-      <p className="text-white/40 text-sm mb-3">{label}</p>
+    <div className="group relative p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 hover:bg-white/10 transition-all duration-300 hover:scale-105">
+      <p className="text-purple-200/70 text-xs mb-3 font-medium uppercase tracking-wide">{label}</p>
       <div className="flex items-baseline gap-1.5 mb-2">
-        <span className="text-white text-3xl">{value || '—'}</span>
-        {unit && <span className="text-white/30 text-sm">{unit}</span>}
+        <span className="text-white text-4xl font-bold">{value || '—'}</span>
+        {unit && <span className="text-purple-300/60 text-sm font-medium">{unit}</span>}
       </div>
-      {change && <p className={`text-xs mb-1 ${Number(change) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{change}</p>}
-      {date && <p className="text-white/20 text-xs">{date}</p>}
+      {change && <p className={`text-xs mb-1 font-semibold ${Number(change) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{change}</p>}
+      {date && <p className="text-white/30 text-xs">{date}</p>}
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     </div>
   );
 
@@ -532,15 +546,34 @@ export default function Dashboard() {
     switch (activeSection) {
       case 'profile':
         return (
-          <>
-            {/* Page Header */}
-            <div className="mb-12">
-              <h1 className="text-white mb-2">Profil Pacient</h1>
-              <p className="text-white/40">Informații medicale complete</p>
+          <div className="relative" id="patient-profile-container">
+            {/* Animated Background Elements */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+              <div className="absolute top-1/2 right-1/4 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
+              <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-purple-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '5s', animationDelay: '2s' }} />
+            </div>
+
+            {/* Cursor Follower Effect */}
+            <div 
+              className="fixed w-96 h-96 rounded-full bg-purple-500/5 blur-3xl pointer-events-none z-0 transition-all duration-700 ease-out"
+              style={{ 
+                left: `${mousePosition.x}px`,
+                top: `${mousePosition.y}px`,
+                transform: 'translate(-50%, -50%)'
+              }}
+            />
+
+            {/* Page Header with Animation */}
+            <div className="mb-12 relative z-10 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+              <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent tracking-tight">
+                Profil Pacient
+              </h1>
+              <p className="text-white/60 text-lg font-light tracking-wide">Informații medicale complete • Dashboard interactiv</p>
             </div>
 
             {/* Patient Header */}
-            <div className="mb-8">
+            <div className="mb-8 relative z-10 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               <PatientHeader 
                 firstName={patientProfile.firstName}
                 lastName={patientProfile.lastName}
@@ -552,241 +585,257 @@ export default function Dashboard() {
             </div>
 
             {/* Editable profile & medical data */}
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-white/60 text-sm">Date personale</p>
-                    <h3 className="text-white text-lg font-semibold">Profil pacient</h3>
-                  </div>
-                  <button
-                    onClick={() => setProfileEditing((v) => !v)}
-                    className="px-3 py-1 text-xs rounded-full bg-white/5 text-white/80 flex items-center gap-2 hover:bg-white/10 transition"
-                  >
-                    <Pencil className="w-4 h-4" /> {profileEditing ? 'Anulează' : 'Editare'}
-                  </button>
-                </div>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+            <div className="grid md:grid-cols-2 gap-8 mb-8 relative z-10">
+              <div 
+                className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up"
+                style={{ animationDelay: '0.3s' }}
+              >
+                {/* Glassmorphic glow effect */}
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-6">
                     <div>
-                      <label className="text-white/50 text-xs mb-1 block">Prenume</label>
-                      <Input
-                        disabled={!profileEditing}
-                        value={profileForm.firstName}
-                        onChange={(e) => setProfileForm((p) => ({ ...p, firstName: e.target.value }))}
-                        placeholder="Prenume"
-                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
-                      />
+                      <p className="text-purple-300/70 text-sm font-medium uppercase tracking-wider mb-2">Date personale</p>
+                      <h3 className="text-white text-2xl font-bold">Profil pacient</h3>
                     </div>
-                    <div>
-                      <label className="text-white/50 text-xs mb-1 block">Nume</label>
-                      <Input
-                        disabled={!profileEditing}
-                        value={profileForm.lastName}
-                        onChange={(e) => setProfileForm((p) => ({ ...p, lastName: e.target.value }))}
-                        placeholder="Nume"
-                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-white/50 text-xs mb-1 block">Email</label>
-                      <Input
-                        disabled={!profileEditing}
-                        type="email"
-                        value={profileForm.email}
-                        onChange={(e) => setProfileForm((p) => ({ ...p, email: e.target.value }))}
-                        placeholder="Email"
-                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/50 text-xs mb-1 block">Telefon</label>
-                      <Input
-                        disabled={!profileEditing}
-                        value={profileForm.phone}
-                        onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))}
-                        placeholder="+40 ..."
-                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-white/50 text-xs mb-1 block">Vârstă</label>
-                      <Input
-                        disabled={!profileEditing}
-                        type="number"
-                        value={profileForm.age}
-                        onChange={(e) => setProfileForm((p) => ({ ...p, age: e.target.value }))}
-                        placeholder="Ani"
-                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
-                      />
-                    </div>
-                  </div>
-                  {profileEditing && (
                     <button
-                      onClick={handleProfileSave}
-                      disabled={savingProfile}
-                      className="w-full mt-2 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-4 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60"
+                      onClick={() => setProfileEditing((v) => !v)}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-purple-200 flex items-center gap-2 hover:from-purple-500/30 hover:to-purple-600/30 transition-all duration-300 border border-purple-500/30 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20"
                     >
-                      <Save className="w-4 h-4" />
-                      {savingProfile ? 'Se salvează...' : 'Salvează profilul'}
+                      <Pencil className="w-4 h-4" /> {profileEditing ? 'Anulează' : 'Editare'}
                     </button>
-                  )}
+                  </div>
+                  <div className="space-y-5">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="group/input">
+                        <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Prenume</label>
+                        <Input
+                          disabled={!profileEditing}
+                          value={profileForm.firstName}
+                          onChange={(e) => setProfileForm((p) => ({ ...p, firstName: e.target.value }))}
+                          placeholder="Prenume"
+                          className="bg-white/5 border-white/10 text-white disabled:opacity-50 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 backdrop-blur-sm"
+                        />
+                      </div>
+                      <div className="group/input">
+                        <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Nume</label>
+                        <Input
+                          disabled={!profileEditing}
+                          value={profileForm.lastName}
+                          onChange={(e) => setProfileForm((p) => ({ ...p, lastName: e.target.value }))}
+                          placeholder="Nume"
+                          className="bg-white/5 border-white/10 text-white disabled:opacity-50 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 backdrop-blur-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="group/input">
+                        <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Email</label>
+                        <Input
+                          disabled={!profileEditing}
+                          type="email"
+                          value={profileForm.email}
+                          onChange={(e) => setProfileForm((p) => ({ ...p, email: e.target.value }))}
+                          placeholder="Email"
+                          className="bg-white/5 border-white/10 text-white disabled:opacity-50 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 backdrop-blur-sm"
+                        />
+                      </div>
+                      <div className="group/input">
+                        <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Telefon</label>
+                        <Input
+                          disabled={!profileEditing}
+                          value={profileForm.phone}
+                          onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))}
+                          placeholder="+40 ..."
+                          className="bg-white/5 border-white/10 text-white disabled:opacity-50 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 backdrop-blur-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="group/input">
+                        <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Vârstă</label>
+                        <Input
+                          disabled={!profileEditing}
+                          type="number"
+                          value={profileForm.age}
+                          onChange={(e) => setProfileForm((p) => ({ ...p, age: e.target.value }))}
+                          placeholder="Ani"
+                          className="bg-white/5 border-white/10 text-white disabled:opacity-50 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 backdrop-blur-sm"
+                        />
+                      </div>
+                    </div>
+                    {profileEditing && (
+                      <button
+                        onClick={handleProfileSave}
+                        disabled={savingProfile}
+                        className="w-full mt-4 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white px-6 py-4 rounded-xl transition-all duration-300 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 disabled:opacity-60 font-semibold hover:scale-105 active:scale-95"
+                      >
+                        <Save className="w-5 h-5" />
+                        {savingProfile ? 'Se salvează...' : 'Salvează profilul'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-white/60 text-sm">Date medicale</p>
-                    <h3 className="text-white text-lg font-semibold">Istoric medical</h3>
-                  </div>
-                  <button
-                    onClick={() => setMedicalEditing((v) => !v)}
-                    className="px-3 py-1 text-xs rounded-full bg-white/5 text-white/80 flex items-center gap-2 hover:bg-white/10 transition"
-                  >
-                    <Pencil className="w-4 h-4" /> {medicalEditing ? 'Anulează' : 'Editare'}
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+              <div 
+                className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up"
+                style={{ animationDelay: '0.4s' }}
+              >
+                {/* Glassmorphic glow effect */}
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-6">
                     <div>
-                      <label className="text-white/50 text-xs mb-1 block">Grupă sangvină</label>
-                      <Select
-                        value={medicalForm.bloodType}
-                        onValueChange={(val) => setMedicalForm((p) => ({ ...p, bloodType: val }))}
-                        disabled={!medicalEditing}
-                      >
-                        <SelectTrigger className="bg-white/[0.04] border-white/[0.08] text-white rounded-xl disabled:opacity-60">
-                          <SelectValue placeholder="Selectează grupa" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#0f1f3d] text-white border-[#2d4a7c]">
-                          {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', '0+', '0-'].map((bt) => (
-                            <SelectItem key={bt} value={bt}>{bt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <p className="text-purple-300/70 text-sm font-medium uppercase tracking-wider mb-2">Date medicale</p>
+                      <h3 className="text-white text-2xl font-bold">Istoric medical</h3>
                     </div>
-                    <div>
-                      <label className="text-white/50 text-xs mb-1 block">Număr asigurare</label>
-                      <Input
-                        disabled={!medicalEditing}
-                        value={medicalForm.insuranceNumber}
-                        onChange={(e) => setMedicalForm((p) => ({ ...p, insuranceNumber: e.target.value }))}
-                        placeholder="ID asigurare"
-                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-white/50 text-xs mb-1 block">Alergii</label>
-                    <textarea
-                      disabled={!medicalEditing}
-                      value={medicalForm.allergies}
-                      onChange={(e) => setMedicalForm((p) => ({ ...p, allergies: e.target.value }))}
-                      placeholder="Listează alergiile separate prin virgulă"
-                      className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] text-white px-3 py-2 text-sm outline-none focus:border-blue-500 disabled:opacity-60"
-                      rows={2}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-white/50 text-xs mb-1 block">Condiții cronice</label>
-                    <textarea
-                      disabled={!medicalEditing}
-                      value={medicalForm.chronicConditions}
-                      onChange={(e) => setMedicalForm((p) => ({ ...p, chronicConditions: e.target.value }))}
-                      placeholder="ex: Hipertensiune"
-                      className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] text-white px-3 py-2 text-sm outline-none focus:border-blue-500 disabled:opacity-60"
-                      rows={2}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-white/50 text-xs mb-1 block">Medicație curentă</label>
-                    <textarea
-                      disabled={!medicalEditing}
-                      value={medicalForm.medications}
-                      onChange={(e) => setMedicalForm((p) => ({ ...p, medications: e.target.value }))}
-                      placeholder="ex: Aspirin 100mg zilnic"
-                      className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] text-white px-3 py-2 text-sm outline-none focus:border-blue-500 disabled:opacity-60"
-                      rows={2}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-white/50 text-xs mb-1 block">Greutate (kg)</label>
-                      <Input
-                        disabled={!medicalEditing}
-                        value={medicalForm.weightKg}
-                        onChange={(e) => setMedicalForm((p) => ({ ...p, weightKg: e.target.value }))}
-                        placeholder="ex: 68"
-                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/50 text-xs mb-1 block">Variație greutate</label>
-                      <Input
-                        disabled={!medicalEditing}
-                        value={medicalForm.weightChange}
-                        onChange={(e) => setMedicalForm((p) => ({ ...p, weightChange: e.target.value }))}
-                        placeholder="ex: -0.5 kg"
-                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-white/50 text-xs mb-1 block">Înălțime (cm)</label>
-                      <Input
-                        disabled={!medicalEditing}
-                        value={medicalForm.heightCm}
-                        onChange={(e) => setMedicalForm((p) => ({ ...p, heightCm: e.target.value }))}
-                        placeholder="ex: 175"
-                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-white/50 text-xs mb-1 block">Glicemie (mg/dL)</label>
-                      <Input
-                        disabled={!medicalEditing}
-                        value={medicalForm.glucose}
-                        onChange={(e) => setMedicalForm((p) => ({ ...p, glucose: e.target.value }))}
-                        placeholder="ex: 95"
-                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/50 text-xs mb-1 block">Tensiune (mmHg)</label>
-                      <Input
-                        disabled={!medicalEditing}
-                        value={medicalForm.bloodPressure}
-                        onChange={(e) => setMedicalForm((p) => ({ ...p, bloodPressure: e.target.value }))}
-                        placeholder="ex: 125/80"
-                        className="bg-white/[0.04] border-white/[0.08] text-white disabled:opacity-60"
-                      />
-                    </div>
-                  </div>
-                  {medicalEditing && (
                     <button
-                      onClick={handleMedicalSave}
-                      disabled={savingMedical}
-                      className="w-full mt-2 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-4 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60"
+                      onClick={() => setMedicalEditing((v) => !v)}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-purple-200 flex items-center gap-2 hover:from-purple-500/30 hover:to-purple-600/30 transition-all duration-300 border border-purple-500/30 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20"
                     >
-                      <Save className="w-4 h-4" />
-                      {savingMedical ? 'Se salvează...' : 'Salvează datele medicale'}
+                      <Pencil className="w-4 h-4" /> {medicalEditing ? 'Anulează' : 'Editare'}
                     </button>
-                  )}
+                  </div>
+                  <div className="space-y-5">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="group/input">
+                        <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Grupă sangvină</label>
+                        <Select
+                          value={medicalForm.bloodType}
+                          onValueChange={(val) => setMedicalForm((p) => ({ ...p, bloodType: val }))}
+                          disabled={!medicalEditing}
+                        >
+                          <SelectTrigger className="bg-white/5 border-white/10 text-white rounded-xl disabled:opacity-50 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 backdrop-blur-sm">
+                            <SelectValue placeholder="Selectează grupa" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-black/90 backdrop-blur-xl text-white border-purple-500/30">
+                            {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', '0+', '0-'].map((bt) => (
+                              <SelectItem key={bt} value={bt} className="hover:bg-purple-500/20">{bt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="group/input">
+                        <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Număr asigurare</label>
+                        <Input
+                          disabled={!medicalEditing}
+                          value={medicalForm.insuranceNumber}
+                          onChange={(e) => setMedicalForm((p) => ({ ...p, insuranceNumber: e.target.value }))}
+                          placeholder="ID asigurare"
+                          className="bg-white/5 border-white/10 text-white disabled:opacity-50 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 backdrop-blur-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="group/input">
+                      <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Alergii</label>
+                      <textarea
+                        disabled={!medicalEditing}
+                        value={medicalForm.allergies}
+                        onChange={(e) => setMedicalForm((p) => ({ ...p, allergies: e.target.value }))}
+                        placeholder="Listează alergiile separate prin virgulă"
+                        className="w-full rounded-xl bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 disabled:opacity-50 transition-all duration-300 backdrop-blur-sm resize-none"
+                        rows={2}
+                      />
+                    </div>
+                    <div className="group/input">
+                      <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Condiții cronice</label>
+                      <textarea
+                        disabled={!medicalEditing}
+                        value={medicalForm.chronicConditions}
+                        onChange={(e) => setMedicalForm((p) => ({ ...p, chronicConditions: e.target.value }))}
+                        placeholder="ex: Hipertensiune"
+                        className="w-full rounded-xl bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 disabled:opacity-50 transition-all duration-300 backdrop-blur-sm resize-none"
+                        rows={2}
+                      />
+                    </div>
+                    <div className="group/input">
+                      <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Medicație curentă</label>
+                      <textarea
+                        disabled={!medicalEditing}
+                        value={medicalForm.medications}
+                        onChange={(e) => setMedicalForm((p) => ({ ...p, medications: e.target.value }))}
+                        placeholder="ex: Aspirin 100mg zilnic"
+                        className="w-full rounded-xl bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 disabled:opacity-50 transition-all duration-300 backdrop-blur-sm resize-none"
+                        rows={2}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="group/input">
+                        <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Greutate (kg)</label>
+                        <Input
+                          disabled={!medicalEditing}
+                          value={medicalForm.weightKg}
+                          onChange={(e) => setMedicalForm((p) => ({ ...p, weightKg: e.target.value }))}
+                          placeholder="ex: 68"
+                          className="bg-white/5 border-white/10 text-white disabled:opacity-50 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 backdrop-blur-sm"
+                        />
+                      </div>
+                      <div className="group/input">
+                        <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Variație greutate</label>
+                        <Input
+                          disabled={!medicalEditing}
+                          value={medicalForm.weightChange}
+                          onChange={(e) => setMedicalForm((p) => ({ ...p, weightChange: e.target.value }))}
+                          placeholder="ex: -0.5 kg"
+                          className="bg-white/5 border-white/10 text-white disabled:opacity-50 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 backdrop-blur-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="group/input">
+                        <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Înălțime (cm)</label>
+                        <Input
+                          disabled={!medicalEditing}
+                          value={medicalForm.heightCm}
+                          onChange={(e) => setMedicalForm((p) => ({ ...p, heightCm: e.target.value }))}
+                          placeholder="ex: 175"
+                          className="bg-white/5 border-white/10 text-white disabled:opacity-50 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 backdrop-blur-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="group/input">
+                        <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Glicemie (mg/dL)</label>
+                        <Input
+                          disabled={!medicalEditing}
+                          value={medicalForm.glucose}
+                          onChange={(e) => setMedicalForm((p) => ({ ...p, glucose: e.target.value }))}
+                          placeholder="ex: 95"
+                          className="bg-white/5 border-white/10 text-white disabled:opacity-50 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 backdrop-blur-sm"
+                        />
+                      </div>
+                      <div className="group/input">
+                        <label className="text-purple-200/70 text-xs mb-2 block font-medium uppercase tracking-wide">Tensiune (mmHg)</label>
+                        <Input
+                          disabled={!medicalEditing}
+                          value={medicalForm.bloodPressure}
+                          onChange={(e) => setMedicalForm((p) => ({ ...p, bloodPressure: e.target.value }))}
+                          placeholder="ex: 125/80"
+                          className="bg-white/5 border-white/10 text-white disabled:opacity-50 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 backdrop-blur-sm"
+                        />
+                      </div>
+                    </div>
+                    {medicalEditing && (
+                      <button
+                        onClick={handleMedicalSave}
+                        disabled={savingMedical}
+                        className="w-full mt-4 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white px-6 py-4 rounded-xl transition-all duration-300 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 disabled:opacity-60 font-semibold hover:scale-105 active:scale-95"
+                      >
+                        <Save className="w-5 h-5" />
+                        {savingMedical ? 'Se salvează...' : 'Salvează datele medicale'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Overview Stats */}
-            <div className="mb-8">
+            <div className="mb-8 relative z-10 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
               <PatientOverviewStats 
                 totalAppointments={appointments.length}
                 totalDocuments={files.length}
@@ -797,176 +846,209 @@ export default function Dashboard() {
             </div>
 
             {/* Main Grid Layout */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 relative z-10">
               {/* Left Column - Main Content */}
               <div className="xl:col-span-2 space-y-8">
                 {/* Health Metrics */}
-                <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
-                  <h3 className="text-white mb-6">Metrici de sănătate</h3>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                  {renderMetric('Greutate', healthMetrics.weight, 'kg', healthMetrics.weightChange, healthMetrics.weightDate)}
-                  {renderMetric('Înălțime', healthMetrics.height, 'cm', '', '')}
-                  {renderMetric('Glicemie', healthMetrics.glucose, 'mg/dL', '', healthMetrics.glucoseDate)}
-                  {renderMetric('Presiune', healthMetrics.bloodPressure, 'mmHg', '', healthMetrics.bpDate)}
+                <div 
+                  className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30 animate-fade-in-up"
+                  style={{ animationDelay: '0.6s' }}
+                >
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                  <div className="relative z-10">
+                    <h3 className="text-white text-2xl font-bold mb-8 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Metrici de sănătate</h3>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    {renderMetric('Greutate', healthMetrics.weight, 'kg', healthMetrics.weightChange, healthMetrics.weightDate)}
+                    {renderMetric('Înălțime', healthMetrics.height, 'cm', '', '')}
+                    {renderMetric('Glicemie', healthMetrics.glucose, 'mg/dL', '', healthMetrics.glucoseDate)}
+                    {renderMetric('Presiune', healthMetrics.bloodPressure, 'mmHg', '', healthMetrics.bpDate)}
+                    </div>
                   </div>
                 </div>
 
                 {/* Appointment History */}
-                <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
-                  <h3 className="text-white mb-6">Programări</h3>
-                  <div className="space-y-3">
-                    {appointmentsData.active.slice(0, 4).map((apt) => (
-                      <div
-                        key={apt.id}
-                        className="flex items-center gap-4 p-5 bg-white/[0.02] rounded-xl border border-white/[0.05] hover:bg-white/[0.04] transition-all duration-200"
-                      >
-                        <div className="flex-shrink-0">
-                          <div className="w-2 h-2 rounded-full bg-blue-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="text-white text-sm">Consultație</p>
-                            <span className="text-white/20">•</span>
-                            <p className="text-white/40 text-sm">{apt.doctorName}</p>
+                <div 
+                  className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30 animate-fade-in-up"
+                  style={{ animationDelay: '0.7s' }}
+                >
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                  <div className="relative z-10">
+                    <h3 className="text-white text-2xl font-bold mb-8 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Programări</h3>
+                    <div className="space-y-4">
+                      {appointmentsData.active.slice(0, 4).map((apt, idx) => (
+                        <div
+                          key={apt.id}
+                          className="group/item flex items-center gap-4 p-6 bg-white/5 rounded-2xl border border-white/10 hover:border-purple-500/30 hover:bg-white/10 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-purple-500/10"
+                          style={{ animationDelay: `${0.8 + idx * 0.1}s` }}
+                        >
+                          <div className="flex-shrink-0">
+                            <div className="w-3 h-3 rounded-full bg-purple-400 animate-pulse shadow-lg shadow-purple-400/50" />
                           </div>
-                          <div className="flex items-center gap-4 text-xs text-white/30">
-                            <span className="flex items-center gap-1.5">
-                              <Calendar className="w-3 h-3" />
-                              {formatDate(apt.date)}
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                              <Clock className="w-3 h-3" />
-                              {apt.time}
-                            </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <p className="text-white text-sm font-semibold">Consultație</p>
+                              <span className="text-purple-400/50">•</span>
+                              <p className="text-purple-200/80 text-sm">{apt.doctorName}</p>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs text-white/50">
+                              <span className="flex items-center gap-1.5">
+                                <Calendar className="w-4 h-4 text-purple-400/70" />
+                                {formatDate(apt.date)}
+                              </span>
+                              <span className="flex items-center gap-1.5">
+                                <Clock className="w-4 h-4 text-purple-400/70" />
+                                {apt.time}
+                              </span>
+                            </div>
                           </div>
+                          <span className="px-4 py-2 bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-purple-200 rounded-xl text-xs font-semibold border border-purple-500/30 shadow-lg shadow-purple-500/20">
+                            Programat
+                          </span>
                         </div>
-                        <span className="px-3 py-1.5 bg-blue-500/10 text-blue-400 rounded-lg text-xs border border-blue-500/20">
-                          Programat
-                        </span>
-                      </div>
-                    ))}
-                    {appointmentsData.active.length === 0 && (
-                      <p className="text-white/40 text-center py-8">Nu ai programări active</p>
-                    )}
+                      ))}
+                      {appointmentsData.active.length === 0 && (
+                        <p className="text-white/40 text-center py-12 text-lg">Nu ai programări active</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 {/* Medical Documents */}
-                <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-white">Documente</h3>
-                    <button
-                      className="text-white/40 hover:text-white text-sm transition-colors"
-                      onClick={() => setActiveSection('files')}
-                    >
-                      Vezi toate
-                    </button>
-                  </div>
-                  {files.length === 0 ? (
-                    <p className="text-white/40 text-sm">Nu ai încărcat documente încă.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {files.slice(0, 4).map((file) => {
-                        const isImage = file.type?.startsWith('image/');
-                        const isPdf = file.type?.includes('pdf');
-                        return (
-                          <div
-                            key={file.id}
-                            className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/[0.03] transition-all duration-200 group cursor-pointer"
-                            onClick={() => setPreviewFile(file)}
-                          >
-                            <div className="flex-shrink-0">
-                              <div className="w-12 h-12 rounded-lg bg-white/[0.05] flex items-center justify-center overflow-hidden">
-                                {isImage ? (
-                                  <img src={file.dataUrl} alt={file.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="flex flex-col items-center justify-center text-white/50 text-[11px]">
-                                    <FileText className="w-4 h-4 text-white/60" />
-                                    {isPdf ? 'PDF' : 'DOC'}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="text-white text-sm truncate">{file.name}</p>
-                              </div>
-                              <div className="flex items-center gap-2 text-xs text-white/40">
-                                <span className="truncate">{file.type || 'fișier'}</span>
-                                <span>•</span>
-                                <span>{new Date(file.uploadedAt).toLocaleDateString('ro-RO')}</span>
-                                <span>•</span>
-                                <span>{formatSize(file.size)}</span>
-                              </div>
-                            </div>
-                            <button
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-white/[0.05] rounded-lg"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPreviewFile(file);
-                              }}
-                            >
-                              <Eye className="w-4 h-4 text-white/60" />
-                            </button>
-                          </div>
-                        );
-                      })}
+                <div 
+                  className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30 animate-fade-in-up"
+                  style={{ animationDelay: '0.8s' }}
+                >
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-8">
+                      <h3 className="text-white text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Documente</h3>
+                      <button
+                        className="text-purple-300/70 hover:text-purple-200 text-sm font-medium transition-all duration-300 hover:scale-110 px-4 py-2 rounded-xl hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30"
+                        onClick={() => setActiveSection('files')}
+                      >
+                        Vezi toate →
+                      </button>
                     </div>
-                  )}
+                    {files.length === 0 ? (
+                      <p className="text-white/40 text-center py-12 text-lg">Nu ai încărcat documente încă.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {files.slice(0, 4).map((file, idx) => {
+                          const isImage = file.type?.startsWith('image/');
+                          const isPdf = file.type?.includes('pdf');
+                          return (
+                            <div
+                              key={file.id}
+                              className="group/item flex items-center gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 hover:bg-white/10 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-purple-500/10 cursor-pointer"
+                              onClick={() => setPreviewFile(file)}
+                              style={{ animationDelay: `${0.9 + idx * 0.1}s` }}
+                            >
+                              <div className="flex-shrink-0">
+                                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center overflow-hidden shadow-lg shadow-purple-500/20 group-hover/item:scale-110 transition-transform duration-300">
+                                  {isImage ? (
+                                    <img src={file.dataUrl} alt={file.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="flex flex-col items-center justify-center text-purple-200 text-xs font-semibold">
+                                      <FileText className="w-6 h-6 mb-1" />
+                                      {isPdf ? 'PDF' : 'DOC'}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <p className="text-white text-sm font-semibold truncate">{file.name}</p>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-purple-200/60">
+                                  <span className="truncate">{file.type || 'fișier'}</span>
+                                  <span className="text-purple-400/40">•</span>
+                                  <span>{new Date(file.uploadedAt).toLocaleDateString('ro-RO')}</span>
+                                  <span className="text-purple-400/40">•</span>
+                                  <span>{formatSize(file.size)}</span>
+                                </div>
+                              </div>
+                              <button
+                                className="opacity-0 group-hover/item:opacity-100 transition-all duration-300 p-3 hover:bg-purple-500/20 rounded-xl border border-purple-500/30 hover:scale-110"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewFile(file);
+                                }}
+                              >
+                                <Eye className="w-5 h-5 text-purple-200" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Right Column - Sidebar */}
-              <div className="xl:col-span-1 space-y-4">
+              <div className="xl:col-span-1 space-y-6">
                 {/* Quick Actions */}
-                <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
-                  <h4 className="text-white text-sm mb-4">Acțiuni rapide</h4>
-                  <div className="space-y-2">
-                    <button className="w-full flex items-center gap-3 p-4 bg-white/[0.02] hover:bg-white/[0.05] rounded-xl transition-all duration-200 text-left">
-                      <div className="w-9 h-9 rounded-lg bg-white/[0.05] flex items-center justify-center">
-                        <Calendar className="w-4 h-4 text-white/60" />
-                      </div>
-                      <span className="text-white/80 text-sm">Programare nouă</span>
-                    </button>
-                    <button className="w-full flex items-center gap-3 p-4 bg-white/[0.02] hover:bg-white/[0.05] rounded-xl transition-all duration-200 text-left">
-                      <div className="w-9 h-9 rounded-lg bg-white/[0.05] flex items-center justify-center">
-                        <FileText className="w-4 h-4 text-white/60" />
-                      </div>
-                      <span className="text-white/80 text-sm">Încarcă document</span>
-                    </button>
+                <div 
+                  className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up"
+                  style={{ animationDelay: '0.9s' }}
+                >
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                  <div className="relative z-10">
+                    <h4 className="text-white text-lg font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Acțiuni rapide</h4>
+                    <div className="space-y-3">
+                      <button className="w-full flex items-center gap-4 p-5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all duration-300 text-left border border-white/10 hover:border-purple-500/30 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/10 group/btn">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center group-hover/btn:scale-110 transition-transform duration-300 shadow-lg shadow-purple-500/20">
+                          <Calendar className="w-5 h-5 text-purple-200" />
+                        </div>
+                        <span className="text-white font-semibold text-sm">Programare nouă</span>
+                      </button>
+                      <button className="w-full flex items-center gap-4 p-5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all duration-300 text-left border border-white/10 hover:border-purple-500/30 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/10 group/btn">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center group-hover/btn:scale-110 transition-transform duration-300 shadow-lg shadow-purple-500/20">
+                          <FileText className="w-5 h-5 text-purple-200" />
+                        </div>
+                        <span className="text-white font-semibold text-sm">Încarcă document</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Medical History */}
-                <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
-                  <h4 className="text-white text-sm mb-4">Condiții medicale</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02]">
-                      <span className="text-white/80 text-sm">{medicalProfile.chronicConditions || 'Necompletat'}</span>
-                      <span className="text-white/30 text-xs">Controlată</span>
+                <div 
+                  className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up"
+                  style={{ animationDelay: '1s' }}
+                >
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                  <div className="relative z-10">
+                    <h4 className="text-white text-lg font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Condiții medicale</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300">
+                        <span className="text-white/90 text-sm font-medium">{medicalProfile.chronicConditions || 'Necompletat'}</span>
+                        <span className="text-purple-300/60 text-xs font-semibold px-3 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30">Controlată</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="mt-4">
-                    <h4 className="text-white text-sm mb-4">Alergii</h4>
-                    <div className="space-y-2">
-                      {(medicalProfile.allergies ? medicalProfile.allergies.split(',') : []).map((allergy, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-2 p-3 rounded-lg bg-red-500/5 border border-red-500/10"
-                        >
-                          <AlertCircle className="w-4 h-4 text-red-400" />
-                          <span className="text-white/80 text-sm">{allergy.trim()}</span>
-                        </div>
-                      ))}
-                      {!medicalProfile.allergies && (
-                        <div className="text-white/40 text-sm">Nu ai adăugat alergii</div>
-                      )}
+                    <div className="mt-6">
+                      <h4 className="text-white text-lg font-bold mb-4 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Alergii</h4>
+                      <div className="space-y-3">
+                        {(medicalProfile.allergies ? medicalProfile.allergies.split(',') : []).map((allergy, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 hover:border-red-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-red-500/20"
+                          >
+                            <AlertCircle className="w-5 h-5 text-red-400" />
+                            <span className="text-white/90 text-sm font-medium">{allergy.trim()}</span>
+                          </div>
+                        ))}
+                        {!medicalProfile.allergies && (
+                          <div className="text-white/40 text-sm text-center py-4">Nu ai adăugat alergii</div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </>
+
+          </div>
         );
 
       case 'medical':
