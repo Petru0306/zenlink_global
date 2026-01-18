@@ -5,6 +5,8 @@ import com.zenlink.zenlink.repository.PatientFileRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -16,6 +18,8 @@ import java.util.UUID;
 public class PatientFileRagIndexService {
 
     public enum IndexStatus { NEW, INDEXING, READY, ERROR }
+
+    private static final Logger log = LoggerFactory.getLogger(PatientFileRagIndexService.class);
 
     private final JdbcTemplate jdbcTemplate;
     private final PatientFileRepository patientFileRepository;
@@ -64,12 +68,14 @@ public class PatientFileRagIndexService {
         upsertIndexRow(fileId, file.getPatientId(), IndexStatus.INDEXING, null);
 
         try {
+            log.info("Indexing file {} (patient {}, name={}, size={})", fileId, file.getPatientId(), file.getName(), file.getSize());
             // Clear any previous index artifacts
             jdbcTemplate.update("DELETE FROM patient_file_chunks WHERE file_id = ?", fileId);
             jdbcTemplate.update("DELETE FROM patient_file_pages WHERE file_id = ?", fileId);
 
             List<String> pages = pdfTextExtractor.extractPages(file.getContent());
             if (PdfTextExtractor.looksScanned(pages)) {
+                log.info("File {} looks scanned, running OCR...", fileId);
                 String ocrText = ocrService.ocrToText(file.getContent());
                 pages = splitOcrIntoPages(ocrText);
             }
@@ -111,7 +117,9 @@ public class PatientFileRagIndexService {
             }
 
             upsertIndexRow(fileId, file.getPatientId(), IndexStatus.READY, null);
+            log.info("Indexing DONE for file {}", fileId);
         } catch (Exception e) {
+            log.error("Indexing FAILED for file {}: {}", fileId, e.getMessage(), e);
             upsertIndexRow(fileId, file.getPatientId(), IndexStatus.ERROR, e.getMessage());
             throw e instanceof RuntimeException re ? re : new RuntimeException(e);
         }

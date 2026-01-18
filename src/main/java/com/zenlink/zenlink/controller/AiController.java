@@ -151,6 +151,7 @@ public class AiController {
 
         StreamingResponseBody body = outputStream -> {
             try {
+                long t0 = System.currentTimeMillis();
                 String userText = request.getUserMessage().trim();
                 if (userText.isEmpty()) {
                     outputStream.write("Te rog scrie o întrebare.".getBytes(StandardCharsets.UTF_8));
@@ -178,8 +179,10 @@ public class AiController {
 
                 // Persist assistant answer after streaming completes (1 write, not per token).
                 aiConversationService.appendMessage(conversation, "assistant", assistant);
+                long dt = System.currentTimeMillis() - t0;
+                org.slf4j.LoggerFactory.getLogger(AiController.class).info("AI chat scope={} scopeId={} completed in {} ms", scopeType, scopeId, dt);
             } catch (Exception e) {
-                String msg = "Eroare: " + (e.getMessage() != null ? e.getMessage() : "necunoscută");
+                String msg = "Eroare: " + (e.getMessage() != null ? e.getMessage() : e.toString());
                 outputStream.write(msg.getBytes(StandardCharsets.UTF_8));
                 outputStream.flush();
             }
