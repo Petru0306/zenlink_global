@@ -37,26 +37,26 @@ export function VisionSidebar({ isOpen, onClose, activeSection, onSectionChange,
         className={`
           fixed left-0 top-0 h-dvh w-[280px] z-50
           flex flex-col min-h-0
-          bg-[#0B1437]/80 backdrop-blur-2xl
-          border-r border-white/[0.05]
+          backdrop-blur-xl bg-black/40 border-r border-white/10
           transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Logo Section */}
-        <div className="p-6 lg:p-8 border-b border-white/[0.05] shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#5B8DEF] to-[#4169E1] flex items-center justify-center">
+        <div className="p-6 lg:p-8 border-b border-white/10 shrink-0 relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+          <div className="relative z-10 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/30 via-purple-600/30 to-purple-700/30 border-2 border-purple-400/50 flex items-center justify-center shadow-lg shadow-purple-500/50 group-hover:scale-110 transition-all duration-300">
               <Brain className="w-5 h-5 text-white" />
             </div>
-            <span className="text-white">ZenLink</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">ZenLink</span>
           </div>
         </div>
 
         {/* Navigation Menu */}
         <nav className="flex-1 min-h-0 p-3 lg:p-4 overflow-y-auto overflow-x-hidden">
-          <div className="w-full min-h-full flex flex-col gap-1">
-            {items.map((item) => {
+          <div className="w-full min-h-full flex flex-col gap-2">
+            {items.map((item, index) => {
               const Icon = item.icon;
               const isActive = activeSection === item.id;
 
@@ -68,21 +68,33 @@ export function VisionSidebar({ isOpen, onClose, activeSection, onSectionChange,
                     onClose?.();
                   }}
                   className={`
-                    w-full flex items-center justify-between px-3.5 lg:px-4 py-2 lg:py-2.5 rounded-xl
-                    transition-all duration-200
+                    relative group w-full flex items-center justify-between px-4 py-3 rounded-2xl
+                    transition-all duration-300
                     ${
                       isActive
-                        ? 'bg-white/[0.08] text-white'
-                        : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
+                        ? 'bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-white border border-purple-500/30 shadow-lg shadow-purple-500/20 scale-105'
+                        : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent hover:border-purple-500/20'
                     }
                   `}
+                  style={{ animationDelay: `${index * 0.05}s` }}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span className="text-[13px] lg:text-sm leading-tight truncate">{item.label}</span>
+                  {/* Active glow effect */}
+                  {isActive && (
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                  )}
+                  
+                  <div className="relative z-10 flex items-center gap-3 min-w-0 flex-1">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-gradient-to-br from-purple-500/30 to-purple-600/30 border border-purple-400/50 shadow-lg shadow-purple-500/30' 
+                        : 'bg-white/5 border border-white/10 group-hover:border-purple-500/30 group-hover:bg-purple-500/10'
+                    }`}>
+                      <Icon className={`w-5 h-5 ${isActive ? 'text-purple-200' : 'text-white/60 group-hover:text-purple-200'}`} />
+                    </div>
+                    <span className="text-sm font-medium leading-tight truncate">{item.label}</span>
                   </div>
                   {isActive && (
-                    <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
+                    <ChevronRight className="w-5 h-5 text-purple-200 shrink-0 relative z-10" />
                   )}
                 </button>
               );

@@ -189,30 +189,32 @@ export default function DoctorDashboard() {
               <p className="text-white/40">Manage your profile and account settings</p>
             </div>
 
-            <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <p className="text-white/60 text-sm">Date personale</p>
-                  <h2 className="text-white text-xl font-semibold">Profil doctor</h2>
+            <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <p className="text-purple-200/70 text-sm font-medium uppercase tracking-wide">Date personale</p>
+                    <h2 className="text-white text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Profil doctor</h2>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !isEditing;
+                      if (!next) {
+                        setEditForm({
+                          firstName: user?.firstName || '',
+                          lastName: user?.lastName || '',
+                          phone: user?.phone || '',
+                        });
+                      }
+                      setIsEditing(next);
+                    }}
+                    className="px-3 py-1 text-xs rounded-xl backdrop-blur-xl bg-white/5 border border-white/10 hover:border-purple-500/30 hover:bg-purple-500/10 text-white/80 flex items-center gap-2 transition-all duration-300 font-semibold"
+                    disabled={saving}
+                  >
+                    <Pencil className="w-4 h-4" /> {isEditing ? 'Anulează' : 'Editare'}
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    const next = !isEditing;
-                    if (!next) {
-                      setEditForm({
-                        firstName: user?.firstName || '',
-                        lastName: user?.lastName || '',
-                        phone: user?.phone || '',
-                      });
-                    }
-                    setIsEditing(next);
-                  }}
-                  className="px-3 py-1 text-xs rounded-full bg-white/5 text-white/80 flex items-center gap-2 hover:bg-white/10 transition"
-                  disabled={saving}
-                >
-                  <Pencil className="w-4 h-4" /> {isEditing ? 'Anulează' : 'Editare'}
-                </button>
-              </div>
 
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -264,7 +266,7 @@ export default function DoctorDashboard() {
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="px-4 py-3 bg-gradient-to-r from-[#5B8DEF] to-[#4169E1] hover:from-[#5B8DEF]/90 hover:to-[#4169E1]/90 text-white rounded-xl shadow-lg shadow-blue-500/20 disabled:opacity-60"
+                      className="px-4 py-3 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-xl shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 disabled:opacity-60 transition-all duration-300 font-semibold"
                     >
                       {saving ? 'Se salvează...' : 'Salvează profilul'}
                     </button>
@@ -277,13 +279,14 @@ export default function DoctorDashboard() {
                           phone: user?.phone || '',
                         });
                       }}
-                      className="px-4 py-3 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl border border-white/[0.08]"
+                      className="px-4 py-3 backdrop-blur-xl bg-white/5 border border-white/10 hover:border-purple-500/30 hover:bg-purple-500/10 text-white rounded-xl transition-all duration-300 font-semibold"
                       disabled={saving}
                     >
                       Anulează
                     </button>
                   </div>
                 )}
+                </div>
               </div>
             </div>
           </div>
@@ -414,110 +417,117 @@ export default function DoctorDashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Calendar for setting availability */}
-              <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
-                <h2 className="text-white text-xl font-semibold mb-6">Set Your Availability</h2>
-                <Calendar
-                  selectedDate={selectedDate}
-                  onDateSelect={handleDateSelect}
-                  unavailableDates={[]}
-                />
-                
-                {selectedDate && (
-                  <div className="mt-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-white font-semibold">
-                        Time slots for {selectedDate.toLocaleDateString('ro-RO')}
-                      </h3>
-                      <button
-                        onClick={addTimeSlot}
-                        className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center gap-1 text-sm"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Add Slot
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {timeSlots.map((slot, index) => (
-                        <div key={index} className="flex items-center gap-3 bg-white/[0.03] p-3 rounded-xl">
-                          <input
-                            type="time"
-                            value={slot.startTime}
-                            onChange={(e) => updateTimeSlot(index, 'startTime', e.target.value)}
-                            className="px-3 py-2 bg-white/[0.05] border border-white/[0.1] rounded-lg text-white focus:outline-none focus:border-blue-500"
-                          />
-                          <span className="text-white/40">-</span>
-                          <input
-                            type="time"
-                            value={slot.endTime}
-                            onChange={(e) => updateTimeSlot(index, 'endTime', e.target.value)}
-                            className="px-3 py-2 bg-white/[0.05] border border-white/[0.1] rounded-lg text-white focus:outline-none focus:border-blue-500"
-                          />
-                          <button
-                            onClick={() => removeTimeSlot(index)}
-                            className="ml-auto p-2 hover:bg-white/[0.1] rounded-lg text-red-400"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                      {timeSlots.length === 0 && (
-                        <p className="text-white/40 text-sm text-center py-4">
-                          No time slots set. Click "Add Slot" to add availability.
-                        </p>
+              <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30">
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                <div className="relative z-10">
+                  <h2 className="text-white text-2xl font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Set Your Availability</h2>
+                  <Calendar
+                    selectedDate={selectedDate}
+                    onDateSelect={handleDateSelect}
+                    unavailableDates={[]}
+                  />
+                  
+                  {selectedDate && (
+                    <div className="mt-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-white font-semibold">
+                          Time slots for {selectedDate.toLocaleDateString('ro-RO')}
+                        </h3>
+                        <button
+                          onClick={addTimeSlot}
+                          className="px-3 py-1 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-lg flex items-center gap-1 text-sm shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 font-semibold"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add Slot
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        {timeSlots.map((slot, index) => (
+                          <div key={index} className="flex items-center gap-3 backdrop-blur-xl bg-white/5 border border-white/10 p-3 rounded-xl">
+                            <input
+                              type="time"
+                              value={slot.startTime}
+                              onChange={(e) => updateTimeSlot(index, 'startTime', e.target.value)}
+                              className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all backdrop-blur-sm"
+                            />
+                            <span className="text-purple-200/70">-</span>
+                            <input
+                              type="time"
+                              value={slot.endTime}
+                              onChange={(e) => updateTimeSlot(index, 'endTime', e.target.value)}
+                              className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all backdrop-blur-sm"
+                            />
+                            <button
+                              onClick={() => removeTimeSlot(index)}
+                              className="ml-auto p-2 hover:bg-red-500/10 rounded-lg text-red-400 transition-all"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                        {timeSlots.length === 0 && (
+                          <p className="text-purple-200/70 text-sm text-center py-4 font-medium">
+                            No time slots set. Click "Add Slot" to add availability.
+                          </p>
+                        )}
+                      </div>
+                      
+                      {timeSlots.length > 0 && (
+                        <button
+                          onClick={saveAvailability}
+                          disabled={savingAvailability}
+                          className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-xl font-semibold shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 disabled:opacity-50 transition-all duration-300"
+                        >
+                          {savingAvailability ? 'Saving...' : 'Save Availability'}
+                        </button>
                       )}
                     </div>
-                    
-                    {timeSlots.length > 0 && (
-                      <button
-                        onClick={saveAvailability}
-                        disabled={savingAvailability}
-                        className="w-full px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-semibold disabled:opacity-50"
-                      >
-                        {savingAvailability ? 'Saving...' : 'Save Availability'}
-                      </button>
-                    )}
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* Upcoming Appointments */}
-              <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
-                <h2 className="text-white text-xl font-semibold mb-6">Upcoming Appointments</h2>
-                <div className="space-y-4">
-                  {upcomingAppointments.length === 0 ? (
-                    <div className="text-white/60 text-center py-8">
-                      No upcoming appointments. Appointments will appear here once patients book with you.
-                    </div>
-                  ) : (
-                    upcomingAppointments.map((apt) => (
-                      <div key={apt.id} className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-                              <Stethoscope className="w-6 h-6 text-blue-400" />
-                            </div>
-                            <div>
-                              <h3 className="text-white font-semibold">{apt.patientName}</h3>
-                              <div className="flex items-center gap-4 mt-1">
-                                <span className="text-white/40 text-sm flex items-center gap-1">
-                                  <CalendarIcon className="w-4 h-4" />
-                                  {apt.date}
-                                </span>
-                                <span className="text-white/40 text-sm flex items-center gap-1">
-                                  <Clock className="w-4 h-4" />
-                                  {apt.time}
-                                </span>
+              <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30">
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                <div className="relative z-10">
+                  <h2 className="text-white text-2xl font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Upcoming Appointments</h2>
+                  <div className="space-y-4">
+                    {upcomingAppointments.length === 0 ? (
+                      <div className="text-purple-200/70 text-center py-8 font-medium">
+                        No upcoming appointments. Appointments will appear here once patients book with you.
+                      </div>
+                    ) : (
+                      upcomingAppointments.map((apt) => (
+                        <div key={apt.id} className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30">
+                          <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                          <div className="relative z-10 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                                <Stethoscope className="w-6 h-6 text-purple-300" />
+                              </div>
+                              <div>
+                                <h3 className="text-white font-bold">{apt.patientName}</h3>
+                                <div className="flex items-center gap-4 mt-1">
+                                  <span className="text-purple-200/70 text-sm flex items-center gap-1 font-medium">
+                                    <CalendarIcon className="w-4 h-4 text-purple-300" />
+                                    {apt.date}
+                                  </span>
+                                  <span className="text-purple-200/70 text-sm flex items-center gap-1 font-medium">
+                                    <Clock className="w-4 h-4 text-purple-300" />
+                                    {apt.time}
+                                  </span>
+                                </div>
                               </div>
                             </div>
+                            <span className="px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-sm font-semibold">
+                              {apt.status}
+                            </span>
                           </div>
-                          <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-lg text-sm">
-                            {apt.status}
-                          </span>
                         </div>
-                      </div>
-                    ))
-                  )}
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -533,81 +543,86 @@ export default function DoctorDashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-                    <Users className="w-6 h-6 text-blue-400" />
+              <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30">
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                <div className="relative z-10 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                    <Users className="w-6 h-6 text-purple-300" />
                   </div>
                   <div>
-                    <p className="text-white/40 text-sm">Total Patients</p>
-                    <p className="text-white text-2xl font-semibold">{derivedPatients.length}</p>
+                    <p className="text-purple-200/70 text-sm font-medium uppercase tracking-wide">Total Patients</p>
+                    <p className="text-white text-2xl font-bold">{derivedPatients.length}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
-              <h2 className="text-white text-xl font-semibold mb-6">All Patients</h2>
-              <div className="space-y-4">
-                {derivedPatients.length === 0 ? (
-                  <div className="text-white/60 text-center py-8">
-                    No patients yet. Patients will appear here once they book appointments with you.
-                  </div>
-                ) : (
-                  derivedPatients.map((patient: any) => (
-                    <div key={patient.id} className="bg-white/[0.03] rounded-xl p-6 border border-white/[0.05]">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                            <User className="w-6 h-6 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="text-white font-semibold">{patient.name}</h3>
-                            <div className="flex items-center gap-4 mt-1">
-                              <span className="text-white/40 text-sm flex items-center gap-1">
-                                <Mail className="w-4 h-4" />
-                                {patient.email}
-                              </span>
-                              <span className="text-white/40 text-sm flex items-center gap-1">
-                                <Phone className="w-4 h-4" />
-                                {patient.phone}
-                              </span>
+            <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+              <div className="relative z-10">
+                <h2 className="text-white text-2xl font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">All Patients</h2>
+                <div className="space-y-4">
+                  {derivedPatients.length === 0 ? (
+                    <div className="text-purple-200/70 text-center py-8 font-medium">
+                      No patients yet. Patients will appear here once they book appointments with you.
+                    </div>
+                  ) : (
+                    derivedPatients.map((patient: any) => (
+                      <div key={patient.id} className="relative group/patient backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30">
+                        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover/patient:opacity-100 transition-opacity duration-500 blur-xl" />
+                        <div className="relative z-10 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                              <User className="w-6 h-6 text-purple-300" />
                             </div>
-                            {patient.nextAppointment && (
-                              <div className="mt-3 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-white/80 text-sm flex items-center gap-3">
-                                <span className="flex items-center gap-1 text-white/70">
-                                  <CalendarIcon className="w-4 h-4" />
-                                  {patient.nextAppointment.date}
+                            <div>
+                              <h3 className="text-white font-bold">{patient.name}</h3>
+                              <div className="flex items-center gap-4 mt-1">
+                                <span className="text-purple-200/70 text-sm flex items-center gap-1 font-medium">
+                                  <Mail className="w-4 h-4 text-purple-300" />
+                                  {patient.email}
                                 </span>
-                                <span className="flex items-center gap-1 text-white/70">
-                                  <Clock className="w-4 h-4" />
-                                  {patient.nextAppointment.time}
-                                </span>
-                                <span className="ml-auto px-3 py-1 bg-green-500/15 text-green-300 rounded-lg text-xs">
-                                  {patient.nextAppointment.status || 'upcoming'}
+                                <span className="text-purple-200/70 text-sm flex items-center gap-1 font-medium">
+                                  <Phone className="w-4 h-4 text-purple-300" />
+                                  {patient.phone}
                                 </span>
                               </div>
-                            )}
+                              {patient.nextAppointment && (
+                                <div className="mt-3 backdrop-blur-xl bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-purple-200/80 text-sm flex items-center gap-3">
+                                  <span className="flex items-center gap-1 text-purple-200/70 font-medium">
+                                    <CalendarIcon className="w-4 h-4 text-purple-300" />
+                                    {patient.nextAppointment.date}
+                                  </span>
+                                  <span className="flex items-center gap-1 text-purple-200/70 font-medium">
+                                    <Clock className="w-4 h-4 text-purple-300" />
+                                    {patient.nextAppointment.time}
+                                  </span>
+                                  <span className="ml-auto px-3 py-1 bg-green-500/15 text-green-300 border border-green-500/30 rounded-lg text-xs font-semibold">
+                                    {patient.nextAppointment.status || 'upcoming'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setActionModal({ type: 'files', patient })}
+                              className="px-4 py-2 backdrop-blur-xl bg-white/5 border border-white/10 hover:border-purple-500/30 hover:bg-purple-500/10 text-white rounded-xl text-sm font-semibold transition-all duration-300"
+                            >
+                              View Files
+                            </button>
+                            <button
+                              onClick={() => setActionModal({ type: 'medical', patient })}
+                              className="px-4 py-2 backdrop-blur-xl bg-white/5 border border-white/10 hover:border-purple-500/30 hover:bg-purple-500/10 text-white rounded-xl text-sm font-semibold transition-all duration-300"
+                            >
+                              Medical Profile
+                            </button>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setActionModal({ type: 'files', patient })}
-                            className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl text-sm"
-                          >
-                            View Files
-                          </button>
-                          <button
-                            onClick={() => setActionModal({ type: 'medical', patient })}
-                            className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] text-white rounded-xl text-sm"
-                          >
-                            Medical Profile
-                          </button>
-                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -621,52 +636,55 @@ export default function DoctorDashboard() {
               <p className="text-white/40">Get help with medical questions and patient care</p>
             </div>
 
-            <div className="bg-white/[0.02] rounded-2xl p-8 border border-white/[0.05]">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <Bot className="w-8 h-8 text-white" />
+            <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 border border-purple-400/50 flex items-center justify-center shadow-2xl shadow-purple-500/50">
+                    <Bot className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-white text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">ZenLink AI Assistant</h2>
+                    <p className="text-purple-200/70 text-sm font-medium">Your intelligent medical assistant</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-white text-xl font-semibold">ZenLink AI Assistant</h2>
-                  <p className="text-white/40 text-sm">Your intelligent medical assistant</p>
-                </div>
-              </div>
 
-              <div className="mb-4">
-                <label className="block text-white/60 text-sm mb-2">Selectează pacientul</label>
-                <select
-                  value={selectedPatientId}
-                  onChange={(e) => setSelectedPatientId(e.target.value)}
-                  className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2 text-white text-sm"
-                >
-                  <option value="">— alege pacient —</option>
-                  {aiPatients.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-                {aiPatients.length === 0 && (
-                  <p className="text-white/40 text-xs mt-2">
-                    Nu există încă pacienți (ai nevoie de programări ca să apară aici).
-                  </p>
+                <div className="mb-4">
+                  <label className="block text-purple-200/70 text-sm mb-2 font-medium uppercase tracking-wide">Selectează pacientul</label>
+                  <select
+                    value={selectedPatientId}
+                    onChange={(e) => setSelectedPatientId(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm backdrop-blur-sm focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                  >
+                    <option value="">— alege pacient —</option>
+                    {aiPatients.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  {aiPatients.length === 0 && (
+                    <p className="text-purple-200/50 text-xs mt-2 font-medium">
+                      Nu există încă pacienți (ai nevoie de programări ca să apară aici).
+                    </p>
+                  )}
+                </div>
+
+                {selectedPatientId ? (
+                  <AiChat
+                    userId={String(user?.id || '')}
+                    userRole={(user?.role || 'DOCTOR') as any}
+                    scopeType="PATIENT"
+                    scopeId={selectedPatientId}
+                    title="ZenLink AI Assistant"
+                    subtitle="Întrebări despre pacientul selectat (cu citări din fișierele pacientului)."
+                  />
+                ) : (
+                  <div className="text-purple-200/70 text-sm backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-4 font-medium">
+                    Selectează un pacient ca să poți folosi AI cu fișierele lui.
+                  </div>
                 )}
               </div>
-
-              {selectedPatientId ? (
-                <AiChat
-                  userId={String(user?.id || '')}
-                  userRole={(user?.role || 'DOCTOR') as any}
-                  scopeType="PATIENT"
-                  scopeId={selectedPatientId}
-                  title="ZenLink AI Assistant"
-                  subtitle="Întrebări despre pacientul selectat (cu citări din fișierele pacientului)."
-                />
-              ) : (
-                <div className="text-white/50 text-sm bg-white/[0.02] border border-white/[0.05] rounded-xl p-4">
-                  Selectează un pacient ca să poți folosi AI cu fișierele lui.
-                </div>
-              )}
             </div>
           </div>
         );
@@ -680,8 +698,9 @@ export default function DoctorDashboard() {
     <div className="min-h-screen bg-[#0a0e1a] relative overflow-hidden">
       {/* Background gradient orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[20%] -right-[10%] w-[800px] h-[800px] rounded-full bg-gradient-to-br from-[#1e3a8a]/30 via-[#1e40af]/20 to-transparent blur-[100px]" />
-        <div className="absolute -bottom-[15%] -left-[5%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-[#0e7490]/25 via-[#0891b2]/15 to-transparent blur-[80px]" />
+        <div className="absolute -top-[20%] -right-[10%] w-[800px] h-[800px] rounded-full bg-gradient-to-br from-purple-500/30 via-purple-600/20 to-transparent blur-[100px]" />
+        <div className="absolute -bottom-[15%] -left-[5%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-purple-400/25 via-purple-500/15 to-transparent blur-[80px]" />
+        <div className="absolute top-[40%] right-[30%] w-[400px] h-[400px] rounded-full bg-gradient-to-br from-purple-400/20 to-transparent blur-[90px]" />
       </div>
 
       {/* Sidebar */}

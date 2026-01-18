@@ -23,9 +23,9 @@ export function ClinicCard({
 }: ClinicCardProps) {
   return (
     <div
-      className={`bg-gradient-to-br from-[#1a2f5c] to-[#0f1f3d] rounded-3xl overflow-hidden border border-[#2d4a7c] transition-all hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-600/20 transform duration-300 ${
-      featured ? 'ring-2 ring-blue-500/50' : ''
-    } ${onViewClinic ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1437]' : ''}`}
+      className={`relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl overflow-hidden border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.03] hover:border-purple-500/30 ${
+      featured ? 'ring-2 ring-purple-500/50' : ''
+    } ${onViewClinic ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black' : ''}`}
       role={onViewClinic ? 'button' : undefined}
       tabIndex={onViewClinic ? 0 : undefined}
       onClick={() => onViewClinic?.(id)}
@@ -37,59 +37,61 @@ export function ClinicCard({
         }
       }}
     >
+      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+      
       {/* Image */}
-      <div className="relative h-52 overflow-hidden group">
+      <div className="relative z-10 h-52 overflow-hidden group/image">
         <ImageWithFallback
           src={image}
           alt={name}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          className="w-full h-full object-cover group-hover/image:scale-110 transition-transform duration-500"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0b1437] via-transparent to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
         
         {featured && (
-          <div className="absolute top-4 left-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-1.5 rounded-full text-xs flex items-center gap-1.5 shadow-lg">
-            <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+          <div className="absolute top-4 left-4 bg-gradient-to-r from-purple-600 to-purple-500 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 shadow-2xl shadow-purple-500/50 border border-purple-400/50">
+            <span className="w-2 h-2 bg-white rounded-full animate-pulse shadow-lg shadow-white/50"></span>
             Featured
           </div>
         )}
         
         {distance && (
-          <div className="absolute top-4 right-4 bg-[#0b1437]/80 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-xs border border-white/10">
+          <div className="absolute top-4 right-4 backdrop-blur-xl bg-black/60 border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium">
             {distance}
           </div>
         )}
       </div>
 
       {/* Content */}
-      <div className="p-6">
+      <div className="relative z-10 p-6">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-white text-lg">{name}</h3>
+              <h3 className="text-white text-xl font-bold">{name}</h3>
               {verified && (
-                <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                <CheckCircle2 className="w-5 h-5 text-purple-400 flex-shrink-0" />
               )}
             </div>
-            <div className="flex items-center gap-1.5 text-[#a3aed0] text-sm">
-              <MapPin className="w-4 h-4" />
+            <div className="flex items-center gap-1.5 text-purple-200/70 text-sm font-medium">
+              <MapPin className="w-4 h-4 text-purple-300" />
               <span>{location}</span>
             </div>
           </div>
         </div>
 
         {/* Stats Row */}
-        <div className="flex items-center gap-4 mb-4 pb-4 border-b border-[#2d4a7c]">
+        <div className="flex items-center gap-4 mb-4 pb-4 border-b border-white/10">
           <div className="flex items-center gap-1.5">
             <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-            <span className="text-white">{rating.toFixed(1)}</span>
-            <span className="text-[#6b7bb5] text-xs">({reviews})</span>
+            <span className="text-white font-bold">{rating.toFixed(1)}</span>
+            <span className="text-purple-200/60 text-xs">({reviews})</span>
           </div>
           {patients && (
             <>
-              <span className="text-[#2d4a7c]">•</span>
-              <div className="flex items-center gap-1.5 text-[#a3aed0] text-sm">
-                <Users className="w-4 h-4" />
+              <span className="text-purple-400/40">•</span>
+              <div className="flex items-center gap-1.5 text-purple-200/70 text-sm font-medium">
+                <Users className="w-4 h-4 text-purple-300" />
                 <span>{patients.toLocaleString()}+</span>
               </div>
             </>
@@ -101,7 +103,7 @@ export function ClinicCard({
           {specialties.map((specialty, index) => (
             <span
               key={index}
-              className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-blue-300 px-3 py-1 rounded-full text-xs border border-blue-500/30"
+              className="bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-purple-200 px-3 py-1 rounded-full text-xs font-medium border border-purple-500/30 shadow-lg shadow-purple-500/20"
             >
               {specialty}
             </span>
@@ -110,7 +112,7 @@ export function ClinicCard({
 
         {/* Open Hours */}
         {openHours && (
-          <div className="flex items-center gap-2 text-[#a3aed0] text-sm mb-5">
+          <div className="flex items-center gap-2 text-purple-200/70 text-sm mb-5 font-medium">
             <Clock className="w-4 h-4 text-green-400" />
             <span>{openHours}</span>
           </div>
@@ -120,13 +122,13 @@ export function ClinicCard({
         <div className="flex gap-3">
           <button 
             onClick={() => onViewClinic?.(id)}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 hover:scale-105 transform duration-200 group"
+            className="flex-1 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transform duration-300 group font-semibold"
           >
             <span>View Details</span>
             <ArrowUpRight className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
           </button>
           <button
-            className="p-3 bg-[#2d4a7c] hover:bg-[#3d5a8c] text-white rounded-xl transition-all hover:scale-110 transform duration-200"
+            className="p-3 bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 hover:from-purple-500/30 hover:to-purple-600/30 text-purple-200 rounded-xl transition-all hover:scale-110 transform duration-300 shadow-lg shadow-purple-500/20"
             onClick={(e) => e.stopPropagation()}
             type="button"
           >
