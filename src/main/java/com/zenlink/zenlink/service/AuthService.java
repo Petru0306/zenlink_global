@@ -28,6 +28,9 @@ public class AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private JwtService jwtService;
+
     @Transactional
     public AuthResponse signup(SignupRequest request) {
         System.out.println("=== SIGNUP REQUEST ===");
@@ -114,7 +117,11 @@ public class AuthService {
         user = userRepository.save(user);
         System.out.println("User created successfully with role: " + user.getRole());
 
-        // Return auth response
+        // Generate JWT tokens
+        String token = jwtService.generateToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        // Return auth response with tokens
         return new AuthResponse(
                 user.getId(),
                 user.getEmail(),
@@ -122,7 +129,8 @@ public class AuthService {
                 user.getLastName(),
                 user.getPhone(),
                 user.getRole(),
-                null // Token will be added later with JWT
+                token,
+                refreshToken
         );
     }
 
@@ -139,6 +147,10 @@ public class AuthService {
             throw new RuntimeException("Invalid email or password");
         }
 
+        // Generate JWT tokens
+        String token = jwtService.generateToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
         return new AuthResponse(
                 user.getId(),
                 user.getEmail(),
@@ -146,7 +158,60 @@ public class AuthService {
                 user.getLastName(),
                 user.getPhone(),
                 user.getRole(),
-                null // Token will be added later with JWT
+                token,
+                refreshToken
         );
+    }
+
+    /**
+     * Refresh access token using refresh token
+     */
+    public AuthResponse refreshToken(String refreshToken) {
+        if (!jwtService.validateToken(refreshToken)) {
+            throw new RuntimeException("Invalid or expired refresh token");
+        }
+
+        if (!jwtService.isRefreshToken(refreshToken)) {
+            throw new RuntimeException("Token is not a refresh token");
+        }
+
+        String email = jwtService.extractUsername(refreshToken);
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("User not found");
+        }
+
+        User user = userOpt.get();
+
+        // Generate new access token
+        String newToken = jwtService.generateToken(user);
+
+        return new AuthResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getPhone(),
+                user.getRole(),
+                newToken,
+                refreshToken // Return same refresh token
+        );
+    }
+
+    /**
+     * Validate access token
+     */
+    public boolean validateAccessToken(String token) {
+        return jwtService.validateToken(token);
+    }
+
+    /**
+     * Get user from token
+     */
+    public User getUserFromToken(String token) {
+        String email = jwtService.extractUsername(token);
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 }

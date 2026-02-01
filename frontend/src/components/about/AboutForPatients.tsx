@@ -32,7 +32,7 @@ export function AboutForPatients() {
                 </li>
               ))}
             </ul>
-            <Link to="/authentication/sign-up">
+            <Link to="/auth">
               <Button className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 font-semibold flex items-center gap-2 group">
                 Începe ca pacient
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

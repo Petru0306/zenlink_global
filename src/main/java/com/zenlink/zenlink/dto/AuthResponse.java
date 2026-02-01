@@ -15,6 +15,6 @@ public class AuthResponse {
     private String lastName;
     private String phone;
     private UserRole role;
-    private String token; // For future JWT implementation
+    private String token;
+    private String refreshToken;
 }
-

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { VisionSidebar } from './components/VisionSidebar';
 import { PatientHeader } from './components/PatientHeader';
@@ -46,7 +47,8 @@ import { AiChat } from '../../components/AiChat';
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('profile');
-  const { user, setUser } = useAuth();
+  const { user, setUser, psychProfile, psychProfileLoading, refreshPsychProfile } = useAuth();
+  const navigate = useNavigate();
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -157,6 +159,12 @@ export default function Dashboard() {
       console.error('Failed to load files from backend:', err);
     });
   }, [user]);
+
+  useEffect(() => {
+    if (user && !psychProfile && !psychProfileLoading) {
+      refreshPsychProfile();
+    }
+  }, [psychProfile, psychProfileLoading, refreshPsychProfile, user]);
 
   // Cleanup object URLs (avoid memory leaks)
   useEffect(() => {
@@ -563,6 +571,12 @@ export default function Dashboard() {
       <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     </div>
   );
+
+  const formatPsychValue = (value) => {
+    if (!value) return '—';
+    const normalized = String(value).replace(/_/g, ' ').toLowerCase();
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -1125,6 +1139,75 @@ export default function Dashboard() {
                       <p className="text-white text-lg font-semibold">{medicalProfile.insuranceNumber || '—'}</p>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 relative z-10">
+              <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                <div className="relative z-10">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+                    <div>
+                      <p className="text-purple-300/70 text-sm font-medium uppercase tracking-wider mb-2">Profil psihologic</p>
+                      <h3 className="text-white text-2xl font-bold">Psych Profile</h3>
+                    </div>
+                    <button
+                      onClick={() => navigate('/onboarding/psych-profile', { state: { mode: 'edit' } })}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-purple-200 flex items-center gap-2 hover:from-purple-500/30 hover:to-purple-600/30 transition-all duration-300 border border-purple-500/30 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20"
+                    >
+                      <Edit3 className="w-4 h-4" /> {psychProfile?.completed ? 'Edit profile' : 'Start survey'}
+                    </button>
+                  </div>
+
+                  {psychProfileLoading ? (
+                    <div className="text-purple-200/70">Loading psychological profile...</div>
+                  ) : psychProfile?.completed ? (
+                    <div className="space-y-6">
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                          <p className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2">Temperament</p>
+                          <p className="text-white text-lg font-semibold">{formatPsychValue(psychProfile.temperament)}</p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                          <p className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2">Anxiety</p>
+                          <p className="text-white text-lg font-semibold">
+                            {formatPsychValue(psychProfile.anxietyLevel)}
+                            {typeof psychProfile.anxietyScore === 'number' ? ` (score ${psychProfile.anxietyScore})` : ''}
+                          </p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                          <p className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2">Control Need</p>
+                          <p className="text-white text-lg font-semibold">
+                            {formatPsychValue(psychProfile.controlNeed)}
+                            {typeof psychProfile.controlScore === 'number' ? ` (score ${psychProfile.controlScore})` : ''}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                          <p className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2">Communication</p>
+                          <p className="text-white text-lg font-semibold">{formatPsychValue(psychProfile.communicationStyle)}</p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                          <p className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2">Procedure Preference</p>
+                          <p className="text-white text-lg font-semibold">{formatPsychValue(psychProfile.procedurePreference)}</p>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                        <p className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-2">Results Sheet</p>
+                        <pre className="whitespace-pre-wrap text-sm text-purple-100/90 leading-relaxed">
+                          {psychProfile.resultsSheet || 'No results sheet available.'}
+                        </pre>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-purple-200/70">
+                      Profilul psihologic nu este completat încă. Este necesar pentru a continua.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

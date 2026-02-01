@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { psychProfileService, type PsychProfileResponse } from '../services/psychProfileService';
 
 export type UserRole = 'PATIENT' | 'DOCTOR' | 'CLINIC';
 
@@ -11,6 +12,7 @@ export interface User {
   age?: number;
   role?: UserRole;
   token?: string;
+  refreshToken?: string;
 }
 
 interface AuthContextType {
@@ -19,11 +21,20 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (firstName: string, lastName: string, email: string, password: string, phone?: string, role?: UserRole, referralCode?: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  refreshAccessToken: () => Promise<boolean>;
   isAuthenticated: boolean;
+  psychProfile: PsychProfileResponse | null;
+  psychProfileLoading: boolean;
+  refreshPsychProfile: () => Promise<PsychProfileResponse | null>;
+  setPsychProfile: (profile: PsychProfileResponse | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  `http://${window.location.hostname || 'localhost'}:8080`;
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -40,6 +51,8 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [psychProfile, setPsychProfile] = useState<PsychProfileResponse | null>(null);
+  const [psychProfileLoading, setPsychProfileLoading] = useState(false);
 
   // Load user from localStorage on mount
   useEffect(() => {
@@ -58,14 +71,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error('Error parsing stored user:', error);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
       }
     }
     setIsLoading(false);
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      refreshPsychProfile();
+    } else {
+      setPsychProfile(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const refreshPsychProfile = async (): Promise<PsychProfileResponse | null> => {
+    if (!user) {
+      setPsychProfile(null);
+      return null;
+    }
+    setPsychProfileLoading(true);
+    try {
+      const response = await psychProfileService.getMyProfile();
+      setPsychProfile(response);
+      return response;
+    } catch (error) {
+      console.error('Failed to load psych profile:', error);
+      setPsychProfile(null);
+      return null;
+    } finally {
+      setPsychProfileLoading(false);
+    }
+  };
+
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch('http://localhost:8080/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,11 +126,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userData: User = {
         id: String(data.userId || data.id || Date.now()),
         email: data.email || email,
-        firstName: data.firstName || data.firstName || '',
-        lastName: data.lastName || data.lastName || '',
+        firstName: data.firstName || '',
+        lastName: data.lastName || '',
         phone: data.phone,
-        role: data.role, // Backend should return the role
-        token: data.token || data.accessToken,
+        role: data.role,
+        token: data.token,
+        refreshToken: data.refreshToken,
       };
 
       console.log('Setting user data with role:', userData.role, 'Full user:', userData);
@@ -96,6 +139,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(userData));
       if (userData.token) {
         localStorage.setItem('token', userData.token);
+      }
+      if (userData.refreshToken) {
+        localStorage.setItem('refreshToken', userData.refreshToken);
       }
     } catch (error) {
       // If backend is not available, use mock authentication for development (login only)
@@ -114,7 +160,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             firstName: foundUser.firstName,
             lastName: foundUser.lastName,
             phone: foundUser.phone,
-            role: foundUser.role || 'PATIENT', // Include role from stored user
+            role: foundUser.role || 'PATIENT',
           };
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
@@ -144,9 +190,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       console.log('Signup request body:', requestBody);
-      console.log('=== SIGNUP FUNCTION v2 - NO MOCK AUTH ===');
       
-      const response = await fetch('http://localhost:8080/api/auth/signup', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -155,7 +200,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       console.log('Signup response status:', response.status);
-      console.log('Signup response ok?', response.ok);
 
       if (!response.ok) {
         let errorData;
@@ -167,24 +211,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           errorData = { message: 'Signup failed' };
         }
         
-        // Show the actual error message from backend (e.g., "Invalid or already used referral code")
         const errorMessage = errorData.message || 'Signup failed';
-        console.error('Throwing error with message:', errorMessage);
         throw new Error(errorMessage);
       }
 
       const data = await response.json();
       console.log('Signup success, received data:', data);
       
-      // IMPORTANT: Use role from backend response, not from parameter
       const userData: User = {
         id: String(data.userId || data.id || Date.now()),
         email: data.email || email,
         firstName: data.firstName || firstName,
         lastName: data.lastName || lastName,
         phone: data.phone || phone,
-        role: data.role || role, // Backend should return the role
-        token: data.token || data.accessToken,
+        role: data.role || role,
+        token: data.token,
+        refreshToken: data.refreshToken,
       };
 
       console.log('Setting user data with role:', userData.role, 'Full user:', userData);
@@ -193,18 +235,82 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (userData.token) {
         localStorage.setItem('token', userData.token);
       }
+      if (userData.refreshToken) {
+        localStorage.setItem('refreshToken', userData.refreshToken);
+      }
     } catch (error: any) {
-      // DO NOT use mock authentication for signup - always require backend validation
-      // This ensures referral codes are properly validated
-      console.error('=== SIGNUP ERROR CAUGHT - THROWING ERROR (NO MOCK) ===', error);
-      throw error; // Re-throw to show error to user - DO NOT use mock auth
+      console.error('Signup error:', error);
+      throw error;
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+  const logout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        // Call logout endpoint (optional - JWT is stateless)
+        await fetch(`${API_BASE_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }).catch(() => {
+          // Ignore errors - logout should work even if backend is down
+        });
+      }
+    } finally {
+      // Always clear local state
+      setUser(null);
+      setPsychProfile(null);
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+    }
+  };
+
+  const refreshAccessToken = async (): Promise<boolean> => {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) {
+        return false;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/auth/refresh-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!response.ok) {
+        // Refresh token is invalid or expired
+        await logout();
+        return false;
+      }
+
+      const data = await response.json();
+      
+      // Update user with new token
+      const updatedUser: User = {
+        ...user!,
+        token: data.token,
+        refreshToken: data.refreshToken,
+      };
+
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem('token', data.token);
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Failed to refresh token:', error);
+      return false;
+    }
   };
 
   return (
@@ -216,11 +322,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         login,
         signup,
         logout,
+        refreshAccessToken,
         isAuthenticated: !!user,
+        psychProfile,
+        psychProfileLoading,
+        refreshPsychProfile,
+        setPsychProfile,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
-

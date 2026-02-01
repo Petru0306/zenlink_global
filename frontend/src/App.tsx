@@ -23,14 +23,17 @@ import { HomePage } from './layouts/homepage/HomePage'
 // @ts-ignore - JS file  
 import Dashboard from './layouts/dashboard'
 import DashboardRouter from './components/DashboardRouter'
-import SignInPage from './pages/SignInPage'
-import SignUpPage from './pages/SignUpPage'
+import AuthPage from './components/auth/AuthPage'
+import PsychProfileOnboarding from './pages/PsychProfileOnboarding'
 // @ts-ignore - JS file
 import theme from './assets/theme'
 
 function App() {
   const location = useLocation()
-  const isAuthPage = location.pathname.startsWith('/authentication')
+  const isAuthPage =
+    location.pathname.startsWith('/authentication') ||
+    location.pathname === '/auth' ||
+    location.pathname.startsWith('/onboarding')
 
   return (
     <ThemeProvider theme={theme}>
@@ -49,8 +52,18 @@ function App() {
             <Route path="/about" element={<AboutPage />} />
             <Route path="/clinic/:id" element={<ClinicProfilePage />} />
             <Route path="/flowchart" element={<Flowchart />} />
-            <Route path="/authentication/sign-in" element={<SignInPage />} />
-            <Route path="/authentication/sign-up" element={<SignUpPage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            {/* Redirect old auth routes to new auth page */}
+            <Route path="/authentication/sign-in" element={<AuthPage />} />
+            <Route path="/authentication/sign-up" element={<AuthPage />} />
+            <Route
+              path="/onboarding/psych-profile"
+              element={
+                <ProtectedRoute skipPsychProfileCheck>
+                  <PsychProfileOnboarding />
+                </ProtectedRoute>
+              }
+            />
             <Route 
               path="/dashboard" 
               element={

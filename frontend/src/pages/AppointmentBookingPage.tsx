@@ -52,7 +52,7 @@ export default function AppointmentBookingPage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate('/authentication/sign-in', { state: { from: `/doctor/${id}/book` } });
+      navigate('/auth', { state: { from: `/doctor/${id}/book` } });
     }
   }, [isAuthenticated, navigate, id]);
 
