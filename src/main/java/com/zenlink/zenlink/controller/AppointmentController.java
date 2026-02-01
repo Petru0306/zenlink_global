@@ -1,6 +1,8 @@
 package com.zenlink.zenlink.controller;
 
 import com.zenlink.zenlink.dto.AppointmentResponse;
+import com.zenlink.zenlink.dto.ConsultationContextResponse;
+import com.zenlink.zenlink.dto.ConsultationDraftDto;
 import com.zenlink.zenlink.dto.CreateAppointmentRequest;
 import com.zenlink.zenlink.service.AppointmentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +52,26 @@ public class AppointmentController {
     public ResponseEntity<List<AppointmentResponse>> getPatientAppointments(@PathVariable Long patientId) {
         List<AppointmentResponse> appointments = appointmentService.getPatientAppointments(patientId);
         return ResponseEntity.ok(appointments);
+    }
+
+    /**
+     * Get consultation context for an appointment
+     */
+    @GetMapping("/{appointmentId}/consultation-context")
+    public ResponseEntity<ConsultationContextResponse> getConsultationContext(@PathVariable Long appointmentId) {
+        ConsultationContextResponse response = appointmentService.getConsultationContext(appointmentId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Save consultation draft for an appointment
+     */
+    @PostMapping("/{appointmentId}/consultation-draft")
+    public ResponseEntity<ConsultationDraftDto> saveConsultationDraft(
+            @PathVariable Long appointmentId,
+            @RequestBody ConsultationDraftDto request) {
+        ConsultationDraftDto saved = appointmentService.saveConsultationDraft(appointmentId, request);
+        return ResponseEntity.ok(saved);
     }
 
     private static class ErrorResponse {

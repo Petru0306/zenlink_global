@@ -1,6 +1,8 @@
 package com.zenlink.zenlink.service;
 
 import com.zenlink.zenlink.dto.AppointmentResponse;
+import com.zenlink.zenlink.dto.ConsultationContextResponse;
+import com.zenlink.zenlink.dto.ConsultationDraftDto;
 import com.zenlink.zenlink.dto.CreateAppointmentRequest;
 import com.zenlink.zenlink.model.Appointment;
 import com.zenlink.zenlink.model.User;
@@ -10,7 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,6 +26,8 @@ public class AppointmentService {
 
     @Autowired
     private UserRepository userRepository;
+
+    private final Map<Long, ConsultationDraftDto> consultationDrafts = new ConcurrentHashMap<>();
 
     @Transactional
     public AppointmentResponse createAppointment(CreateAppointmentRequest request, Long patientId) {
@@ -99,6 +106,42 @@ public class AppointmentService {
                     apt.getStatus()
             );
         }).collect(Collectors.toList());
+    }
+
+    public ConsultationContextResponse getConsultationContext(Long appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+        User patient = userRepository.findById(appointment.getPatientId()).orElse(null);
+
+        String displayName = patient != null
+                ? (patient.getFirstName() + " " + patient.getLastName()).trim()
+                : "Patient";
+        Integer age = patient != null ? patient.getAge() : null;
+        String reason = "Consultatie stomatologica";
+        String internalKey = "ZK-" + appointmentId;
+
+        ConsultationContextResponse.PatientSummary patientSummary =
+                new ConsultationContextResponse.PatientSummary(
+                        appointment.getPatientId(),
+                        displayName,
+                        age,
+                        reason
+                );
+
+        ConsultationDraftDto existingDraft = consultationDrafts.get(appointmentId);
+
+        return new ConsultationContextResponse(
+                appointmentId,
+                patientSummary,
+                internalKey,
+                Collections.emptyList(),
+                existingDraft
+        );
+    }
+
+    public ConsultationDraftDto saveConsultationDraft(Long appointmentId, ConsultationDraftDto draft) {
+        consultationDrafts.put(appointmentId, draft);
+        return draft;
     }
 }
 

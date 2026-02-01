@@ -46,6 +46,7 @@ import Profile from "layouts/profile";
 import SignIn from "layouts/authentication/sign-in";
 import SignUp from "layouts/authentication/sign-up";
 import { HomePage } from "layouts/homepage/HomePage";
+import Flowchart from "layouts/flowchart";
 
 // Vision UI Dashboard React icons
 import { IoRocketSharp } from "react-icons/io5";
@@ -54,6 +55,7 @@ import { BsFillPersonFill } from "react-icons/bs";
 import { BsCreditCardFill } from "react-icons/bs";
 import { IoStatsChart } from "react-icons/io5";
 import { IoHome } from "react-icons/io5";
+import { IoGitNetworkSharp } from "react-icons/io5";
 
 const routes = [
   {
@@ -81,6 +83,15 @@ const routes = [
     route: "/billing",
     icon: <BsCreditCardFill size="15px" color="inherit" />,
     component: Billing,
+    noCollapse: true,
+  },
+  {
+    type: "collapse",
+    name: "Flowchart",
+    key: "flowchart",
+    route: "/flowchart",
+    icon: <IoGitNetworkSharp size="15px" color="inherit" />,
+    component: Flowchart,
     noCollapse: true,
   },
   { type: "title", title: "Account Pages", key: "account-pages" },

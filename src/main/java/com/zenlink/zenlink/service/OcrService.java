@@ -28,7 +28,6 @@ public class OcrService {
             ProcessBuilder pb = new ProcessBuilder(
                     "ocrmypdf",
                     "--force-ocr",
-                    "--skip-text",
                     "-l", "ron+eng",
                     "--sidecar", sidecar.toString(),
                     inPdf.toString(),
