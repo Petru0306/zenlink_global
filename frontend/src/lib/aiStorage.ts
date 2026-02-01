@@ -8,6 +8,19 @@ export type Message = {
   role: 'user' | 'assistant';
   content: string;
   createdAt: string; // ISO
+  meta?: {
+    showCta?: boolean;
+    triageState?: 'intake' | 'clarifying' | 'conclusion';
+    status?: 'loading' | 'ready'; // For preventing flash of unformatted text
+    parsedTurn?: any; // Cached parsed AiTurn to avoid re-parsing
+  };
+};
+
+export type TriageContext = {
+  state: 'intake' | 'clarifying' | 'conclusion';
+  round: number;
+  answers: Record<string, string>;
+  lastQuestions: string[];
 };
 
 export type Conversation = {
@@ -16,6 +29,7 @@ export type Conversation = {
   createdAt: string;
   updatedAt: string;
   messages: Message[];
+  triage?: TriageContext;
 };
 
 const STORAGE_KEY = 'zenlink_ai_conversations_v1';
@@ -91,6 +105,43 @@ export function addMessage(
   };
 }
 
+/** Update the last assistant message in a conversation (for streaming) */
+export function updateLastAssistantMessage(
+  conversation: Conversation,
+  content: string,
+  meta?: Message['meta']
+): Conversation {
+  const now = new Date().toISOString();
+  const messages = [...conversation.messages];
+  const lastIndex = messages.length - 1;
+  
+  // Find last assistant message or create one if it doesn't exist
+  if (lastIndex >= 0 && messages[lastIndex].role === 'assistant') {
+    // Update existing assistant message
+    messages[lastIndex] = {
+      ...messages[lastIndex],
+      content,
+      meta: meta || messages[lastIndex].meta,
+    };
+  } else {
+    // Create new assistant message if last message is not assistant
+    const message: Message = {
+      id: generateId(),
+      role: 'assistant',
+      content,
+      createdAt: now,
+      meta,
+    };
+    messages.push(message);
+  }
+  
+  return {
+    ...conversation,
+    updatedAt: now,
+    messages,
+  };
+}
+
 /** Generate a short title from the first user message (e.g. first 4–6 words) */
 export function renameTitleFromFirstUserMessage(firstUserMessage: string): string {
   const trimmed = firstUserMessage.trim();
@@ -99,6 +150,47 @@ export function renameTitleFromFirstUserMessage(firstUserMessage: string): strin
   const take = Math.min(6, Math.max(4, Math.ceil(words.length / 2)));
   const title = words.slice(0, take).join(' ');
   return title.length > 60 ? title.slice(0, 57) + '...' : title || 'New chat';
+}
+
+/** Auto-title conversation from first user message (Doctronic-style) */
+export function autoTitleConversation(firstUserMessage: string): string {
+  const trimmed = firstUserMessage.trim();
+  if (!trimmed) return 'New chat';
+  
+  // Extract key phrases (common dental issues)
+  const lower = trimmed.toLowerCase();
+  const patterns = [
+    { pattern: /durere.*(dinte|măsea|gingie)/i, title: 'Durere dentară' },
+    { pattern: /sensibilitate/i, title: 'Sensibilitate dentară' },
+    { pattern: /umflătur/i, title: 'Umflătură' },
+    { pattern: /sângerare/i, title: 'Sângerare' },
+    { pattern: /febră/i, title: 'Febră' },
+    { pattern: /carie/i, title: 'Carie' },
+    { pattern: /extracție/i, title: 'Extracție' },
+    { pattern: /implant/i, title: 'Implant' },
+  ];
+  
+  for (const { pattern, title } of patterns) {
+    if (pattern.test(trimmed)) {
+      // Try to add location if mentioned
+      if (lower.includes('stâng') || lower.includes('dreapt')) {
+        return `${title} ${lower.includes('stâng') ? 'stânga' : 'dreapta'}`;
+      }
+      if (lower.includes('sus') || lower.includes('jos')) {
+        return `${title} ${lower.includes('sus') ? 'sus' : 'jos'}`;
+      }
+      return title;
+    }
+  }
+  
+  // Fallback to first sentence or key words
+  const firstSentence = trimmed.split(/[.!?]/)[0].trim();
+  if (firstSentence.length > 0 && firstSentence.length <= 50) {
+    return firstSentence;
+  }
+  
+  // Last resort: first 4-6 words
+  return renameTitleFromFirstUserMessage(trimmed);
 }
 
 /** Update conversation in list (replace by id) and persist */

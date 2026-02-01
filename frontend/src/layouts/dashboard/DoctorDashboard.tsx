@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
   Calendar as CalendarIcon, Clock, Users, Bot, User, 
-  Stethoscope, Mail, Phone, Plus, X, Pencil
+  Stethoscope, Mail, Phone, Plus, X, Pencil, Edit2, CalendarDays, CheckCircle2
 } from 'lucide-react';
 import { Calendar } from '../../components/Calendar';
 import { VisionSidebar } from './components/VisionSidebar';
 import { Input } from '../../components/ui/input';
 import { AiChat } from '../../components/AiChat';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 
 export default function DoctorDashboard() {
   const { user, setUser } = useAuth();
@@ -35,6 +36,69 @@ export default function DoctorDashboard() {
   const [availability, setAvailability] = useState<any[]>([]);
   const [timeSlots, setTimeSlots] = useState<Array<{startTime: string, endTime: string}>>([]);
   const [savingAvailability, setSavingAvailability] = useState(false);
+  const [editingSlotIndex, setEditingSlotIndex] = useState<number | null>(null);
+  const [newSlotStart, setNewSlotStart] = useState('09:00');
+  const [newSlotEnd, setNewSlotEnd] = useState('10:00');
+  const [showAddSlot, setShowAddSlot] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<{add?: string, edit?: {[key: number]: string}}>({});
+  
+  // Consistent date formatting function (local time, YYYY-MM-DD)
+  const formatDateKeyLocal = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Calculate availability status map for calendar (must be at top level, not in switch)
+  const availabilityStatusMap = useMemo(() => {
+    const map = new Map<string, 'OFF' | 'PARTIAL' | 'FULL'>();
+    const slotsByDate = new Map<string, any[]>();
+    
+    availability.forEach(av => {
+      // Ensure date key is in YYYY-MM-DD format (normalize from backend)
+      let dateKey = av.date;
+      // If date comes in different format, normalize it
+      if (dateKey.includes('T')) {
+        dateKey = dateKey.split('T')[0];
+      }
+      // Ensure it's YYYY-MM-DD format
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+        // Try to parse and reformat
+        const parsed = new Date(dateKey);
+        if (!isNaN(parsed.getTime())) {
+          dateKey = formatDateKeyLocal(parsed);
+        }
+      }
+      
+      if (!slotsByDate.has(dateKey)) {
+        slotsByDate.set(dateKey, []);
+      }
+      slotsByDate.get(dateKey)!.push(av);
+    });
+    
+    slotsByDate.forEach((slots, dateKey) => {
+      if (slots.length === 0) {
+        map.set(dateKey, 'OFF');
+      } else {
+        // Calculate total hours
+        let totalMinutes = 0;
+        slots.forEach(slot => {
+          const start = slot.startTime.split(':').map(Number);
+          const end = slot.endTime.split(':').map(Number);
+          const startMin = start[0] * 60 + start[1];
+          const endMin = end[0] * 60 + end[1];
+          totalMinutes += (endMin - startMin);
+        });
+        const totalHours = totalMinutes / 60;
+        // Consider full day if >= 7 hours, partial if >= 2 hours
+        map.set(dateKey, totalHours >= 7 ? 'FULL' : totalHours >= 2 ? 'PARTIAL' : 'OFF');
+      }
+    });
+    
+    return map;
+  }, [availability]);
 
   useEffect(() => {
     // Fetch appointments for current doctor
@@ -302,11 +366,77 @@ export default function DoctorDashboard() {
         );
 
       case 'schedule':
+        // Validation helper functions
+        const timeToMinutes = (time: string): number => {
+          const [hours, minutes] = time.split(':').map(Number);
+          return hours * 60 + minutes;
+        };
+
+        const isValidRange = (start: string, end: string): boolean => {
+          return timeToMinutes(end) > timeToMinutes(start);
+        };
+
+        const overlaps = (aStart: string, aEnd: string, bStart: string, bEnd: string): boolean => {
+          const aStartMin = timeToMinutes(aStart);
+          const aEndMin = timeToMinutes(aEnd);
+          const bStartMin = timeToMinutes(bStart);
+          const bEndMin = timeToMinutes(bEnd);
+          return aStartMin < bEndMin && bStartMin < aEndMin;
+        };
+
+        const findOverlappingSlot = (start: string, end: string, excludeIndex?: number): number | null => {
+          for (let i = 0; i < timeSlots.length; i++) {
+            if (excludeIndex !== undefined && i === excludeIndex) continue;
+            if (overlaps(start, end, timeSlots[i].startTime, timeSlots[i].endTime)) {
+              return i;
+            }
+          }
+          return null;
+        };
+
+        const isDuplicate = (start: string, end: string, excludeIndex?: number): boolean => {
+          for (let i = 0; i < timeSlots.length; i++) {
+            if (excludeIndex !== undefined && i === excludeIndex) continue;
+            if (timeSlots[i].startTime === start && timeSlots[i].endTime === end) {
+              return true;
+            }
+          }
+          return false;
+        };
+
+        const validateSlot = (start: string, end: string, excludeIndex?: number): string | null => {
+          if (!isValidRange(start, end)) {
+            return 'Ora de final trebuie să fie după ora de început.';
+          }
+          if (isDuplicate(start, end, excludeIndex)) {
+            return 'Acest interval există deja.';
+          }
+          const overlapIndex = findOverlappingSlot(start, end, excludeIndex);
+          if (overlapIndex !== null) {
+            const overlapping = timeSlots[overlapIndex];
+            return `Intervalul se suprapune cu ${overlapping.startTime}–${overlapping.endTime}. Alege alt interval.`;
+          }
+          return null;
+        };
+
+        // Toast notification helper
+        const showToast = (message: string) => {
+          setToastMessage(message);
+          setTimeout(() => setToastMessage(null), 3000);
+        };
+
         const handleDateSelect = (date: Date) => {
           setSelectedDate(date);
-          const dateStr = date.toISOString().split('T')[0];
+          setEditingSlotIndex(null);
+          setShowAddSlot(false);
+          setValidationErrors({});
+          const dateStr = formatDateKeyLocal(date);
           // Check if there's existing availability for this date
-          const existingSlots = availability.filter(av => av.date === dateStr);
+          const existingSlots = availability.filter(av => {
+            let avDate = av.date;
+            if (avDate.includes('T')) avDate = avDate.split('T')[0];
+            return avDate === dateStr;
+          });
           if (existingSlots.length > 0) {
             setTimeSlots(existingSlots.map(av => ({
               startTime: av.startTime.substring(0, 5),
@@ -318,52 +448,295 @@ export default function DoctorDashboard() {
         };
 
         const addTimeSlot = () => {
-          setTimeSlots([...timeSlots, { startTime: '09:00', endTime: '10:00' }]);
+          if (!newSlotStart || !newSlotEnd) return;
+          const error = validateSlot(newSlotStart, newSlotEnd);
+          if (error) {
+            setValidationErrors({ add: error });
+            return;
+          }
+          setValidationErrors({});
+          setTimeSlots([...timeSlots, { startTime: newSlotStart, endTime: newSlotEnd }]);
+          setNewSlotStart('09:00');
+          setNewSlotEnd('10:00');
+          setShowAddSlot(false);
         };
 
         const removeTimeSlot = (index: number) => {
           setTimeSlots(timeSlots.filter((_, i) => i !== index));
+          setEditingSlotIndex(null);
         };
 
         const updateTimeSlot = (index: number, field: 'startTime' | 'endTime', value: string) => {
           const updated = [...timeSlots];
           updated[index] = { ...updated[index], [field]: value };
+          const slot = updated[index];
+          const error = validateSlot(slot.startTime, slot.endTime, index);
+          setValidationErrors(prev => {
+            const newEdit = { ...(prev.edit || {}) };
+            if (error) {
+              newEdit[index] = error;
+            } else {
+              delete newEdit[index];
+            }
+            return { ...prev, edit: Object.keys(newEdit).length > 0 ? newEdit : undefined };
+          });
           setTimeSlots(updated);
         };
 
+        const startEditSlot = (index: number) => {
+          setEditingSlotIndex(index);
+          setShowAddSlot(false);
+        };
+
+        const saveEditSlot = (index: number) => {
+          const slot = timeSlots[index];
+          const error = validateSlot(slot.startTime, slot.endTime, index);
+          if (error) {
+            setValidationErrors(prev => ({
+              ...prev,
+              edit: { ...prev.edit, [index]: error }
+            }));
+            return;
+          }
+          setValidationErrors(prev => {
+            const newEdit = { ...prev.edit };
+            delete newEdit[index];
+            return { ...prev, edit: newEdit };
+          });
+          setEditingSlotIndex(null);
+        };
+
+        const cancelEdit = () => {
+          setEditingSlotIndex(null);
+          setShowAddSlot(false);
+          // Reload slots for selected date
+          if (selectedDate) {
+            handleDateSelect(selectedDate);
+          }
+        };
+
+
+        const applyToWeekdays = async () => {
+          if (!selectedDate || timeSlots.length === 0) {
+            showToast('Selectează o zi și adaugă sloturi mai întâi.');
+            return;
+          }
+          
+          const month = selectedDate.getMonth();
+          const year = selectedDate.getFullYear();
+          const monthName = selectedDate.toLocaleDateString('ro-RO', { month: 'long', year: 'numeric' });
+          
+          if (!confirm(`Aplici acest program la toate zilele lucrătoare (Lun–Vin) din ${monthName}?`)) {
+            return;
+          }
+          
+          // Get all weekdays (Mon-Fri ONLY, exclude weekends) in the current month
+          const weekdays: Date[] = [];
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(year, month, day);
+            const dayOfWeek = date.getDay();
+            // Only include Monday (1) through Friday (5), exclude Saturday (6) and Sunday (0)
+            if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+              weekdays.push(date);
+            }
+          }
+          
+          if (weekdays.length === 0) {
+            showToast('Nu există zile lucrătoare în această lună.');
+            return;
+          }
+          
+          // Validate slots don't overlap with each other
+          const sortedSlots = [...timeSlots].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+          for (let i = 0; i < sortedSlots.length - 1; i++) {
+            if (overlaps(sortedSlots[i].startTime, sortedSlots[i].endTime, sortedSlots[i + 1].startTime, sortedSlots[i + 1].endTime)) {
+              showToast('Sloturile se suprapun. Nu pot fi aplicate.');
+              return;
+            }
+          }
+          
+          if (!user?.id) {
+            showToast('Eroare: utilizator neidentificat.');
+            return;
+          }
+          
+          const doctorId = typeof user.id === 'string' ? parseInt(user.id) : user.id;
+          let appliedCount = 0;
+          let skippedCount = 0;
+          
+          // Apply to each weekday (Mon-Fri ONLY)
+          for (const weekday of weekdays) {
+            // Use local date formatting to avoid timezone issues
+            const dateStr = formatDateKeyLocal(weekday);
+            
+            // Double-check it's a weekday (shouldn't happen, but safety check)
+            const dayOfWeek = weekday.getDay();
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+              // Skip weekends (shouldn't be in weekdays array, but extra safety)
+              continue;
+            }
+            
+            // Check existing slots for this date
+            const existingSlots = availability.filter(av => {
+              let avDate = av.date;
+              if (avDate.includes('T')) avDate = avDate.split('T')[0];
+              return avDate === dateStr;
+            });
+            const existingSlotsFormatted = existingSlots.map(av => ({
+              startTime: av.startTime.substring(0, 5),
+              endTime: av.endTime.substring(0, 5)
+            }));
+            
+            // Check for overlaps
+            let hasOverlap = false;
+            for (const newSlot of timeSlots) {
+              for (const existingSlot of existingSlotsFormatted) {
+                if (overlaps(newSlot.startTime, newSlot.endTime, existingSlot.startTime, existingSlot.endTime)) {
+                  hasOverlap = true;
+                  break;
+                }
+              }
+              if (hasOverlap) break;
+            }
+            
+            if (hasOverlap) {
+              skippedCount++;
+              continue;
+            }
+            
+            // Save slots for this date
+            try {
+              const requestBody = {
+                date: dateStr,
+                timeSlots: timeSlots.map(slot => ({
+                  startTime: slot.startTime + ':00',
+                  endTime: slot.endTime + ':00'
+                }))
+              };
+              
+              const response = await fetch(`http://localhost:8080/api/availability/doctor/${doctorId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody),
+              });
+              
+              if (response.status >= 200 && response.status < 300) {
+                appliedCount++;
+              } else {
+                skippedCount++;
+              }
+            } catch (error) {
+              skippedCount++;
+            }
+          }
+          
+          // Refresh availability
+          try {
+            const updatedAvailability = await fetch(`http://localhost:8080/api/availability/doctor/${doctorId}`)
+              .then(res => res.json());
+            setAvailability(updatedAvailability);
+          } catch (error) {
+            console.error('Error refreshing availability:', error);
+          }
+          
+          if (skippedCount > 0) {
+            showToast(`Aplicat la ${appliedCount} zile. ${skippedCount} zile au fost sărite din cauza suprapunerilor.`);
+          } else {
+            showToast(`Aplicat cu succes la ${appliedCount} zile lucrătoare (Lun–Vin).`);
+          }
+        };
+
+        // Calculate summary for selected date
+        const calculateSummary = () => {
+          if (timeSlots.length === 0) return { totalHours: 0, slotCount: 0 };
+          let totalMinutes = 0;
+          timeSlots.forEach(slot => {
+            const start = slot.startTime.split(':').map(Number);
+            const end = slot.endTime.split(':').map(Number);
+            const startMin = start[0] * 60 + start[1];
+            const endMin = end[0] * 60 + end[1];
+            totalMinutes += (endMin - startMin);
+          });
+          return {
+            totalHours: (totalMinutes / 60).toFixed(1),
+            slotCount: timeSlots.length
+          };
+        };
+
+        const summary = calculateSummary();
+
+        // Generate time options with 15/30 min increments
+        const generateTimeOptions = () => {
+          const options = [];
+          for (let hour = 0; hour < 24; hour++) {
+            for (let min of [0, 15, 30, 45]) {
+              const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+              options.push(timeStr);
+            }
+          }
+          return options;
+        };
+
+        const timeOptions = generateTimeOptions();
+
         const saveAvailability = async () => {
           if (!selectedDate || !user?.id) {
-            alert('Please select a date first');
+            showToast('Selectează o zi mai întâi.');
             return;
           }
           
           if (timeSlots.length === 0) {
-            alert('Please add at least one time slot');
+            showToast('Adaugă cel puțin un interval de timp.');
+            return;
+          }
+          
+          // Final validation: check all slots are valid and don't overlap
+          const sortedSlots = [...timeSlots].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+          const validatedSlots: Array<{startTime: string, endTime: string}> = [];
+          
+          for (let i = 0; i < sortedSlots.length; i++) {
+            const slot = sortedSlots[i];
+            if (!slot.startTime || !slot.endTime) continue;
+            
+            // Validate range
+            if (!isValidRange(slot.startTime, slot.endTime)) {
+              showToast(`Slot invalid: ${slot.startTime}–${slot.endTime}. Ora de final trebuie să fie după ora de început.`);
+              setSavingAvailability(false);
+              return;
+            }
+            
+            // Check for overlaps with already validated slots
+            let hasOverlap = false;
+            for (const validated of validatedSlots) {
+              if (overlaps(slot.startTime, slot.endTime, validated.startTime, validated.endTime)) {
+                hasOverlap = true;
+                break;
+              }
+            }
+            
+            if (hasOverlap) {
+              showToast(`Slot ${slot.startTime}–${slot.endTime} se suprapune cu alt slot.`);
+              setSavingAvailability(false);
+              return;
+            }
+            
+            validatedSlots.push(slot);
+          }
+          
+          if (validatedSlots.length === 0) {
+            showToast('Nu există sloturi valide de salvat.');
+            setSavingAvailability(false);
             return;
           }
           
           setSavingAvailability(true);
           try {
-            const dateStr = selectedDate.toISOString().split('T')[0];
-            
-            // Validate time slots
-            const validSlots = timeSlots.filter(slot => {
-              if (!slot.startTime || !slot.endTime) return false;
-              const start = slot.startTime.split(':').map(Number);
-              const end = slot.endTime.split(':').map(Number);
-              if (start.length !== 2 || end.length !== 2) return false;
-              const startMinutes = start[0] * 60 + start[1];
-              const endMinutes = end[0] * 60 + end[1];
-              return endMinutes > startMinutes;
-            });
-            
-            if (validSlots.length === 0) {
-              throw new Error('Please provide valid time slots (end time must be after start time)');
-            }
+            const dateStr = formatDateKeyLocal(selectedDate);
             
             const requestBody = {
               date: dateStr,
-              timeSlots: validSlots.map(slot => ({
+              timeSlots: validatedSlots.map(slot => ({
                 startTime: slot.startTime + ':00',
                 endTime: slot.endTime + ':00'
               }))
@@ -392,11 +765,10 @@ export default function DoctorDashboard() {
                   .then(res => res.json());
                 setAvailability(updatedAvailability);
                 console.log('Availability refreshed:', updatedAvailability);
-                alert('Availability saved successfully!');
+                showToast('Disponibilitate salvată cu succes!');
               } catch (refreshError) {
                 console.error('Error refreshing availability:', refreshError);
-                // Still show success since save worked
-                alert('Availability saved successfully! (Note: Could not refresh list)');
+                showToast('Disponibilitate salvată cu succes! (Notă: Lista nu a putut fi actualizată)');
               }
             } else {
               // Error response
@@ -411,7 +783,7 @@ export default function DoctorDashboard() {
             }
           } catch (error: any) {
             console.error('Error saving availability:', error);
-            alert(`Failed to save availability: ${error.message || 'Please try again.'}`);
+            showToast(`Eroare la salvare: ${error.message || 'Te rugăm să încerci din nou.'}`);
           } finally {
             setSavingAvailability(false);
           }
@@ -419,6 +791,22 @@ export default function DoctorDashboard() {
         
         return (
           <div className="space-y-8">
+            {/* Toast Notification */}
+            {toastMessage && (
+              <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
+                <div className="backdrop-blur-xl bg-gradient-to-br from-purple-500/20 via-purple-500/10 to-transparent border border-purple-500/30 rounded-xl p-4 shadow-2xl shadow-purple-500/30 flex items-center gap-3 min-w-[300px]">
+                  <CheckCircle2 className="w-5 h-5 text-purple-300 flex-shrink-0" />
+                  <p className="text-white text-sm font-medium">{toastMessage}</p>
+                  <button
+                    onClick={() => setToastMessage(null)}
+                    className="ml-auto text-white/50 hover:text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+            
             <div>
               <h1 className="text-white text-3xl font-semibold mb-2">Schedule & Appointments</h1>
               <p className="text-white/40">Manage your availability and appointments</p>
@@ -434,53 +822,204 @@ export default function DoctorDashboard() {
                     selectedDate={selectedDate}
                     onDateSelect={handleDateSelect}
                     unavailableDates={[]}
+                    availabilityMap={availabilityStatusMap}
                   />
                   
                   {selectedDate && (
                     <div className="mt-6 space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-white font-semibold">
-                          Time slots for {selectedDate.toLocaleDateString('ro-RO')}
-                        </h3>
+                        <div>
+                          <h3 className="text-white font-semibold">
+                            Availability for {selectedDate.toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                          </h3>
+                          {timeSlots.length > 0 && (
+                            <p className="text-purple-200/60 text-sm mt-1">
+                              Total hours: <span className="text-purple-200 font-semibold">{summary.totalHours}h</span> • 
+                              Slots: <span className="text-purple-200 font-semibold">{summary.slotCount}</span>
+                            </p>
+                          )}
+                        </div>
                         <button
-                          onClick={addTimeSlot}
-                          className="px-3 py-1 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-lg flex items-center gap-1 text-sm shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 font-semibold"
+                          onClick={() => {
+                            setShowAddSlot(!showAddSlot);
+                            setEditingSlotIndex(null);
+                          }}
+                          className="px-3 py-1.5 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-lg flex items-center gap-1.5 text-sm shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 font-semibold"
                         >
                           <Plus className="w-4 h-4" />
                           Add Slot
                         </button>
                       </div>
-                      
-                      <div className="space-y-3">
-                        {timeSlots.map((slot, index) => (
-                          <div key={index} className="flex items-center gap-3 backdrop-blur-xl bg-white/5 border border-white/10 p-3 rounded-xl">
-                            <input
-                              type="time"
-                              value={slot.startTime}
-                              onChange={(e) => updateTimeSlot(index, 'startTime', e.target.value)}
-                              className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all backdrop-blur-sm"
-                            />
-                            <span className="text-purple-200/70">-</span>
-                            <input
-                              type="time"
-                              value={slot.endTime}
-                              onChange={(e) => updateTimeSlot(index, 'endTime', e.target.value)}
-                              className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all backdrop-blur-sm"
-                            />
-                            <button
-                              onClick={() => removeTimeSlot(index)}
-                              className="ml-auto p-2 hover:bg-red-500/10 rounded-lg text-red-400 transition-all"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
+
+                      {/* Add Slot Editor */}
+                      {showAddSlot && (
+                        <div className="backdrop-blur-xl bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent border border-purple-500/20 p-4 rounded-xl space-y-3">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1">
+                              <label className="text-purple-200/70 text-xs mb-1 block font-medium">Start Time</label>
+                              <Select value={newSlotStart} onValueChange={setNewSlotStart}>
+                                <SelectTrigger className="w-full bg-white/5 border-white/10 text-white">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {timeOptions.map(time => (
+                                    <SelectItem key={time} value={time}>{time}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex-1">
+                              <label className="text-purple-200/70 text-xs mb-1 block font-medium">End Time</label>
+                              <Select value={newSlotEnd} onValueChange={(value) => {
+                                setNewSlotEnd(value);
+                                const error = validateSlot(newSlotStart, value);
+                                setValidationErrors({ add: error || undefined });
+                              }}>
+                                <SelectTrigger className="w-full bg-white/5 border-white/10 text-white">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {timeOptions.map(time => (
+                                    <SelectItem key={time} value={time}>{time}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {validationErrors.add && (
+                                <p className="text-red-400 text-xs mt-1">{validationErrors.add}</p>
+                              )}
+                            </div>
+                            <div className="flex items-end gap-2 pt-6">
+                              <button
+                                onClick={addTimeSlot}
+                                disabled={!!validationErrors.add || !isValidRange(newSlotStart, newSlotEnd)}
+                                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-lg text-sm font-semibold transition-all shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setShowAddSlot(false);
+                                  setValidationErrors({});
+                                }}
+                                className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-lg text-sm font-semibold transition-all"
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           </div>
+                        </div>
+                      )}
+                      
+                      {/* Visual Time Blocks */}
+                      <div className="space-y-2">
+                        {timeSlots.map((slot, index) => (
+                          editingSlotIndex === index ? (
+                            <div key={index} className="backdrop-blur-xl bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent border border-purple-500/20 p-4 rounded-xl space-y-3">
+                              <div className="flex items-start gap-3">
+                                <div className="flex-1">
+                                  <label className="text-purple-200/70 text-xs mb-1 block font-medium">Start Time</label>
+                                  <Select 
+                                    value={slot.startTime} 
+                                    onValueChange={(value) => updateTimeSlot(index, 'startTime', value)}
+                                  >
+                                    <SelectTrigger className="w-full bg-white/5 border-white/10 text-white">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {timeOptions.map(time => (
+                                        <SelectItem key={time} value={time}>{time}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="flex-1">
+                                  <label className="text-purple-200/70 text-xs mb-1 block font-medium">End Time</label>
+                                  <Select 
+                                    value={slot.endTime} 
+                                    onValueChange={(value) => updateTimeSlot(index, 'endTime', value)}
+                                  >
+                                    <SelectTrigger className="w-full bg-white/5 border-white/10 text-white">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {timeOptions.map(time => (
+                                        <SelectItem key={time} value={time}>{time}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {validationErrors.edit?.[index] && (
+                                    <p className="text-red-400 text-xs mt-1">{validationErrors.edit[index]}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-end gap-2 pt-6">
+                                  <button
+                                    onClick={() => saveEditSlot(index)}
+                                    disabled={!!validationErrors.edit?.[index]}
+                                    className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-lg text-sm font-semibold transition-all shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={cancelEdit}
+                                    className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-lg text-sm font-semibold transition-all"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div key={index} className="group relative backdrop-blur-xl bg-gradient-to-br from-white/8 via-white/5 to-transparent border border-white/10 hover:border-purple-500/30 p-4 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-2 h-2 rounded-full bg-gradient-to-br from-purple-400 to-purple-600"></div>
+                                  <span className="text-white font-semibold text-base">
+                                    {slot.startTime} – {slot.endTime}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={() => startEditSlot(index)}
+                                    className="p-2 hover:bg-purple-500/20 rounded-lg text-purple-300 transition-all"
+                                    title="Edit slot"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => removeTimeSlot(index)}
+                                    className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-all"
+                                    title="Delete slot"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )
                         ))}
-                        {timeSlots.length === 0 && (
-                          <p className="text-purple-200/70 text-sm text-center py-4 font-medium">
-                            No time slots set. Click "Add Slot" to add availability.
-                          </p>
+                        {timeSlots.length === 0 && !showAddSlot && (
+                          <div className="text-center py-8 backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl">
+                            <Clock className="w-8 h-8 text-purple-300/50 mx-auto mb-2" />
+                            <p className="text-purple-200/70 text-sm font-medium">
+                              No time slots set. Click "Add Slot" to add availability.
+                            </p>
+                          </div>
                         )}
                       </div>
+
+                      {/* Weekly Convenience Actions */}
+                      {timeSlots.length > 0 && (
+                        <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+                          <button
+                            onClick={applyToWeekdays}
+                            className="px-3 py-1.5 bg-white/5 border border-white/10 hover:border-purple-500/30 hover:bg-purple-500/10 text-white rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-all"
+                            title="Apply to all weekdays (Mon–Fri) in current month"
+                          >
+                            <CalendarDays className="w-3.5 h-3.5" />
+                            Apply to Mon–Fri
+                          </button>
+                        </div>
+                      )}
                       
                       {timeSlots.length > 0 && (
                         <button
@@ -508,8 +1047,14 @@ export default function DoctorDashboard() {
                   </div>
                   <div className="space-y-4">
                     {upcomingAppointments.length === 0 ? (
-                      <div className="text-purple-200/70 text-center py-8 font-medium">
-                        No upcoming appointments. Appointments will appear here once patients book with you.
+                      <div className="text-center py-12 backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl">
+                        <CalendarIcon className="w-12 h-12 text-purple-300/50 mx-auto mb-3" />
+                        <p className="text-purple-200/70 text-sm font-medium mb-1">
+                          No upcoming appointments
+                        </p>
+                        <p className="text-purple-200/50 text-xs">
+                          Appointments booked by patients will appear here.
+                        </p>
                       </div>
                     ) : (
                       upcomingAppointments.map((apt) => (

@@ -14,7 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@Service
+// RAG features temporarily disabled - require Ollama embeddings
+// @Service
 public class PatientFileRagIndexService {
 
     public enum IndexStatus { NEW, INDEXING, READY, ERROR }

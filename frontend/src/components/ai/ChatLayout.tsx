@@ -16,6 +16,8 @@ type Props = {
   input: string;
   onInputChange: (value: string) => void;
   onSend: () => void;
+  onOptionSelect?: (value: string, label: string) => void;
+  onFreeTextSubmit?: (text: string) => void;
 };
 
 export function ChatLayout({
@@ -30,6 +32,8 @@ export function ChatLayout({
   input,
   onInputChange,
   onSend,
+  onOptionSelect,
+  onFreeTextSubmit,
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -51,8 +55,8 @@ export function ChatLayout({
   );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)]">
-      <div className="flex flex-1 min-h-0 rounded-2xl overflow-hidden border border-white/10 bg-[hsl(240,10%,6%)]/30 shadow-2xl">
+    <div className="flex flex-col h-full w-full">
+      <div className="flex flex-1 min-h-0 overflow-hidden bg-[hsl(240,10%,6%)]">
         {/* Mobile: sidebar as overlay / drawer */}
         <div className="md:hidden fixed inset-0 z-40 flex">
           {sidebarOpen && (
@@ -70,12 +74,12 @@ export function ChatLayout({
         </div>
 
         {/* Desktop: sidebar inline */}
-        <div className="hidden md:flex md:w-72 shrink-0 flex-col h-full border-r border-white/10 bg-[hsl(240,10%,6%)]/60 p-4">
+        <div className="hidden md:flex md:w-80 shrink-0 flex-col h-full border-r border-white/10 bg-[hsl(240,10%,6%)]/60 p-5">
           {sidebarContent}
         </div>
 
-        {/* Main chat area */}
-        <div className="flex-1 flex flex-col min-w-0 p-4">
+        {/* Main chat area - full width */}
+        <div className="flex-1 flex flex-col min-w-0 w-full">
           <div className="md:hidden flex items-center gap-2 mb-2">
             <button
               type="button"
@@ -95,6 +99,8 @@ export function ChatLayout({
               input={input}
               onInputChange={onInputChange}
               onSend={onSend}
+              onOptionSelect={onOptionSelect}
+              onFreeTextSubmit={onFreeTextSubmit}
             />
           </div>
         </div>
