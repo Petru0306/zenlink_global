@@ -14,10 +14,13 @@ export function renderMarkdown(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
   
-  // Headings (### Title)
+  // Headings (### Title) - must be before other processing
   html = html.replace(/^###\s+(.+)$/gm, '<h3 class="font-semibold text-lg mt-4 mb-2 text-white">$1</h3>');
   html = html.replace(/^##\s+(.+)$/gm, '<h2 class="font-semibold text-xl mt-4 mb-2 text-white">$1</h2>');
   html = html.replace(/^#\s+(.+)$/gm, '<h1 class="font-semibold text-2xl mt-4 mb-2 text-white">$1</h1>');
+  
+  // Emoji + text patterns (🧾 Segment summary)
+  html = html.replace(/^([🧾❓🧠🧩⚠️✅])\s+(.+)$/gm, '<div class="flex items-center gap-2 my-2"><span class="text-xl">$1</span><span>$2</span></div>');
   
   // Bold (**text**)
   html = html.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-white">$1</strong>');

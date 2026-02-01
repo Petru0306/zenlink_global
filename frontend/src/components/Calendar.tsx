@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from './ui/button';
 
 interface CalendarProps {
   selectedDate: Date | null;
   onDateSelect: (date: Date) => void;
   unavailableDates?: string[]; // Array of dates in YYYY-MM-DD format
+  availabilityMap?: Map<string, 'OFF' | 'PARTIAL' | 'FULL'>; // Map of date keys to availability status
 }
 
-export function Calendar({ selectedDate, onDateSelect, unavailableDates = [] }: CalendarProps) {
+export function Calendar({ selectedDate, onDateSelect, unavailableDates = [], availabilityMap }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const monthNames = [
@@ -80,7 +80,6 @@ export function Calendar({ selectedDate, onDateSelect, unavailableDates = [] }: 
 
   // Days of the month
   for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     days.push(day);
   }
 
@@ -129,6 +128,10 @@ export function Calendar({ selectedDate, onDateSelect, unavailableDates = [] }: 
           const isToday =
             dateKey ===
             `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+          
+          // Get availability status for this date
+          const availabilityStatus = availabilityMap?.get(dateKey);
+          const hasAvailability = availabilityStatus && availabilityStatus !== 'OFF';
 
           return (
             <button
@@ -136,7 +139,7 @@ export function Calendar({ selectedDate, onDateSelect, unavailableDates = [] }: 
               onClick={() => handleDateClick(day)}
               disabled={isPast || isUnavailable}
               className={`
-                aspect-square rounded-xl font-semibold transition-all
+                aspect-square rounded-xl font-semibold transition-all relative
                 ${isSelectedDate
                   ? 'bg-gradient-to-br from-[#5B8DEF] to-[#4169E1] text-white shadow-lg shadow-blue-500/30 scale-105'
                   : isPast || isUnavailable
@@ -147,6 +150,24 @@ export function Calendar({ selectedDate, onDateSelect, unavailableDates = [] }: 
               `}
             >
               {day}
+              {/* Availability indicator dot - purple for any availability */}
+              {!isPast && !isUnavailable && hasAvailability && (
+                <div className="absolute bottom-1 right-1">
+                  <div className="w-2 h-2 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 shadow-sm" />
+                </div>
+              )}
+              {/* Status indicator (for FULL/PARTIAL/OFF) - shown at bottom center */}
+              {!isPast && !isUnavailable && availabilityStatus && (
+                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2">
+                  <div className={`w-1 h-1 rounded-full ${
+                    availabilityStatus === 'FULL' 
+                      ? 'bg-green-400' 
+                      : availabilityStatus === 'PARTIAL' 
+                      ? 'bg-yellow-400' 
+                      : 'bg-transparent'
+                  }`} />
+                </div>
+              )}
             </button>
           );
         })}
