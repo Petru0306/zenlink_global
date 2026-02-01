@@ -4,6 +4,7 @@ import java.util.List;
 
 public class AiChatRequest {
     private List<AiMessage> messages;
+    private String triageState; // "intake", "clarifying", "conclusion"
 
     public AiChatRequest() {}
 
@@ -17,6 +18,14 @@ public class AiChatRequest {
 
     public void setMessages(List<AiMessage> messages) {
         this.messages = messages;
+    }
+
+    public String getTriageState() {
+        return triageState;
+    }
+
+    public void setTriageState(String triageState) {
+        this.triageState = triageState;
     }
 }
 

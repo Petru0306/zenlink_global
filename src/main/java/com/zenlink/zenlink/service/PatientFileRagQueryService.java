@@ -6,7 +6,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.UUID;
 
-@Service
+// RAG features temporarily disabled - require Ollama embeddings  
+// @Service
 public class PatientFileRagQueryService {
 
     public record RagHit(UUID fileId, String fileName, int pageNumber, String chunkText, double distance) {}

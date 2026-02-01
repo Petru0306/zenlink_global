@@ -10,6 +10,8 @@ type Props = {
   input: string;
   onInputChange: (value: string) => void;
   onSend: () => void;
+  onOptionSelect?: (value: string, label: string) => void;
+  onFreeTextSubmit?: (text: string) => void;
 };
 
 export function ChatWindow({
@@ -19,6 +21,8 @@ export function ChatWindow({
   input,
   onInputChange,
   onSend,
+  onOptionSelect,
+  onFreeTextSubmit,
 }: Props) {
   const listEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -35,39 +39,53 @@ export function ChatWindow({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[hsl(240,10%,6%)]/40 rounded-2xl border border-white/10 overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-[hsl(240,10%,6%)] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center px-4 py-3 border-b border-white/10 bg-white/[0.02]">
-        <h2 className="text-lg font-semibold text-white truncate">{title || 'New chat'}</h2>
+      <div className="flex items-center px-6 py-4 border-b border-white/10 bg-white/[0.02] shrink-0">
+        <h2 className="text-xl font-semibold text-white truncate">{title || 'New chat'}</h2>
       </div>
 
-      {/* Message list */}
-      <div className="flex-1 overflow-auto p-4 space-y-4">
+      {/* Message list - full width, more padding */}
+      <div className="flex-1 overflow-auto px-6 py-6 space-y-8">
         {messages.length === 0 && !isTyping && (
           <div className="text-center text-white/50 text-sm py-12">
             Începe o conversație. Scrie mai jos sau alege o conversație din stânga.
           </div>
         )}
         {messages.map((m) => (
-          <MessageBubble key={m.id} message={m} />
+          <MessageBubble
+            key={m.id}
+            message={m}
+            onOptionSelect={onOptionSelect}
+            onFreeTextSubmit={onFreeTextSubmit}
+          />
         ))}
         {isTyping && (
-          <div className="flex justify-start">
-            <div className="max-w-[85%] rounded-2xl px-4 py-3 text-sm border bg-white/[0.04] border-white/[0.08] text-white/70">
-              <span className="inline-flex gap-1">
-                <span className="w-2 h-2 rounded-full bg-white/50 animate-pulse" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 rounded-full bg-white/50 animate-pulse" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 rounded-full bg-white/50 animate-pulse" style={{ animationDelay: '300ms' }} />
-              </span>
-              {' '}Asistentul scrie...
+          <div className="flex justify-start w-full">
+            <div className="w-full max-w-[1000px] rounded-2xl px-6 py-5 border bg-white/[0.04] border-white/[0.08]">
+              <div className="flex items-center gap-3 text-white/70">
+                <span className="inline-flex gap-1">
+                  <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" style={{ animationDelay: '300ms' }} />
+                </span>
+                <span className="text-sm">Asistentul scrie...</span>
+              </div>
             </div>
           </div>
         )}
         <div ref={listEndRef} />
       </div>
 
+      {/* Disclaimer footer */}
+      <div className="px-6 py-3 border-t border-white/10 bg-white/[0.02] shrink-0">
+        <p className="text-xs text-white/50 text-center">
+          ⚠️ ZenLink AI oferă informații generale și nu înlocuiește consultul medical.
+        </p>
+      </div>
+
       {/* Input area */}
-      <div className="p-4 border-t border-white/10 bg-white/[0.02]">
+      <div className="px-6 py-4 border-t border-white/10 bg-white/[0.02] shrink-0">
         <div className="flex gap-2 items-end rounded-2xl bg-white/[0.05] border border-white/10 focus-within:border-purple-500/50 transition-colors">
           <textarea
             ref={textareaRef}

@@ -1,7 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, ArrowRight } from 'lucide-react';
-import { sendMessage as sendAiMessage } from '../../services/aiClient';
+import { sendMessageStreaming } from '../../services/aiClient';
+import {
+  determineNextTriageState,
+  isConclusionMessage,
+} from '../../lib/triageLogic';
 import { MessageBubble } from './MessageBubble';
 import type { Message } from '../../lib/aiStorage';
 
@@ -11,16 +15,19 @@ const EXAMPLE_MESSAGES: Message[] = [
     id: 'ex1',
     role: 'assistant',
     content: 'Bună! Sunt asistentul AI ZenLink. Te pot ajuta cu întrebări despre sănătatea dentară, pregătirea pentru consultații și îngrijirea post-tratament. Cu ce te pot ajuta astăzi?',
+    createdAt: new Date().toISOString(),
   },
   {
     id: 'ex2',
     role: 'user',
     content: 'Ce cauzează sensibilitatea dentară?',
+    createdAt: new Date().toISOString(),
   },
   {
     id: 'ex3',
     role: 'assistant',
     content: 'Sensibilitatea dentară poate apărea din mai multe motive:\n\n• Eroziunea smalțului dentar\n• Retracția gingiilor\n• Caria dentară\n• Periuțarea prea agresivă\n• Consumul excesiv de alimente acide\n\nPentru un diagnostic precis, recomandăm o consultație la dentist.',
+    createdAt: new Date().toISOString(),
   },
 ];
 
@@ -40,6 +47,7 @@ export function AIPreviewWidget({ onContinueToFull }: Props) {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
+  const [triageState, setTriageState] = useState<'intake' | 'clarifying' | 'conclusion' | undefined>(undefined);
   const listEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -56,6 +64,7 @@ export function AIPreviewWidget({ onContinueToFull }: Props) {
       id: `msg-${Date.now()}-user`,
       role: 'user',
       content: text,
+      createdAt: new Date().toISOString(),
     };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
@@ -63,36 +72,75 @@ export function AIPreviewWidget({ onContinueToFull }: Props) {
     setMessageCount((prev) => prev + 1);
     setIsTyping(true);
 
-    // Check if we've reached the limit
-    if (messageCount + 1 >= MAX_MESSAGES) {
+    // Determine triage state (limit to 1 round in preview)
+    const nextState = determineNextTriageState(undefined, text, newMessages.length);
+    const limitedState = nextState === 'clarifying' && triageState === 'clarifying' 
+      ? 'conclusion' // Force conclusion after 1 round
+      : nextState;
+    setTriageState(limitedState);
+
+    // Check if we've reached the limit or should redirect
+    if (messageCount + 1 >= MAX_MESSAGES || limitedState === 'conclusion') {
       setTimeout(() => {
         setIsTyping(false);
         const continueMessage: Message = {
           id: `msg-${Date.now()}-continue`,
           role: 'assistant',
-          content: 'Ai atins limita de mesaje în preview. Continuă conversația în interfața completă AI Assistant pentru răspunsuri nelimitate!',
+          content: 'Pentru o analiză completă și recomandări detaliate, continuă conversația în interfața completă AI Assistant!',
+          createdAt: new Date().toISOString(),
+          meta: { showCta: true },
         };
         setMessages((prev) => [...prev, continueMessage]);
       }, 800);
       return;
     }
 
+    // Add empty assistant message for streaming
+    const emptyAssistant: Message = {
+      id: `msg-${Date.now()}-assistant`,
+      role: 'assistant',
+      content: '',
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, emptyAssistant]);
+
+    let accumulatedText = '';
+    const assistantId = emptyAssistant.id;
+
     try {
-      // Call real AI service
-      const reply = await sendAiMessage('preview', newMessages);
-      const assistantMessage: Message = {
-        id: `msg-${Date.now()}-assistant`,
-        role: 'assistant',
-        content: reply,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
+      // Call streaming AI service
+      await sendMessageStreaming('preview', newMessages, (chunk: string) => {
+        accumulatedText += chunk;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: accumulatedText } : m
+          )
+        );
+      }, limitedState);
+
+      // Final update
+      const isConclusion = isConclusionMessage(accumulatedText);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId
+            ? {
+                ...m,
+                content: accumulatedText,
+                meta: isConclusion ? { showCta: true, triageState: 'conclusion' } : undefined,
+              }
+            : m
+        )
+      );
     } catch (error) {
       const errorMessage: Message = {
-        id: `msg-${Date.now()}-error`,
+        id: assistantId,
         role: 'assistant',
         content: 'Eroare la răspuns. Încearcă din nou sau continuă în interfața completă.',
+        createdAt: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) =>
+        prev.map((m) => (m.id === assistantId ? errorMessage : m))
+      );
     } finally {
       setIsTyping(false);
     }
@@ -107,6 +155,7 @@ export function AIPreviewWidget({ onContinueToFull }: Props) {
         id: `msg-${Date.now()}-user`,
         role: 'user',
         content: prompt,
+        createdAt: new Date().toISOString(),
       };
       const newMessages = [...messages, userMessage];
       setMessages(newMessages);
@@ -114,36 +163,73 @@ export function AIPreviewWidget({ onContinueToFull }: Props) {
       setMessageCount((prev) => prev + 1);
       setIsTyping(true);
 
+      // Determine triage state
+      const nextState = determineNextTriageState(undefined, prompt, newMessages.length);
+      const limitedState = nextState === 'clarifying' && triageState === 'clarifying' 
+        ? 'conclusion'
+        : nextState;
+      setTriageState(limitedState);
+
       // Check if we've reached the limit
-      if (messageCount + 1 >= MAX_MESSAGES) {
+      if (messageCount + 1 >= MAX_MESSAGES || limitedState === 'conclusion') {
         setTimeout(() => {
           setIsTyping(false);
           const continueMessage: Message = {
             id: `msg-${Date.now()}-continue`,
             role: 'assistant',
-            content: 'Ai atins limita de mesaje în preview. Continuă conversația în interfața completă AI Assistant pentru răspunsuri nelimitate!',
+            content: 'Pentru o analiză completă și recomandări detaliate, continuă conversația în interfața completă AI Assistant!',
+            createdAt: new Date().toISOString(),
+            meta: { showCta: true },
           };
           setMessages((prev) => [...prev, continueMessage]);
         }, 800);
         return;
       }
 
+      // Add empty assistant message for streaming
+      const emptyAssistant: Message = {
+        id: `msg-${Date.now()}-assistant`,
+        role: 'assistant',
+        content: '',
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, emptyAssistant]);
+
+      let accumulatedText = '';
+      const assistantId = emptyAssistant.id;
+
       try {
-        // Call real AI service
-        const reply = await sendAiMessage('preview', newMessages);
-        const assistantMessage: Message = {
-          id: `msg-${Date.now()}-assistant`,
-          role: 'assistant',
-          content: reply,
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
+        await sendMessageStreaming('preview', newMessages, (chunk: string) => {
+          accumulatedText += chunk;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: accumulatedText } : m
+            )
+          );
+        }, limitedState);
+
+        const isConclusion = isConclusionMessage(accumulatedText);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? {
+                  ...m,
+                  content: accumulatedText,
+                  meta: isConclusion ? { showCta: true, triageState: 'conclusion' } : undefined,
+                }
+              : m
+          )
+        );
       } catch (error) {
         const errorMessage: Message = {
-          id: `msg-${Date.now()}-error`,
+          id: assistantId,
           role: 'assistant',
           content: 'Eroare la răspuns. Încearcă din nou sau continuă în interfața completă.',
+          createdAt: new Date().toISOString(),
         };
-        setMessages((prev) => [...prev, errorMessage]);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? errorMessage : m))
+        );
       } finally {
         setIsTyping(false);
       }

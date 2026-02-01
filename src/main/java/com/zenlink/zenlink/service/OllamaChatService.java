@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@Service
+// @Service - Disabled: Ollama removed, using OpenAI for all AI features
 public class OllamaChatService {
 
     private final HttpClient httpClient;
