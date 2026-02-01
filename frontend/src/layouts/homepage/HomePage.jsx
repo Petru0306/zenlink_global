@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
-import { ArrowRight, Facebook, Instagram, Twitter, Youtube, Activity, Shield, Sparkles } from "lucide-react";
+import { ArrowRight, Facebook, Instagram, Twitter, Youtube, Activity, Shield, Sparkles, Send } from "lucide-react";
 import { Brain } from "lucide-react";
 import { CounterAnimation } from "../../components/CounterAnimation";
+import { AIPreviewWidget } from "../../components/ai/AIPreviewWidget";
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export function HomePage() {
   const mouseCurrentRef = useRef({ x: 0, y: 0 }); // smoothed [-1..1]
   const rafIdRef = useRef(null);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [aiBarInput, setAiBarInput] = useState("");
 
   const particles = useMemo(() => {
     const count = 40;
@@ -336,6 +338,44 @@ export function HomePage() {
                 ZenLink aduce în fața ta un sistem complet de gestionare a sănătății, 
                 oferind experiențe premium și funcționalități inovatoare.
               </p>
+              {/* AI Start chat bar - fix sub paragraful din hero */}
+              <div className="max-w-xl">
+                <div className="rounded-2xl bg-white/[0.05] border border-white/10 shadow-xl overflow-hidden focus-within:border-purple-500/50 focus-within:ring-2 focus-within:ring-purple-500/20 transition-all flex items-center gap-2 px-4 py-2">
+                  <input
+                    type="text"
+                    value={aiBarInput}
+                    onChange={(e) => setAiBarInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const text = aiBarInput.trim();
+                        if (text) {
+                          navigate("/ai", { state: { initialMessage: text } });
+                          setAiBarInput("");
+                        }
+                      }
+                    }}
+                    placeholder="Întreabă AI-ul ZenLink…"
+                    className="flex-1 min-h-[48px] bg-transparent text-white text-sm placeholder:text-white/40 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const text = aiBarInput.trim();
+                      if (text) {
+                        navigate("/ai", { state: { initialMessage: text } });
+                        setAiBarInput("");
+                      }
+                    }}
+                    disabled={!aiBarInput.trim()}
+                    className="p-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    title="Începe conversația"
+                    aria-label="Trimite"
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
               <div className="pt-4">
                 <Button
                   onClick={() => navigate('/doctori')}
@@ -511,35 +551,62 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Feature Section 1 - Large */}
+      {/* AI Assistant PRO - Interactive Preview */}
       <section className="relative py-32 px-6">
         <div className="max-w-[75rem] mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-[clamp(2.65rem,6vw,4rem)] font-bold mb-6 text-[hsl(220,12%,98%)]">
-              AI Assistant PRO
-            </h2>
-            <p className="text-[clamp(1rem,2vw,1.125rem)] text-[hsl(220,12%,85%)]">
-              Intelligence that understands healthcare.
-            </p>
-          </div>
-          
-          <div className="relative aspect-[16/10] max-w-5xl mx-auto rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-sm shadow-2xl shadow-purple-500/20">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 mb-6 shadow-2xl shadow-purple-500/50">
-                  <Sparkles className="w-12 h-12 text-white" />
-                </div>
-                <p className="text-[hsl(220,12%,85%)] text-lg">Advanced AI diagnostics and patient insights</p>
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            {/* Left Column - Marketing Content */}
+            <div className="space-y-6 order-2 lg:order-1">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 mb-4 shadow-2xl shadow-purple-500/50">
+                <Sparkles className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-[clamp(2.15rem,5vw,3.15rem)] font-bold text-[hsl(220,12%,98%)]">
+                AI Assistant PRO
+              </h2>
+              <p className="text-[clamp(1rem,2vw,1.125rem)] text-[hsl(220,12%,85%)] leading-relaxed">
+                Healthcare-aware AI that helps patients understand dental care, prepare for visits, and make informed decisions.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3 text-[hsl(220,12%,90%)]">
+                  <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+                  </div>
+                  <span>Instant answers to dental questions</span>
+                </li>
+                <li className="flex items-start gap-3 text-[hsl(220,12%,90%)]">
+                  <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+                  </div>
+                  <span>Visit preparation guidance</span>
+                </li>
+                <li className="flex items-start gap-3 text-[hsl(220,12%,90%)]">
+                  <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+                  </div>
+                  <span>Post-treatment care tips</span>
+                </li>
+                <li className="flex items-start gap-3 text-[hsl(220,12%,90%)]">
+                  <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+                  </div>
+                  <span>AI trained for healthcare context</span>
+                </li>
+              </ul>
+              <div className="pt-4">
+                <Button
+                  onClick={() => navigate('/ai')}
+                  className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 font-semibold"
+                >
+                  Open Full AI Assistant
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
               </div>
             </div>
-          </div>
-          
-          <div className="mt-12 text-center">
-            <p className="text-[hsl(220,12%,65%)] mb-4">From $99/month</p>
-            <Button className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 font-semibold">
-              Learn More
-              <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
+
+            {/* Right Column - Interactive AI Preview */}
+            <div className="order-1 lg:order-2 h-[500px] md:h-[600px] lg:h-[700px]">
+              <AIPreviewWidget onContinueToFull={() => navigate('/ai')} />
+            </div>
           </div>
         </div>
       </section>

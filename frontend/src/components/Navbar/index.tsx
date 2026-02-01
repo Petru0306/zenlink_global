@@ -13,6 +13,8 @@ export default function Navbar() {
     { name: 'Home', path: '/' },
     { name: 'Doctors', path: '/doctori' },
     { name: 'Clinics', path: '/clinici' },
+    { name: 'AI', path: '/ai' },
+    { name: 'About', path: '/about' },
     { name: 'Dashboard', path: '/dashboard' },
   ];
 
@@ -31,13 +33,13 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 backdrop-blur-xl bg-black/40 border-b border-white/10 shadow-2xl">
       <div
-        className={`py-4 flex items-center w-full relative ${
-          onDashboard ? 'pl-[300px] pr-6' : 'max-w-7xl mx-auto px-6 justify-between'
+        className={`py-4 flex items-center w-full gap-4 ${
+          onDashboard ? 'pl-[300px] pr-6' : 'max-w-7xl mx-auto px-6'
         }`}
       >
         {/* Logo and Site Name (hidden on dashboard view) */}
         {!onDashboard && (
-          <Link to="/" className="flex items-center gap-3 hover:scale-105 transition-transform duration-300 group">
+          <Link to="/" className="flex items-center gap-3 hover:scale-105 transition-transform duration-300 group shrink-0">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/30 via-purple-600/30 to-purple-700/30 border-2 border-purple-400/50 flex items-center justify-center shadow-lg shadow-purple-500/50 group-hover:scale-110 transition-all duration-300">
               <Brain className="w-5 h-5 text-white" />
             </div>
@@ -45,30 +47,27 @@ export default function Navbar() {
           </Link>
         )}
 
-        {/* Navigation Links */}
-        <div className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2 backdrop-blur-xl bg-white/5 rounded-2xl p-2 border border-white/10">
-          {navLinks.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={`px-5 py-2 rounded-xl transition-all duration-300 font-medium ${
-                isActive(link.path)
-                  ? 'text-white bg-gradient-to-r from-purple-500/20 to-purple-600/20 border border-purple-500/30 shadow-lg shadow-purple-500/20'
-                  : 'text-white/60 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              {link.name}
-            </Link>
-          ))}
+        {/* Navigation Links - centered in remaining space, no overlap */}
+        <div className="hidden md:flex flex-1 items-center justify-center min-w-0">
+          <div className="flex items-center gap-2 backdrop-blur-xl bg-white/5 rounded-2xl p-2 border border-white/10">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`px-4 py-2 rounded-xl transition-all duration-300 font-medium whitespace-nowrap ${
+                  isActive(link.path)
+                    ? 'text-white bg-gradient-to-r from-purple-500/20 to-purple-600/20 border border-purple-500/30 shadow-lg shadow-purple-500/20'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {link.name}
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* Auth Section */}
-        <div
-          className={`flex items-center gap-4 ${
-            onDashboard ? 'ml-auto' : ''
-          }`}
-          style={onDashboard ? { position: 'relative', zIndex: 5 } : {}}
-        >
+        <div className={`flex items-center gap-4 shrink-0 ${onDashboard ? 'ml-auto' : ''}`}>
           {isAuthenticated ? (
             <>
               {/* User Info */}

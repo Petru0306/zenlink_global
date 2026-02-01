@@ -10,6 +10,8 @@ import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
 import DoctorsPage from './pages/DoctorsPage'
 import ClinicsPage from './pages/ClinicsPage'
+import AiPage from './pages/AiPage.tsx'
+import AboutPage from './pages/AboutPage'
 import DoctorProfilePage from './pages/DoctorProfilePage'
 import ClinicProfilePage from './pages/ClinicProfilePage'
 import AppointmentBookingPage from './pages/AppointmentBookingPage'
@@ -39,6 +41,8 @@ function App() {
             <Route path="/doctor/:id" element={<DoctorProfilePage />} />
             <Route path="/doctor/:id/book" element={<AppointmentBookingPage />} />
             <Route path="/clinici" element={<ClinicsPage />} />
+            <Route path="/ai" element={<AiPage />} />
+            <Route path="/about" element={<AboutPage />} />
             <Route path="/clinic/:id" element={<ClinicProfilePage />} />
             <Route path="/authentication/sign-in" element={<SignInPage />} />
             <Route path="/authentication/sign-up" element={<SignUpPage />} />
