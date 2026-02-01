@@ -13,6 +13,9 @@ import ClinicsPage from './pages/ClinicsPage'
 import DoctorProfilePage from './pages/DoctorProfilePage'
 import ClinicProfilePage from './pages/ClinicProfilePage'
 import AppointmentBookingPage from './pages/AppointmentBookingPage'
+import ConsultationWorkspace from './pages/ConsultationWorkspace'
+// @ts-ignore - JS file
+import Flowchart from './layouts/flowchart'
 // @ts-ignore - JS file
 import { HomePage } from './layouts/homepage/HomePage'
 // @ts-ignore - JS file  
@@ -38,8 +41,10 @@ function App() {
             <Route path="/doctori" element={<DoctorsPage />} />
             <Route path="/doctor/:id" element={<DoctorProfilePage />} />
             <Route path="/doctor/:id/book" element={<AppointmentBookingPage />} />
+            <Route path="/consult/:appointmentId" element={<ConsultationWorkspace />} />
             <Route path="/clinici" element={<ClinicsPage />} />
             <Route path="/clinic/:id" element={<ClinicProfilePage />} />
+            <Route path="/flowchart" element={<Flowchart />} />
             <Route path="/authentication/sign-in" element={<SignInPage />} />
             <Route path="/authentication/sign-up" element={<SignUpPage />} />
             <Route 

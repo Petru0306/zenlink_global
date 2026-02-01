@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
   Calendar as CalendarIcon, Clock, Users, Bot, User, 
@@ -11,6 +12,7 @@ import { AiChat } from '../../components/AiChat';
 
 export default function DoctorDashboard() {
   const { user, setUser } = useAuth();
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('profile');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -100,6 +102,13 @@ export default function DoctorDashboard() {
     // consider future slots upcoming regardless of status
     return ts >= Date.now();
   });
+
+  const canStartConsultation = (apt: any) => {
+    const role = (user?.role || '').toString().toLowerCase();
+    const status = (apt?.status || '').toString().toLowerCase();
+    const allowedStatuses = ['scheduled', 'confirmed', 'upcoming'];
+    return role === 'doctor' && allowedStatuses.includes(status);
+  };
 
   const derivedPatients = useMemo(() => {
     const map = new Map();
@@ -491,7 +500,12 @@ export default function DoctorDashboard() {
               <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30">
                 <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
                 <div className="relative z-10">
-                  <h2 className="text-white text-2xl font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Upcoming Appointments</h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-white text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Upcoming Appointments</h2>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-purple-200/70 border border-white/10 rounded-full px-3 py-1 backdrop-blur-sm bg-white/5">
+                      ZenLink Ready (Silent Mode)
+                    </span>
+                  </div>
                   <div className="space-y-4">
                     {upcomingAppointments.length === 0 ? (
                       <div className="text-purple-200/70 text-center py-8 font-medium">
@@ -520,9 +534,18 @@ export default function DoctorDashboard() {
                                 </div>
                               </div>
                             </div>
-                            <span className="px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-sm font-semibold">
-                              {apt.status}
-                            </span>
+                            <div className="flex items-center gap-3">
+                              <span className="px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-sm font-semibold">
+                                {apt.status}
+                              </span>
+                              <button
+                                onClick={() => navigate(`/consult/${apt.id}`)}
+                                disabled={!canStartConsultation(apt)}
+                                className="px-4 py-2 bg-white/5 border border-white/10 hover:border-purple-500/30 hover:bg-purple-500/10 text-white rounded-xl text-sm font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Începe consultația
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))
