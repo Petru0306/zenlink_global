@@ -177,31 +177,6 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Centered pill notch when scrolled - appears after background fades out */}
-      <nav 
-        className={`sticky top-0 z-50 flex justify-center pt-4 transition-all duration-300 ${
-          isScrolled 
-            ? 'opacity-100 delay-300' 
-            : 'opacity-0 pointer-events-none delay-0'
-        }`}
-      >
-        <div className="hidden md:flex items-center backdrop-blur-xl bg-white/5 rounded-2xl p-2 border border-white/10">
-          {navLinks.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={`px-4 py-2 rounded-xl transition-all duration-300 font-medium whitespace-nowrap ${
-                isActive(link.path)
-                  ? 'text-white bg-gradient-to-r from-purple-500/20 to-purple-600/20 border border-purple-500/30 shadow-lg shadow-purple-500/20'
-                  : 'text-white/60 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              {link.name}
-            </Link>
-          ))}
-        </div>
-      </nav>
-
       {/* Mobile Navigation - background bar disappears when scrolled */}
       <div className={`md:hidden transition-all duration-300 ${
         isScrolled 

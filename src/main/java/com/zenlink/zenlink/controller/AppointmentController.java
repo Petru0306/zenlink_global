@@ -97,11 +97,11 @@ public class AppointmentController {
             ConsultationSegmentAnalyzeResponse response = consultationService.analyzeSegment(appointmentId, request);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            ConsultationSegmentAnalyzeResponse errorResponse = new ConsultationSegmentAnalyzeResponse();
+            errorResponse.setAssistantMarkdown("Eroare la analiză: " + e.getMessage());
+            errorResponse.setUpdatedRollingSummary(request.getRollingSummary());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ConsultationSegmentAnalyzeResponse(
-                            "Eroare la analiză: " + e.getMessage(),
-                            request.getRollingSummary()
-                    ));
+                    .body(errorResponse);
         }
     }
 

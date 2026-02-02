@@ -38,6 +38,7 @@ public class OpenAiChatService {
     private final String model;
     private final Integer maxOutputTokens;
     private final Double temperature;
+    private final boolean enabled;
 
     public OpenAiChatService(
             ObjectMapper objectMapper,
@@ -62,17 +63,17 @@ public class OpenAiChatService {
         this.temperature = (envTemp != null && !envTemp.isEmpty()) 
                 ? Double.parseDouble(envTemp) : temperature;
 
-        if (this.apiKey == null || this.apiKey.trim().isEmpty()) {
-            throw new IllegalStateException(
-                "OPENAI_API_KEY is required. Please set it as an environment variable or in application.properties."
-            );
-        }
+        this.enabled = this.apiKey != null && !this.apiKey.trim().isEmpty();
 
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
 
-        log.info("OpenAI service initialized with model: {}, API key length: {}", this.model, this.apiKey != null ? this.apiKey.length() : 0);
+        if (this.enabled) {
+            log.info("OpenAI service initialized with model: {}, API key length: {}", this.model, this.apiKey != null ? this.apiKey.length() : 0);
+        } else {
+            log.warn("OpenAI service disabled. Set OPENAI_API_KEY to enable AI endpoints.");
+        }
     }
 
     /**
@@ -93,6 +94,9 @@ public class OpenAiChatService {
             String triageState,
             OutputStream outputStream
     ) throws Exception {
+        if (!enabled) {
+            throw new IllegalStateException("OpenAI service is disabled. Set OPENAI_API_KEY to enable.");
+        }
         // Validate input
         if (userMessages == null || userMessages.isEmpty()) {
             throw new IllegalArgumentException("Messages cannot be empty");
