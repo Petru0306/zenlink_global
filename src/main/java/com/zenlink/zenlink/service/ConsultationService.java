@@ -271,6 +271,119 @@ public class ConsultationService {
     }
 
     /**
+     * Evidence search + verification (web search via OpenAI Responses API).
+     */
+    public ConsultationEvidenceResponse evidenceSearch(Long appointmentId, ConsultationEvidenceRequest request) throws Exception {
+        String purpose = request.getPurpose() != null ? request.getPurpose().trim().toLowerCase() : "verify";
+        String mode = request.getMode() != null ? request.getMode().trim().toLowerCase() : "quick";
+        boolean deep = "deep".equals(mode);
+
+        String transcript = request.getTranscript() != null ? request.getTranscript().trim() : "";
+        String query = request.getQuery() != null ? request.getQuery().trim() : "";
+        String section = request.getSection() != null ? request.getSection().trim() : "";
+        String currentText = request.getCurrentText() != null ? request.getCurrentText().trim() : "";
+        String sheetText = request.getSheetText() != null ? request.getSheetText().trim() : "";
+
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("You are ZenLink Evidence Assistant. You may use web_search tool.\n");
+        prompt.append("Rules:\n");
+        prompt.append("- No diagnosis, no treatment, no clinical decisions.\n");
+        prompt.append("- Only information structuring and evidence-backed context.\n");
+        prompt.append("- If you cannot find sources, say coverage=\"insufficient\" and return empty sources.\n");
+        prompt.append("- Provide sources in RO+EN if available.\n\n");
+
+        if ("gaps".equals(purpose)) {
+            prompt.append("TASK: Identify documentation gaps based on the transcript and current clinician sheet.\n");
+            prompt.append("Every gap MUST be backed by at least one source. No source -> do not output the gap.\n");
+            prompt.append("Return ONLY JSON in this format:\n");
+            prompt.append("{\n");
+            prompt.append("  \"purpose\": \"gaps\",\n");
+            prompt.append("  \"mode\": \"").append(mode).append("\",\n");
+            prompt.append("  \"gaps\": [\n");
+            prompt.append("    {\n");
+            prompt.append("      \"sectionKey\": \"reason|anamnesis.medicalHistory|anamnesis.dentalHistory|observations.general|observations.specialty|materials|clinicianNote|actions\",\n");
+            prompt.append("      \"title\": \"Short gap title\",\n");
+            prompt.append("      \"detail\": \"Non-decisional wording describing missing documentation\",\n");
+            prompt.append("      \"severity\": \"low|medium|high\",\n");
+            prompt.append("      \"sources\": [\n");
+            prompt.append("        {\"title\":\"...\",\"url\":\"...\",\"snippet\":\"...\",\"publisher\":\"...\",\"year\":\"...\"}\n");
+            prompt.append("      ]\n");
+            prompt.append("    }\n");
+            prompt.append("  ]\n");
+            prompt.append("}\n\n");
+        } else if ("suggest".equals(purpose)) {
+            prompt.append("TASK: Suggest neutral, clinician-facing text for the requested section. It must be factual, non-decisional, and short.\n");
+            prompt.append("Return ONLY JSON in this format:\n");
+            prompt.append("{\n");
+            prompt.append("  \"purpose\": \"suggest\",\n");
+            prompt.append("  \"mode\": \"").append(mode).append("\",\n");
+            prompt.append("  \"suggestedText\": \"...\",\n");
+            prompt.append("  \"sources\": [\n");
+            prompt.append("    {\"title\":\"...\",\"url\":\"...\",\"snippet\":\"...\",\"publisher\":\"...\",\"year\":\"...\"}\n");
+            prompt.append("  ]\n");
+            prompt.append("}\n\n");
+        } else {
+            prompt.append("TASK: Extract 3-6 verifiable factual claims from the input and attach sources.\n");
+            prompt.append("Return ONLY JSON in this format:\n");
+            prompt.append("{\n");
+            prompt.append("  \"purpose\": \"verify\",\n");
+            prompt.append("  \"mode\": \"").append(mode).append("\",\n");
+            prompt.append("  \"claims\": [\n");
+            prompt.append("    {\n");
+            prompt.append("      \"claim\": \"...\",\n");
+            prompt.append("      \"coverage\": \"good\"|\"partial\"|\"insufficient\",\n");
+            prompt.append("      \"sources\": [\n");
+            prompt.append("        {\"title\":\"...\",\"url\":\"...\",\"snippet\":\"...\",\"publisher\":\"...\",\"year\":\"...\"}\n");
+            prompt.append("      ]\n");
+            prompt.append("    }\n");
+            prompt.append("  ]\n");
+            prompt.append("}\n\n");
+        }
+
+        if (!query.isEmpty()) {
+            prompt.append("QUERY:\n").append(query).append("\n\n");
+        }
+        if (!section.isEmpty()) {
+            prompt.append("SECTION:\n").append(section).append("\n\n");
+        }
+        if (!currentText.isEmpty()) {
+            prompt.append("CURRENT_TEXT:\n").append(currentText).append("\n\n");
+        }
+        if (!sheetText.isEmpty()) {
+            prompt.append("CURRENT_SHEET:\n").append(sheetText).append("\n\n");
+        }
+        if (!transcript.isEmpty()) {
+            prompt.append("TRANSCRIPT:\n").append(transcript).append("\n\n");
+        }
+
+        String raw = openAiChatService.runWebSearch(prompt.toString(), deep);
+        String jsonStr = raw != null ? raw.trim() : "";
+        jsonStr = jsonStr.replaceAll("(?i)^```json\\s*", "");
+        jsonStr = jsonStr.replaceAll("^```\\s*", "");
+        jsonStr = jsonStr.replaceAll("\\s*```$", "");
+
+        try {
+            ConsultationEvidenceResponse parsed = objectMapper.readValue(jsonStr, ConsultationEvidenceResponse.class);
+            if (parsed.getPurpose() == null) {
+                parsed.setPurpose(purpose);
+            }
+            if (parsed.getMode() == null) {
+                parsed.setMode(mode);
+            }
+            return parsed;
+        } catch (Exception e) {
+            log.warn("Failed to parse evidence JSON, returning fallback: {}", e.getMessage());
+            ConsultationEvidenceResponse fallback = new ConsultationEvidenceResponse();
+            fallback.setPurpose(purpose);
+            fallback.setMode(mode);
+            if ("suggest".equals(purpose)) {
+                fallback.setSuggestedText(jsonStr);
+            }
+            return fallback;
+        }
+    }
+
+    /**
      * Execute a copilot action
      */
     public CopilotResponse executeCopilotAction(Long appointmentId, CopilotActionRequest request) {
@@ -482,6 +595,7 @@ public class ConsultationService {
                 "1. Patient Clarity Sheet (friendly, non-technical language)\n" +
                 "2. Doctor Summary (technical, clinical notes)\n" +
                 "No medication dosing. Safe language. Informational only.\n" +
+                "IMPORTANT: Do NOT generate assessment/plan decisions. Set doctorSummary.assessment and doctorSummary.plan to empty strings.\n" +
                 "\n" +
                 "IMPORTANT: Return your response as valid JSON only. Use this exact structure:\n" +
                 "{\n" +
@@ -655,6 +769,12 @@ public class ConsultationService {
             if (doctorSummary.getChiefComplaint() == null || doctorSummary.getChiefComplaint().isEmpty()) {
                 doctorSummary.setChiefComplaint("Patient consultation");
             }
+            if (doctorSummary.getAssessment() == null) {
+                doctorSummary.setAssessment("");
+            }
+            if (doctorSummary.getPlan() == null) {
+                doctorSummary.setPlan("");
+            }
             if (doctorSummary.getClinicalNotes() == null || doctorSummary.getClinicalNotes().isEmpty()) {
                 doctorSummary.setClinicalNotes(Arrays.asList("Full transcript available", "See consultation notes"));
             }
@@ -678,8 +798,8 @@ public class ConsultationService {
             doctorSummary.setChiefComplaint("Patient consultation");
             doctorSummary.setHistoryOfPresentIllness("As per transcript");
             doctorSummary.setExaminationFindings("To be documented");
-            doctorSummary.setAssessment("Assessment pending");
-            doctorSummary.setPlan("Plan as discussed");
+            doctorSummary.setAssessment("");
+            doctorSummary.setPlan("");
             doctorSummary.setClinicalNotes(Arrays.asList("Full transcript available", "See consultation notes"));
             
             return new ConsultationFinalizeResponse(claritySheet, doctorSummary);

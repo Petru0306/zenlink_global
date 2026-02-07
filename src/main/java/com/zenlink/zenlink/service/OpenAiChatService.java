@@ -29,6 +29,7 @@ public class OpenAiChatService {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiChatService.class);
     private static final String OPENAI_API_BASE = "https://api.openai.com/v1";
+    private static final String OPENAI_RESPONSES_ENDPOINT = "/responses";
     private static final int MAX_MESSAGES = 20;
     private static final int MAX_USER_MESSAGE_LENGTH = 6000;
 
@@ -36,6 +37,8 @@ public class OpenAiChatService {
     private final ObjectMapper objectMapper;
     private final String apiKey;
     private final String model;
+    private final String searchQuickModel;
+    private final String searchDeepModel;
     private final Integer maxOutputTokens;
     private final Double temperature;
     private final boolean enabled;
@@ -45,7 +48,9 @@ public class OpenAiChatService {
             @Value("${openai.api-key:${OPENAI_API_KEY:}}") String apiKey,
             @Value("${openai.model:${OPENAI_MODEL:gpt-5-nano}}") String model,
             @Value("${openai.max-output-tokens:${OPENAI_MAX_OUTPUT_TOKENS:600}}") Integer maxOutputTokens,
-            @Value("${openai.temperature:${OPENAI_TEMPERATURE:0.3}}") Double temperature
+            @Value("${openai.temperature:${OPENAI_TEMPERATURE:0.3}}") Double temperature,
+            @Value("${openai.search.quick-model:${OPENAI_SEARCH_QUICK_MODEL:o4-mini-deep-research}}") String searchQuickModel,
+            @Value("${openai.search.deep-model:${OPENAI_SEARCH_DEEP_MODEL:o3-deep-research}}") String searchDeepModel
     ) {
         this.objectMapper = objectMapper;
         // Try environment variable first, then property
@@ -63,6 +68,15 @@ public class OpenAiChatService {
         this.temperature = (envTemp != null && !envTemp.isEmpty()) 
                 ? Double.parseDouble(envTemp) : temperature;
 
+        this.searchQuickModel = (System.getenv("OPENAI_SEARCH_QUICK_MODEL") != null
+                && !System.getenv("OPENAI_SEARCH_QUICK_MODEL").isEmpty())
+                ? System.getenv("OPENAI_SEARCH_QUICK_MODEL")
+                : searchQuickModel;
+        this.searchDeepModel = (System.getenv("OPENAI_SEARCH_DEEP_MODEL") != null
+                && !System.getenv("OPENAI_SEARCH_DEEP_MODEL").isEmpty())
+                ? System.getenv("OPENAI_SEARCH_DEEP_MODEL")
+                : searchDeepModel;
+
         this.enabled = this.apiKey != null && !this.apiKey.trim().isEmpty();
 
         this.httpClient = HttpClient.newBuilder()
@@ -74,6 +88,104 @@ public class OpenAiChatService {
         } else {
             log.warn("OpenAI service disabled. Set OPENAI_API_KEY to enable AI endpoints.");
         }
+    }
+
+    /**
+     * Run a web search using OpenAI Responses API + web_search tool.
+     * Returns the model's output_text (expected to be JSON).
+     */
+    public String runWebSearch(String input, boolean deep) throws Exception {
+        if (!enabled) {
+            throw new IllegalStateException("OpenAI service is disabled. Set OPENAI_API_KEY to enable.");
+        }
+        String searchModel = deep ? searchDeepModel : searchQuickModel;
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("model", searchModel);
+        payload.put("input", input);
+        payload.put("tools", List.of(Map.of("type", "web_search")));
+
+        byte[] bodyBytes = objectMapper.writeValueAsBytes(payload);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(OPENAI_API_BASE + OPENAI_RESPONSES_ENDPOINT))
+                .timeout(Duration.ofMinutes(deep ? 8 : 3))
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofByteArray(bodyBytes))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (response.statusCode() == 429) {
+            long waitMs = extractRetryAfterMillis(response.body());
+            if (waitMs > 0) {
+                Thread.sleep(Math.min(waitMs, 1500));
+                response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            }
+        }
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            String sanitized = response.body() != null ? response.body().replace(apiKey, "***") : "";
+            log.error("OpenAI web search error: HTTP {} - {}", response.statusCode(), sanitized);
+            throw new RuntimeException("OpenAI web search error: HTTP " + response.statusCode() + " - " + sanitized);
+        }
+
+        return extractOutputText(response.body());
+    }
+
+    private long extractRetryAfterMillis(String rawJson) {
+        if (rawJson == null || rawJson.isEmpty()) return 0;
+        try {
+            var root = objectMapper.readTree(rawJson);
+            if (root.has("error")) {
+                var msgNode = root.get("error").get("message");
+                if (msgNode != null) {
+                    String msg = msgNode.asText();
+                    int idx = msg.indexOf("Please try again in");
+                    if (idx >= 0) {
+                        String tail = msg.substring(idx);
+                        String digits = tail.replaceAll("[^0-9]", "");
+                        if (!digits.isEmpty()) {
+                            return Long.parseLong(digits);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return 0;
+        }
+        return 0;
+    }
+
+    private String extractOutputText(String rawJson) throws Exception {
+        if (rawJson == null || rawJson.isEmpty()) {
+            return "";
+        }
+        try {
+            var root = objectMapper.readTree(rawJson);
+            if (root.has("output_text")) {
+                return root.get("output_text").asText();
+            }
+            if (root.has("output") && root.get("output").isArray()) {
+                StringBuilder sb = new StringBuilder();
+                for (var item : root.get("output")) {
+                    if (item.has("content") && item.get("content").isArray()) {
+                        for (var content : item.get("content")) {
+                            if (content.has("type") && "output_text".equals(content.get("type").asText())) {
+                                if (content.has("text")) {
+                                    sb.append(content.get("text").asText());
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!sb.isEmpty()) {
+                    return sb.toString();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse web search response, returning raw text: {}", e.getMessage());
+        }
+        return rawJson;
     }
 
     /**

@@ -32,6 +32,12 @@ type Message = {
     segments_used?: number
     suggested_actions?: Array<{ id: string; label: string; icon: string }>
   }
+  evidence?: {
+    purpose?: 'verify' | 'suggest'
+    mode?: 'quick' | 'deep'
+    claims?: ClaimEvidence[]
+    sources?: EvidenceSource[]
+  }
 }
 
 type Segment = {
@@ -48,6 +54,62 @@ type PatientContext = {
   allergies?: string
   conditions?: string
   medications?: string
+}
+
+type EvidenceSource = {
+  title: string
+  url: string
+  snippet: string
+  publisher: string
+  year: string
+}
+
+type ClaimEvidence = {
+  claim: string
+  coverage: 'good' | 'partial' | 'insufficient'
+  sources: EvidenceSource[]
+}
+
+type ClinicianSheet = {
+  general: {
+    date: string
+    clinician: string
+    specialty: string
+    presentationType: string
+  }
+  reason: string
+  anamnesis: {
+    medicalHistory: string
+    treatments: string
+    dentalHistory: string
+    dentalTreatments: string
+    contextNotes: string
+  }
+  observations: {
+    general: string
+    specialty: string
+  }
+  materials: {
+    investigations: string
+    photos: string
+    documents: string
+  }
+  clinicianNote: string
+  actions: string
+  provenance: {
+    patientReport: boolean
+    clinicianObservations: boolean
+    uploadedFiles: boolean
+    citedMaterials: boolean
+  }
+  exportControl: {
+    includeReason: boolean
+    includeObservations: boolean
+    includeActions: boolean
+    includeAdministrative: boolean
+    excludeInternalNote: boolean
+    excludeSensitive: boolean
+  }
 }
 
 export default function ConsultationWorkspace() {
@@ -72,7 +134,7 @@ export default function ConsultationWorkspace() {
   // Segments and transcript
   const [segments, setSegments] = useState<Segment[]>([])
   const [fullTranscript, setFullTranscript] = useState('')
-  const [rollingSummary, setRollingSummary] = useState('')
+  const [rollingSummary] = useState('')
   
   // Ref to access current segments synchronously
   const segmentsRef = useRef<Segment[]>([])
@@ -90,6 +152,7 @@ export default function ConsultationWorkspace() {
   const [isFinalizing, setIsFinalizing] = useState(false)
   const [isSendingMessage, setIsSendingMessage] = useState(false)
   const [isActionLoading, setIsActionLoading] = useState<string | null>(null)
+  const [suggestLoading, setSuggestLoading] = useState<string | null>(null)
   
   // Patient context
   const [patientContext, setPatientContext] = useState<PatientContext | null>(null)
@@ -98,7 +161,51 @@ export default function ConsultationWorkspace() {
   const [claritySheet, setClaritySheet] = useState<any>(null)
   const [doctorSummary, setDoctorSummary] = useState<any>(null)
   const [showClaritySheet, setShowClaritySheet] = useState(false)
-  const [activeSheetTab, setActiveSheetTab] = useState<'patient' | 'doctor'>('patient')
+  const [activeSheetTab, setActiveSheetTab] = useState<'patient' | 'doctor' | 'clinician'>('patient')
+  const [searchMode, setSearchMode] = useState<'quick' | 'deep'>('quick')
+  const [activeSource, setActiveSource] = useState<EvidenceSource | null>(null)
+  const [fieldSuggestions, setFieldSuggestions] = useState<Record<string, { text: string; sources: EvidenceSource[] }>>({})
+  const [clinicianSheet, setClinicianSheet] = useState<ClinicianSheet>({
+    general: {
+      date: '',
+      clinician: '',
+      specialty: '',
+      presentationType: '',
+    },
+    reason: '',
+    anamnesis: {
+      medicalHistory: '',
+      treatments: '',
+      dentalHistory: '',
+      dentalTreatments: '',
+      contextNotes: '',
+    },
+    observations: {
+      general: '',
+      specialty: '',
+    },
+    materials: {
+      investigations: '',
+      photos: '',
+      documents: '',
+    },
+    clinicianNote: '',
+    actions: '',
+    provenance: {
+      patientReport: true,
+      clinicianObservations: true,
+      uploadedFiles: false,
+      citedMaterials: false,
+    },
+    exportControl: {
+      includeReason: true,
+      includeObservations: true,
+      includeActions: true,
+      includeAdministrative: true,
+      excludeInternalNote: true,
+      excludeSensitive: true,
+    },
+  })
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollToBottom = () => {
@@ -163,6 +270,9 @@ export default function ConsultationWorkspace() {
       .map(s => s.text)
       .join(' ')
     setFullTranscript(allText)
+    if (appointmentId && allText) {
+      localStorage.setItem(`consultation:transcript:${appointmentId}`, allText)
+    }
   }, [segments])
 
   // Load consultation context
@@ -180,6 +290,7 @@ export default function ConsultationWorkspace() {
       })
       .then((data: ConsultationContext) => {
         setContext(data)
+        localStorage.setItem(`consultation:context:${appointmentId}`, JSON.stringify(data))
         
         // Build patient context
         const pc: PatientContext = {
@@ -327,221 +438,82 @@ export default function ConsultationWorkspace() {
 
   // Verifică (ZenLink) - Analyze segment
   const handleAnalyze = useCallback(async () => {
-    if (!appointmentId || !patientContext) {
-      console.error('Missing appointmentId or patientContext')
+    if (!appointmentId) {
+      console.error('Missing appointmentId')
       return
     }
-    
+
     // Guard against double clicks
     if (isAnalyzing) {
       console.log('Already analyzing, ignoring click')
       return
     }
-    
+
     setIsAnalyzing(true)
-    
+
     try {
       // If recording, pause and flush first - wait for completion
       if (isRecording) {
         await handlePause(false)
-        // Wait a bit for state to settle
         await new Promise(resolve => setTimeout(resolve, 300))
       }
-      
-      // Get the last doctor message from conversation (most recent transcribed text)
-      let segmentText = ''
-      let lastSegments: string[] = []
-      
-      // Use functional update to get latest messages
-      setMessages(prev => {
-        const doctorMessages = prev.filter(m => m.role === 'doctor').map(m => m.content)
-        if (doctorMessages.length > 0) {
-          segmentText = doctorMessages[doctorMessages.length - 1]
-          // Get last 3 excluding current
-          lastSegments = doctorMessages.slice(0, -1).slice(-3)
-        }
-        return prev
-      })
-      
-      // If no message found, try to get from segments
-      if (!segmentText) {
-        const currentSegments = segmentsRef.current
-        const segmentsWithText = currentSegments.filter(s => s.text && typeof s.text === 'string' && s.text.trim().length > 0) as Segment[]
-        const lastSegment = segmentsWithText[segmentsWithText.length - 1]
-        if (lastSegment) {
-          segmentText = lastSegment.text
-          // Get last 3 segments for context
-          const otherSegments = segmentsWithText.slice(0, -1).slice(-3)
-          lastSegments = otherSegments.map(s => s.text)
-        }
-      }
-      
-      if (!segmentText || !segmentText.trim()) {
-        alert('Nu există text de analizat. Încearcă să înregistrezi ceva mai întâi.')
+
+      const transcriptToUse = fullTranscript.trim()
+      if (!transcriptToUse) {
+        alert('Nu există transcript complet. Încearcă să înregistrezi ceva mai întâi.')
         setIsAnalyzing(false)
         return
       }
-      
+
       const requestBody = {
-        patientContext: patientContext,
-        lastSegments: lastSegments,
-        lastSegment: segmentText,
-        rollingSummary: rollingSummary,
+        purpose: 'verify',
+        mode: searchMode,
+        transcript: transcriptToUse,
       }
-      
-      console.log('Sending analyze request to:', `${apiBase}/api/appointments/${appointmentId}/segment-analyze`)
+
+      console.log('Sending evidence search to:', `${apiBase}/api/appointments/${appointmentId}/evidence-search`)
       console.log('Request body:', requestBody)
-      
-      const response = await fetch(`${apiBase}/api/appointments/${appointmentId}/segment-analyze`, {
+
+      const response = await fetch(`${apiBase}/api/appointments/${appointmentId}/evidence-search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
       })
-      
+
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('Analyze error:', response.status, errorText)
-        throw new Error(`Failed to analyze: ${response.status} - ${errorText}`)
+        console.error('Evidence search error:', response.status, errorText)
+        throw new Error(`Failed to verify: ${response.status} - ${errorText}`)
       }
-      
+
       const data = await response.json()
-      console.log('Analyze response:', data)
-      
-      // Update rolling summary
-      if (data.updatedRollingSummary) {
-        setRollingSummary(data.updatedRollingSummary)
-      }
-      
-      // Parse doctor copilot response - NEVER show question mode
-      let finalContent = data.assistantMarkdown || data.assistantResponse || 'Analiză completă.'
-      let copilotData = null
-      
-      // Check if response is already in doctor_copilot format
-      if (data.type === 'doctor_copilot' && data.content_markdown) {
-        finalContent = data.content_markdown
-        copilotData = {
-          type: 'doctor_copilot' as const,
-          title: data.title,
-          language: data.language,
-          segments_used: data.segments_used,
-          suggested_actions: data.suggested_actions || [],
-        }
-      } else {
-        // Try to parse as JSON if it's a string
-        try {
-          const responseText = data.assistantMarkdown || data.assistantResponse || ''
-          const parsed = typeof responseText === 'string' ? JSON.parse(responseText) : responseText
-          
-          // REJECT old question/urgent/conclusion mode formats - convert to doctor_copilot
-          if (parsed && (parsed.mode === 'question' || parsed.mode === 'urgent' || parsed.mode === 'conclusion')) {
-            console.warn('Received old format (mode:', parsed.mode, '), converting to doctor_copilot format.')
-            
-            // Convert to markdown based on format
-            let markdown = ''
-            
-            if (parsed.mode === 'urgent' || parsed.mode === 'conclusion') {
-              const conclusion = parsed.conclusion
-              if (conclusion) {
-                if (conclusion.summary) {
-                  markdown += `## ✅ Rezumat\n\n${conclusion.summary}\n\n`
-                }
-                
-                if (conclusion.probabilities && Array.isArray(conclusion.probabilities)) {
-                  markdown += `## 🧠 Posibile cauze (orientativ)\n\n`
-                  conclusion.probabilities.forEach((prob: any) => {
-                    markdown += `1. **${prob.label || 'Cauză'}** (probabilitate ~${prob.percent || '?'}%)`
-                    if (prob.note) {
-                      markdown += `: ${prob.note}`
-                    }
-                    markdown += `\n`
-                  })
-                  markdown += `\n`
-                }
-                
-                if (conclusion.nextSteps && Array.isArray(conclusion.nextSteps)) {
-                  markdown += `## 🧩 Ce să faci / next steps\n\n`
-                  conclusion.nextSteps.forEach((step: any) => {
-                    markdown += `- `
-                    if (step.title) {
-                      markdown += `**${step.title}**: `
-                    }
-                    if (step.text) {
-                      markdown += step.text
-                    }
-                    markdown += `\n`
-                  })
-                  markdown += `\n`
-                }
-                
-                if (conclusion.redFlags && Array.isArray(conclusion.redFlags)) {
-                  markdown += `## ⚠️ Red flags\n\n`
-                  conclusion.redFlags.forEach((flag: string) => {
-                    markdown += `- ${flag}\n`
-                  })
-                  markdown += `\n`
-                }
-              }
-            } else if (parsed.mode === 'question') {
-              markdown = `## 📋 Analiză segment\n\n` +
-                `**Problema:** ${parsed.title || 'Durere de măsea'}\n\n` +
-                `**Întrebare recomandată:** ${parsed.question || 'N/A'}\n\n` +
-                `**Rationament:** ${parsed.rationale || 'N/A'}\n\n` +
-                `⚠️ **Notă:** Formatul vechi de întrebare a fost detectat. Te rugăm să folosești acțiunile de mai jos pentru detalii.`
-            }
-            
-            finalContent = markdown
-            copilotData = {
-              type: 'doctor_copilot' as const,
-              title: parsed.title || 'Analiză segment',
-              language: 'ro',
-              segments_used: 1,
-              suggested_actions: [
-                { id: 'followup_questions', label: 'Întrebări de clarificare', icon: 'help-circle' },
-                { id: 'differential', label: 'Posibile cauze', icon: 'stethoscope' },
-                { id: 'red_flags', label: 'Red flags', icon: 'alert-triangle' },
-                { id: 'research', label: 'Research rapid (surse)', icon: 'book-open' },
-              ],
-            }
-          } else if (parsed && parsed.type === 'doctor_copilot' && parsed.content_markdown) {
-            finalContent = parsed.content_markdown
-            copilotData = {
-              type: 'doctor_copilot' as const,
-              title: parsed.title,
-              language: parsed.language,
-              segments_used: parsed.segments_used,
-              suggested_actions: parsed.suggested_actions || [],
-            }
-          }
-        } catch (e) {
-          // Not JSON, use as-is (markdown)
-          console.log('Response is not JSON, using as markdown')
-        }
-      }
-      
-      // Add assistant message - always render as markdown, never triage UI
+
       const assistantMessage: Message = {
         id: `msg-${Date.now()}`,
         role: 'assistant',
-        content: finalContent,
+        content: '✅ Verificare cu surse (ZenLink)',
         timestamp: new Date(),
-        copilotData: copilotData || undefined,
+        evidence: {
+          purpose: data.purpose,
+          mode: data.mode,
+          claims: data.claims || [],
+          sources: data.sources || [],
+        },
       }
       setMessages(prev => [...prev, assistantMessage])
-      
     } catch (error: any) {
-      console.error('Error analyzing segment:', error)
-      // Add error message to chat
+      console.error('Error verifying with sources:', error)
       const errorMessage: Message = {
         id: `msg-error-${Date.now()}`,
         role: 'assistant',
-        content: 'Eroare la analiză: ' + (error.message || 'Unknown error'),
+        content: 'Eroare la verificare: ' + (error.message || 'Unknown error'),
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, errorMessage])
     } finally {
       setIsAnalyzing(false)
     }
-  }, [appointmentId, patientContext, rollingSummary, isRecording, handlePause])
+  }, [appointmentId, isAnalyzing, isRecording, handlePause, fullTranscript, searchMode])
   
   // Store handleAnalyze in ref to avoid circular dependency
   useEffect(() => {
@@ -635,6 +607,61 @@ export default function ConsultationWorkspace() {
       setIsFinalizing(false)
     }
   }, [appointmentId, patientContext, isRecording, handlePause])
+
+  const handleSuggestSection = useCallback(async (fieldKey: string, sectionLabel: string, currentText: string) => {
+    if (!appointmentId) return
+    if (suggestLoading) return
+    if (!fullTranscript.trim() && !currentText.trim()) {
+      alert('Nu există transcript sau text pentru a sugera.')
+      return
+    }
+
+    setSuggestLoading(fieldKey)
+    try {
+      const requestBody = {
+        purpose: 'suggest',
+        mode: searchMode,
+        section: sectionLabel,
+        currentText: currentText,
+        transcript: fullTranscript,
+      }
+
+      const response = await fetch(`${apiBase}/api/appointments/${appointmentId}/evidence-search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Failed to suggest: ${response.status} - ${errorText}`)
+      }
+
+      const data = await response.json()
+      setFieldSuggestions(prev => ({
+        ...prev,
+        [fieldKey]: {
+          text: data.suggestedText || '',
+          sources: data.sources || [],
+        },
+      }))
+    } catch (error: any) {
+      console.error('Error suggesting section:', error)
+      alert('Eroare la sugestie: ' + (error.message || 'Unknown error'))
+    } finally {
+      setSuggestLoading(null)
+    }
+  }, [appointmentId, fullTranscript, searchMode, suggestLoading])
+
+  const clearSuggestion = useCallback((fieldKey: string) => {
+    setFieldSuggestions(prev => ({
+      ...prev,
+      [fieldKey]: {
+        text: '',
+        sources: prev[fieldKey]?.sources || [],
+      },
+    }))
+  }, [])
 
   // Handle copilot action
   const handleCopilotAction = useCallback(async (actionId: string) => {
@@ -899,6 +926,24 @@ export default function ConsultationWorkspace() {
               </>
             )}
           </button>
+          <div className="flex items-center rounded-lg border border-white/10 bg-white/5 p-1 text-xs">
+            <button
+              onClick={() => setSearchMode('quick')}
+              className={`px-2 py-1 rounded-md transition-colors ${
+                searchMode === 'quick' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/70'
+              }`}
+            >
+              Quick
+            </button>
+            <button
+              onClick={() => setSearchMode('deep')}
+              className={`px-2 py-1 rounded-md transition-colors ${
+                searchMode === 'deep' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/70'
+              }`}
+            >
+              Deep
+            </button>
+          </div>
           
           {/* Finalize button */}
           <button
@@ -1007,6 +1052,44 @@ export default function ConsultationWorkspace() {
                           className="markdown-content text-white/90"
                           dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
                         />
+                        {msg.evidence?.claims && msg.evidence.claims.length > 0 && (
+                          <div className="mt-4 space-y-3">
+                            <p className="text-xs text-white/50 uppercase tracking-wide">Literature context</p>
+                            {msg.evidence.claims.map((claim, idx) => (
+                              <div key={`${msg.id}-claim-${idx}`} className="rounded-lg border border-white/10 bg-white/5 p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-sm text-white/80">{claim.claim}</p>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    claim.coverage === 'good'
+                                      ? 'bg-emerald-500/20 text-emerald-300'
+                                      : claim.coverage === 'partial'
+                                      ? 'bg-amber-500/20 text-amber-300'
+                                      : 'bg-red-500/20 text-red-300'
+                                  }`}>
+                                    {claim.coverage === 'good'
+                                      ? 'acoperire bună'
+                                      : claim.coverage === 'partial'
+                                      ? 'acoperire parțială'
+                                      : 'acoperire insuficientă'}
+                                  </span>
+                                </div>
+                                {claim.sources && claim.sources.length > 0 && (
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {claim.sources.map((source, sIdx) => (
+                                      <button
+                                        key={`${msg.id}-source-${idx}-${sIdx}`}
+                                        onClick={() => setActiveSource(source)}
+                                        className="text-xs px-2 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-200 hover:bg-purple-500/20 transition-colors"
+                                      >
+                                        {source.title || 'Sursă'}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </>
                     ) : (
                       <p className="text-white/90">{msg.content}</p>
@@ -1192,6 +1275,22 @@ export default function ConsultationWorkspace() {
               >
                 Rezumat (Doctor)
               </button>
+              <button
+                onClick={() => setActiveSheetTab('clinician')}
+                className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+                  activeSheetTab === 'clinician'
+                    ? 'bg-white/10 text-white border-b-2 border-purple-500'
+                    : 'text-white/50 hover:text-white/70'
+                }`}
+              >
+                Clarity Sheet (Clinician)
+              </button>
+              <button
+                onClick={() => navigate(`/consult/${appointmentId}/clinician-sheet`)}
+                className="ml-auto px-3 py-2 rounded-lg text-xs font-medium bg-purple-500/20 border border-purple-500/30 text-purple-200 hover:bg-purple-500/30"
+              >
+                Deschide editorul
+              </button>
             </div>
             
             {/* Content */}
@@ -1241,6 +1340,395 @@ export default function ConsultationWorkspace() {
                   )}
                 </>
               )}
+
+              {activeSheetTab === 'clinician' && (
+                <div className="space-y-6">
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-sm text-white font-semibold">ZenLink — Clinician Clarity Sheet</p>
+                    <p className="text-xs text-white/50 mt-1">
+                      ZenLink NU oferă decizii medicale. Clinicianul rămâne integral responsabil.
+                    </p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="text-xs text-white/40">Mod căutare surse:</span>
+                      <div className="flex items-center rounded-lg border border-white/10 bg-white/5 p-1 text-xs">
+                        <button
+                          onClick={() => setSearchMode('quick')}
+                          className={`px-2 py-1 rounded-md transition-colors ${
+                            searchMode === 'quick' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/70'
+                          }`}
+                        >
+                          Quick
+                        </button>
+                        <button
+                          onClick={() => setSearchMode('deep')}
+                          className={`px-2 py-1 rounded-md transition-colors ${
+                            searchMode === 'deep' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/70'
+                          }`}
+                        >
+                          Deep
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-4">
+                    <h4 className="text-sm font-semibold text-white/80">1. Date generale caz</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <input
+                        value={clinicianSheet.general.date}
+                        onChange={(e) => setClinicianSheet(prev => ({
+                          ...prev,
+                          general: { ...prev.general, date: e.target.value },
+                        }))}
+                        placeholder="Data consultației"
+                        className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/30"
+                      />
+                      <input
+                        value={clinicianSheet.general.clinician}
+                        onChange={(e) => setClinicianSheet(prev => ({
+                          ...prev,
+                          general: { ...prev.general, clinician: e.target.value },
+                        }))}
+                        placeholder="Clinician"
+                        className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/30"
+                      />
+                      <input
+                        value={clinicianSheet.general.specialty}
+                        onChange={(e) => setClinicianSheet(prev => ({
+                          ...prev,
+                          general: { ...prev.general, specialty: e.target.value },
+                        }))}
+                        placeholder="Specialitate (ex. parodontologie)"
+                        className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/30"
+                      />
+                      <input
+                        value={clinicianSheet.general.presentationType}
+                        onChange={(e) => setClinicianSheet(prev => ({
+                          ...prev,
+                          general: { ...prev.general, presentationType: e.target.value },
+                        }))}
+                        placeholder="Tip prezentare (prima prezentare / control / etc.)"
+                        className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/30"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-sm font-semibold text-white/80">2. Motivul prezentării</h4>
+                      <button
+                        onClick={() => handleSuggestSection('reason', 'Motivul prezentării', clinicianSheet.reason)}
+                        disabled={suggestLoading === 'reason'}
+                        className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-200 hover:bg-purple-500/20 disabled:opacity-50"
+                      >
+                        {suggestLoading === 'reason' ? 'Sugerez...' : 'Sugerează (surse)'}
+                      </button>
+                    </div>
+                    <GhostTextarea
+                      value={clinicianSheet.reason}
+                      suggestion={fieldSuggestions.reason?.text}
+                      placeholder="„Pacientul se prezintă pentru…”"
+                      onChange={(value) => setClinicianSheet(prev => ({ ...prev, reason: value }))}
+                      onAcceptSuggestion={(value) => {
+                        setClinicianSheet(prev => ({ ...prev, reason: value }))
+                        clearSuggestion('reason')
+                      }}
+                      onDismissSuggestion={() => clearSuggestion('reason')}
+                    />
+                    {fieldSuggestions.reason?.sources?.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {fieldSuggestions.reason.sources.map((source, idx) => (
+                          <button
+                            key={`reason-source-${idx}`}
+                            onClick={() => setActiveSource(source)}
+                            className="text-xs px-2 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-200 hover:bg-purple-500/20"
+                          >
+                            {source.title || 'Sursă'}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-white/40">Informație raportată de pacient, structurată pentru claritate.</p>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-4">
+                    <h4 className="text-sm font-semibold text-white/80">3. Anamneză relevantă</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-white/50">Istoric medical general (relevant)</p>
+                        <button
+                          onClick={() => handleSuggestSection('anamnesis.medicalHistory', 'Istoric medical general', clinicianSheet.anamnesis.medicalHistory)}
+                          disabled={suggestLoading === 'anamnesis.medicalHistory'}
+                          className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-200 hover:bg-purple-500/20 disabled:opacity-50"
+                        >
+                          {suggestLoading === 'anamnesis.medicalHistory' ? 'Sugerez...' : 'Sugerează (surse)'}
+                        </button>
+                      </div>
+                      <GhostTextarea
+                        value={clinicianSheet.anamnesis.medicalHistory}
+                        suggestion={fieldSuggestions['anamnesis.medicalHistory']?.text}
+                        placeholder="Afecțiuni cunoscute, tratamente în curs"
+                        onChange={(value) => setClinicianSheet(prev => ({
+                          ...prev,
+                          anamnesis: { ...prev.anamnesis, medicalHistory: value },
+                        }))}
+                        onAcceptSuggestion={(value) => {
+                          setClinicianSheet(prev => ({
+                            ...prev,
+                            anamnesis: { ...prev.anamnesis, medicalHistory: value },
+                          }))
+                          clearSuggestion('anamnesis.medicalHistory')
+                        }}
+                        onDismissSuggestion={() => clearSuggestion('anamnesis.medicalHistory')}
+                      />
+
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-white/50">Istoric dentar</p>
+                        <button
+                          onClick={() => handleSuggestSection('anamnesis.dentalHistory', 'Istoric dentar', clinicianSheet.anamnesis.dentalHistory)}
+                          disabled={suggestLoading === 'anamnesis.dentalHistory'}
+                          className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-200 hover:bg-purple-500/20 disabled:opacity-50"
+                        >
+                          {suggestLoading === 'anamnesis.dentalHistory' ? 'Sugerez...' : 'Sugerează (surse)'}
+                        </button>
+                      </div>
+                      <GhostTextarea
+                        value={clinicianSheet.anamnesis.dentalHistory}
+                        suggestion={fieldSuggestions['anamnesis.dentalHistory']?.text}
+                        placeholder="Tratamente anterioare, elemente relevante"
+                        onChange={(value) => setClinicianSheet(prev => ({
+                          ...prev,
+                          anamnesis: { ...prev.anamnesis, dentalHistory: value },
+                        }))}
+                        onAcceptSuggestion={(value) => {
+                          setClinicianSheet(prev => ({
+                            ...prev,
+                            anamnesis: { ...prev.anamnesis, dentalHistory: value },
+                          }))
+                          clearSuggestion('anamnesis.dentalHistory')
+                        }}
+                        onDismissSuggestion={() => clearSuggestion('anamnesis.dentalHistory')}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-4">
+                    <h4 className="text-sm font-semibold text-white/80">4. Observații clinice</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-white/50">Observații generale</p>
+                        <button
+                          onClick={() => handleSuggestSection('observations.general', 'Observații generale', clinicianSheet.observations.general)}
+                          disabled={suggestLoading === 'observations.general'}
+                          className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-200 hover:bg-purple-500/20 disabled:opacity-50"
+                        >
+                          {suggestLoading === 'observations.general' ? 'Sugerez...' : 'Sugerează (surse)'}
+                        </button>
+                      </div>
+                      <GhostTextarea
+                        value={clinicianSheet.observations.general}
+                        suggestion={fieldSuggestions['observations.general']?.text}
+                        placeholder="Aspecte observabile, elemente notabile"
+                        onChange={(value) => setClinicianSheet(prev => ({
+                          ...prev,
+                          observations: { ...prev.observations, general: value },
+                        }))}
+                        onAcceptSuggestion={(value) => {
+                          setClinicianSheet(prev => ({
+                            ...prev,
+                            observations: { ...prev.observations, general: value },
+                          }))
+                          clearSuggestion('observations.general')
+                        }}
+                        onDismissSuggestion={() => clearSuggestion('observations.general')}
+                      />
+
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-white/50">Observații specifice specialității</p>
+                        <button
+                          onClick={() => handleSuggestSection('observations.specialty', 'Observații specifice specialității', clinicianSheet.observations.specialty)}
+                          disabled={suggestLoading === 'observations.specialty'}
+                          className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-200 hover:bg-purple-500/20 disabled:opacity-50"
+                        >
+                          {suggestLoading === 'observations.specialty' ? 'Sugerez...' : 'Sugerează (surse)'}
+                        </button>
+                      </div>
+                      <GhostTextarea
+                        value={clinicianSheet.observations.specialty}
+                        suggestion={fieldSuggestions['observations.specialty']?.text}
+                        placeholder="Ex. retracție gingivală, parodontită etc."
+                        onChange={(value) => setClinicianSheet(prev => ({
+                          ...prev,
+                          observations: { ...prev.observations, specialty: value },
+                        }))}
+                        onAcceptSuggestion={(value) => {
+                          setClinicianSheet(prev => ({
+                            ...prev,
+                            observations: { ...prev.observations, specialty: value },
+                          }))
+                          clearSuggestion('observations.specialty')
+                        }}
+                        onDismissSuggestion={() => clearSuggestion('observations.specialty')}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+                    <h4 className="text-sm font-semibold text-white/80">5. Date suplimentare & materiale</h4>
+                    <GhostTextarea
+                      value={clinicianSheet.materials.investigations}
+                      suggestion={fieldSuggestions['materials.investigations']?.text}
+                      placeholder="Investigații disponibile (imagini, radiografii)"
+                      onChange={(value) => setClinicianSheet(prev => ({
+                        ...prev,
+                        materials: { ...prev.materials, investigations: value },
+                      }))}
+                      onAcceptSuggestion={(value) => {
+                        setClinicianSheet(prev => ({
+                          ...prev,
+                          materials: { ...prev.materials, investigations: value },
+                        }))
+                        clearSuggestion('materials.investigations')
+                      }}
+                      onDismissSuggestion={() => clearSuggestion('materials.investigations')}
+                    />
+                    <GhostTextarea
+                      value={clinicianSheet.materials.photos}
+                      suggestion={fieldSuggestions['materials.photos']?.text}
+                      placeholder="Fotografii clinice"
+                      onChange={(value) => setClinicianSheet(prev => ({
+                        ...prev,
+                        materials: { ...prev.materials, photos: value },
+                      }))}
+                      onAcceptSuggestion={(value) => {
+                        setClinicianSheet(prev => ({
+                          ...prev,
+                          materials: { ...prev.materials, photos: value },
+                        }))
+                        clearSuggestion('materials.photos')
+                      }}
+                      onDismissSuggestion={() => clearSuggestion('materials.photos')}
+                    />
+                    <GhostTextarea
+                      value={clinicianSheet.materials.documents}
+                      suggestion={fieldSuggestions['materials.documents']?.text}
+                      placeholder="Alte documente încărcate"
+                      onChange={(value) => setClinicianSheet(prev => ({
+                        ...prev,
+                        materials: { ...prev.materials, documents: value },
+                      }))}
+                      onAcceptSuggestion={(value) => {
+                        setClinicianSheet(prev => ({
+                          ...prev,
+                          materials: { ...prev.materials, documents: value },
+                        }))
+                        clearSuggestion('materials.documents')
+                      }}
+                      onDismissSuggestion={() => clearSuggestion('materials.documents')}
+                    />
+                    <p className="text-xs text-white/40">ZenLink păstrează trasabilitatea sursei fiecărui material.</p>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-sm font-semibold text-white/80">6. Notă clinică – clinician (uman)</h4>
+                      <button
+                        onClick={() => handleSuggestSection('clinicianNote', 'Notă clinician', clinicianSheet.clinicianNote)}
+                        disabled={suggestLoading === 'clinicianNote'}
+                        className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-200 hover:bg-purple-500/20 disabled:opacity-50"
+                      >
+                        {suggestLoading === 'clinicianNote' ? 'Sugerez...' : 'Sugerează (surse)'}
+                      </button>
+                    </div>
+                    <GhostTextarea
+                      value={clinicianSheet.clinicianNote}
+                      suggestion={fieldSuggestions.clinicianNote?.text}
+                      placeholder="Impresii clinice preliminare, aspecte de urmărit"
+                      onChange={(value) => setClinicianSheet(prev => ({ ...prev, clinicianNote: value }))}
+                      onAcceptSuggestion={(value) => {
+                        setClinicianSheet(prev => ({ ...prev, clinicianNote: value }))
+                        clearSuggestion('clinicianNote')
+                      }}
+                      onDismissSuggestion={() => clearSuggestion('clinicianNote')}
+                    />
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-sm font-semibold text-white/80">7. Acțiuni realizate în cadrul consultației</h4>
+                      <button
+                        onClick={() => handleSuggestSection('actions', 'Acțiuni realizate', clinicianSheet.actions)}
+                        disabled={suggestLoading === 'actions'}
+                        className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-200 hover:bg-purple-500/20 disabled:opacity-50"
+                      >
+                        {suggestLoading === 'actions' ? 'Sugerez...' : 'Sugerează (surse)'}
+                      </button>
+                    </div>
+                    <GhostTextarea
+                      value={clinicianSheet.actions}
+                      suggestion={fieldSuggestions.actions?.text}
+                      placeholder="Examinare clinică, discuții explicative, materiale educaționale"
+                      onChange={(value) => setClinicianSheet(prev => ({ ...prev, actions: value }))}
+                      onAcceptSuggestion={(value) => {
+                        setClinicianSheet(prev => ({ ...prev, actions: value }))
+                        clearSuggestion('actions')
+                      }}
+                      onDismissSuggestion={() => clearSuggestion('actions')}
+                    />
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+                    <h4 className="text-sm font-semibold text-white/80">8. Claritate & proveniența informației</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-white/70">
+                      {[
+                        { key: 'patientReport', label: 'Raport pacient' },
+                        { key: 'clinicianObservations', label: 'Observații clinician' },
+                        { key: 'uploadedFiles', label: 'Fișiere încărcate' },
+                        { key: 'citedMaterials', label: 'Materiale educaționale citate' },
+                      ].map((item) => (
+                        <label key={item.key} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={(clinicianSheet.provenance as any)[item.key]}
+                            onChange={(e) => setClinicianSheet(prev => ({
+                              ...prev,
+                              provenance: { ...prev.provenance, [item.key]: e.target.checked },
+                            }))}
+                          />
+                          {item.label}
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-white/40">No source, no say — principiu ZenLink.</p>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+                    <h4 className="text-sm font-semibold text-white/80">9. Control export către pacient</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-white/70">
+                      {[
+                        { key: 'includeReason', label: 'Include motivul prezentării' },
+                        { key: 'includeObservations', label: 'Include rezumat observații' },
+                        { key: 'includeActions', label: 'Include acțiuni realizate' },
+                        { key: 'includeAdministrative', label: 'Include pași administrativi următori' },
+                        { key: 'excludeInternalNote', label: 'Exclude notă clinică internă' },
+                        { key: 'excludeSensitive', label: 'Exclude observații sensibile' },
+                      ].map((item) => (
+                        <label key={item.key} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={(clinicianSheet.exportControl as any)[item.key]}
+                            onChange={(e) => setClinicianSheet(prev => ({
+                              ...prev,
+                              exportControl: { ...prev.exportControl, [item.key]: e.target.checked },
+                            }))}
+                          />
+                          {item.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             
             {/* Download buttons */}
@@ -1259,6 +1747,39 @@ export default function ConsultationWorkspace() {
                 Descarcă PDF {activeSheetTab === 'patient' ? 'Clarity Sheet' : 'Rezumat'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Evidence source modal */}
+      {activeSource && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6">
+          <div className="w-full max-w-lg rounded-2xl bg-[#0c0c18] border border-white/10 p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm text-white font-semibold">{activeSource.title || 'Sursă'}</p>
+                <p className="text-xs text-white/50">{activeSource.publisher || 'Publisher'} • {activeSource.year || '—'}</p>
+              </div>
+              <button
+                onClick={() => setActiveSource(null)}
+                className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center"
+              >
+                <X className="w-4 h-4 text-white/60" />
+              </button>
+            </div>
+            {activeSource.snippet && (
+              <p className="mt-3 text-sm text-white/70 leading-relaxed">{activeSource.snippet}</p>
+            )}
+            {activeSource.url && (
+              <a
+                href={activeSource.url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-flex text-sm text-purple-300 hover:text-purple-200"
+              >
+                Deschide documentația →
+              </a>
+            )}
           </div>
         </div>
       )}
@@ -1282,6 +1803,54 @@ const Section = ({ title, content, items }: { title: string; content?: string; i
     )}
   </div>
 )
+
+const GhostTextarea = ({
+  value,
+  suggestion,
+  placeholder,
+  onChange,
+  onAcceptSuggestion,
+  onDismissSuggestion,
+}: {
+  value: string
+  suggestion?: string
+  placeholder?: string
+  onChange: (value: string) => void
+  onAcceptSuggestion: (value: string) => void
+  onDismissSuggestion: () => void
+}) => {
+  const ghost = suggestion
+    ? suggestion.startsWith(value)
+      ? suggestion.slice(value.length)
+      : suggestion
+    : ''
+
+  return (
+    <div className="relative">
+      <div className="pointer-events-none absolute inset-0 whitespace-pre-wrap text-sm text-white/70 px-3 py-2">
+        <span>{value}</span>
+        {ghost && <span className="text-white/30">{ghost}</span>}
+      </div>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Tab' && suggestion) {
+            e.preventDefault()
+            onAcceptSuggestion(suggestion)
+          }
+          if (e.key === 'Escape' && suggestion) {
+            e.preventDefault()
+            onDismissSuggestion()
+          }
+        }}
+        placeholder={placeholder}
+        rows={3}
+        className="relative z-10 w-full bg-transparent text-transparent caret-white px-3 py-2 text-sm border border-white/10 rounded-lg placeholder:text-white/30 resize-none"
+      />
+    </div>
+  )
+}
 
 // Helper function to generate PDF from HTML content
 async function generatePDF(htmlContent: string, title: string, patientName: string, appointmentId: string) {

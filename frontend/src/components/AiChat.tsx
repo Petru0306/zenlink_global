@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import { normalizeAiErrorMessage } from '../services/aiClient';
 
 type ChatRole = 'user' | 'assistant';
 
@@ -206,8 +207,24 @@ export function AiChat({
           return copy;
         });
       }
+
+      const trimmed = assistantText.trim();
+      if (trimmed.startsWith('Eroare:')) {
+        const raw = trimmed.replace(/^Eroare:\s*/i, '');
+        const friendly = normalizeAiErrorMessage(raw);
+        setMessages((prev) => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (last?.role === 'assistant') {
+            copy[copy.length - 1] = { role: 'assistant', content: `Eroare: ${friendly}` };
+          } else {
+            copy.push({ role: 'assistant', content: `Eroare: ${friendly}` });
+          }
+          return copy;
+        });
+      }
     } catch (e: any) {
-      const msg = typeof e?.message === 'string' ? e.message : 'Eroare necunoscută';
+      const msg = typeof e?.message === 'string' ? normalizeAiErrorMessage(e.message) : 'Eroare necunoscută';
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', content: `Eroare: ${msg}` },

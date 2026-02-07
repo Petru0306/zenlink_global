@@ -131,11 +131,12 @@ export function AIPreviewWidget({ onContinueToFull }: Props) {
             : m
         )
       );
-    } catch (error) {
+    } catch (error: any) {
+      const message = error?.message || 'Eroare la răspuns. Încearcă din nou sau continuă în interfața completă.';
       const errorMessage: Message = {
         id: assistantId,
         role: 'assistant',
-        content: 'Eroare la răspuns. Încearcă din nou sau continuă în interfața completă.',
+        content: message,
         createdAt: new Date().toISOString(),
       };
       setMessages((prev) =>
@@ -220,11 +221,12 @@ export function AIPreviewWidget({ onContinueToFull }: Props) {
               : m
           )
         );
-      } catch (error) {
+      } catch (error: any) {
+        const message = error?.message || 'Eroare la răspuns. Încearcă din nou sau continuă în interfața completă.';
         const errorMessage: Message = {
           id: assistantId,
           role: 'assistant',
-          content: 'Eroare la răspuns. Încearcă din nou sau continuă în interfața completă.',
+          content: message,
           createdAt: new Date().toISOString(),
         };
         setMessages((prev) =>

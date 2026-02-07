@@ -11,6 +11,8 @@ import com.zenlink.zenlink.dto.CreateAppointmentRequest;
 import com.zenlink.zenlink.dto.CopilotActionRequest;
 import com.zenlink.zenlink.dto.CopilotChatRequest;
 import com.zenlink.zenlink.dto.CopilotResponse;
+import com.zenlink.zenlink.dto.ConsultationEvidenceRequest;
+import com.zenlink.zenlink.dto.ConsultationEvidenceResponse;
 import com.zenlink.zenlink.service.AppointmentService;
 import com.zenlink.zenlink.service.ConsultationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -176,6 +178,22 @@ public class AppointmentController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(null);
+        }
+    }
+
+    /**
+     * Evidence search (web search) for verify/suggest workflows.
+     */
+    @PostMapping("/{appointmentId}/evidence-search")
+    public ResponseEntity<?> evidenceSearch(
+            @PathVariable Long appointmentId,
+            @RequestBody ConsultationEvidenceRequest request) {
+        try {
+            ConsultationEvidenceResponse response = consultationService.evidenceSearch(appointmentId, request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            String message = e.getMessage() != null ? e.getMessage() : "Evidence search failed";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(message);
         }
     }
 

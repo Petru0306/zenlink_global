@@ -101,11 +101,12 @@ export default function AiPage() {
           return prev.map((c) => (c.id === final.id ? final : c));
         });
       })
-      .catch(() => {
+      .catch((error) => {
+        const errorMessage = error?.message || 'Eroare la răspuns. Încearcă din nou.';
         setConversations((prev) => {
           const convToUpdate = prev.find((c) => c.id === currentConv.id);
           if (!convToUpdate) return prev;
-          const withError = updateLastAssistantMessage(convToUpdate, 'Eroare la răspuns. Încearcă din nou.');
+          const withError = updateLastAssistantMessage(convToUpdate, errorMessage);
           return prev.map((c) => (c.id === withError.id ? withError : c));
         });
       })

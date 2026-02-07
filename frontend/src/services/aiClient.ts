@@ -19,6 +19,18 @@ function toBackendMessages(messages: Message[]): Array<{ role: string; content: 
     }));
 }
 
+function normalizeAiErrorMessage(raw: string): string {
+  const text = raw?.trim();
+  if (!text) {
+    return 'Eroare necunoscută la comunicarea cu AI';
+  }
+  const lower = text.toLowerCase();
+  if (lower.includes('openai service is disabled') || lower.includes('openai_api_key')) {
+    return 'AI este dezactivat. Setează variabila OPENAI_API_KEY în backend și repornește serverul.';
+  }
+  return text;
+}
+
 /**
  * Send chat messages with streaming support - updates callback as text arrives.
  * This provides a ChatGPT-like progressive typing effect.
@@ -102,9 +114,15 @@ export async function sendMessageStreaming(
       reader.releaseLock();
     }
 
+    const trimmed = fullText.trim();
+    if (trimmed.startsWith('Eroare:')) {
+      const raw = trimmed.replace(/^Eroare:\s*/i, '');
+      throw new Error(normalizeAiErrorMessage(raw));
+    }
+
     return fullText;
   } catch (error: any) {
-    const message = error?.message || 'Eroare necunoscută la comunicarea cu AI';
+    const message = normalizeAiErrorMessage(error?.message || '');
     console.error('AI client streaming error:', error);
     throw new Error(message);
   }
@@ -173,18 +191,20 @@ export async function sendMessage(
       if (response.status === 0 || response.status === 503) {
         throw new Error('Backend-ul nu este disponibil. Verifică dacă serverul rulează pe http://localhost:8080');
       }
-      throw new Error(errorText || `Eroare HTTP ${response.status}`);
+      throw new Error(normalizeAiErrorMessage(errorText || `Eroare HTTP ${response.status}`));
     }
 
     const data = await response.json();
     if (data.error) {
-      throw new Error(data.error);
+      throw new Error(normalizeAiErrorMessage(data.error));
     }
 
     return data.text || 'No response from AI';
   } catch (error: any) {
-    const message = error?.message || 'Eroare necunoscută la comunicarea cu AI';
+    const message = normalizeAiErrorMessage(error?.message || '');
     console.error('AI client error:', error);
     throw new Error(message);
   }
 }
+
+export { normalizeAiErrorMessage };
