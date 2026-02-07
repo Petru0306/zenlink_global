@@ -100,6 +100,7 @@ export default function ConsultationWorkspace() {
   const [showClaritySheet, setShowClaritySheet] = useState(false)
   const [activeSheetTab, setActiveSheetTab] = useState<'patient' | 'doctor'>('patient')
   
+  
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -245,7 +246,7 @@ export default function ConsultationWorkspace() {
   }, [transcriptionProvider, isRecording])
 
   // Pause recording with flush
-  const handlePause = useCallback(async (autoAnalyze: boolean = false) => {
+  const handlePause = useCallback(async () => {
     if (!transcriptionProvider) return
     
     setRecordingStatus('paused')
@@ -261,6 +262,8 @@ export default function ConsultationWorkspace() {
     const currentSegments = segmentsRef.current
     let finalText = ''
     let segmentId: string | null = null
+    let latestSegment: Segment | null = null
+    let segmentStartTime: Date | null = null
     
     if (currentSegments.length === 0) {
       // If no segments, but we have text, create one
@@ -268,20 +271,23 @@ export default function ConsultationWorkspace() {
         finalText = (flushedText + ' ' + draftText).trim()
         if (finalText) {
           segmentId = `seg-${Date.now()}`
+          segmentStartTime = new Date()
           const newSegment: Segment = {
             id: segmentId,
-            startedAt: new Date(),
+            startedAt: segmentStartTime,
             endedAt: new Date(),
             text: finalText,
           }
+          latestSegment = newSegment
           setSegments([newSegment])
         }
       }
     } else {
       // Combine existing text, flushed text, and current draft
-      const latestSegment = currentSegments[currentSegments.length - 1]
+      latestSegment = currentSegments[currentSegments.length - 1]
       if (latestSegment) {
         segmentId = latestSegment.id
+        segmentStartTime = latestSegment.startedAt
         const existingText = latestSegment.text || ''
         finalText = (existingText + ' ' + flushedText + ' ' + draftText).trim()
         
@@ -299,6 +305,42 @@ export default function ConsultationWorkspace() {
       }
     }
     
+    // Save segment to backend
+    if (finalText && finalText.trim() && segmentId && appointmentId) {
+      const startTs = segmentStartTime?.getTime() || Date.now()
+      const endTs = Date.now()
+      
+      try {
+        const response = await fetch(`${apiBase}/api/appointments/${appointmentId}/segments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: finalText,
+            startTs: startTs,
+            endTs: endTs,
+            speaker: 'doctor'
+          }),
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          console.log('✅ Segment saved:', data.segmentId)
+          // Update segment with saved ID if needed
+          if (data.segmentId) {
+            setSegments(prev => prev.map((seg, index) => 
+              index === prev.length - 1 && seg.id === segmentId
+                ? { ...seg, id: `seg-${data.segmentId}` }
+                : seg
+            ))
+          }
+        } else {
+          console.error('Failed to save segment:', response.status)
+        }
+      } catch (error) {
+        console.error('Error saving segment:', error)
+      }
+    }
+    
     // Add the transcribed text as a doctor message in the conversation
     // NOW we can use finalText directly since we calculated it BEFORE setSegments
     if (finalText && finalText.trim()) {
@@ -310,20 +352,13 @@ export default function ConsultationWorkspace() {
       }
       setMessages(prev => [...prev, doctorMessage])
       console.log('✅ Added doctor message:', finalText.substring(0, 50) + '...')
-      
-      // If autoAnalyze is true, automatically send to AI
-      if (autoAnalyze && appointmentId && patientContext && handleAnalyzeRef.current) {
-        setTimeout(async () => {
-          await handleAnalyzeRef.current?.()
-        }, 300)
-      }
     } else {
       console.log('⚠️ No text. flushedText length:', flushedText.length, 'draftText length:', draftText.length)
     }
     
     setCurrentDraft('')
     setRecordingStatus('idle')
-  }, [transcriptionProvider, currentDraft, appointmentId, patientContext])
+  }, [transcriptionProvider, currentDraft, appointmentId, apiBase])
 
   // Verifică (ZenLink) - Analyze segment
   const handleAnalyze = useCallback(async () => {
@@ -343,7 +378,7 @@ export default function ConsultationWorkspace() {
     try {
       // If recording, pause and flush first - wait for completion
       if (isRecording) {
-        await handlePause(false)
+        await handlePause()
         // Wait a bit for state to settle
         await new Promise(resolve => setTimeout(resolve, 300))
       }
@@ -548,6 +583,7 @@ export default function ConsultationWorkspace() {
     handleAnalyzeRef.current = handleAnalyze
   }, [handleAnalyze])
 
+
   // Finalize consultation
   const handleFinalize = useCallback(async () => {
     if (!appointmentId || !patientContext) {
@@ -557,7 +593,7 @@ export default function ConsultationWorkspace() {
     
     // Stop recording if active
     if (isRecording) {
-      await handlePause(false)
+      await handlePause()
       await new Promise(resolve => setTimeout(resolve, 200))
     }
     
@@ -837,7 +873,7 @@ export default function ConsultationWorkspace() {
   return (
     <div className="h-screen bg-[#0a0a14] text-white flex flex-col overflow-hidden">
       {/* Header - Sticky */}
-      <div className="shrink-0 border-b border-white/10 px-6 py-4 flex items-center justify-between">
+      <div className="shrink-0 border-b border-white/10 px-6 py-4 flex items-center justify-between bg-[#0a0a14]">
             <div>
               <p className="text-xs text-white/40 font-medium uppercase tracking-wider mb-1">
                 Consultație #{appointmentId}
@@ -873,7 +909,7 @@ export default function ConsultationWorkspace() {
             </button>
           ) : (
             <button
-              onClick={() => handlePause(false)}
+              onClick={() => handlePause()}
               className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg flex items-center gap-2 text-sm font-medium transition-all"
             >
               <Pause className="w-4 h-4" />
@@ -970,7 +1006,7 @@ export default function ConsultationWorkspace() {
             </div>
 
         {/* Center - Conversation area */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Messages - Scrollable */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
             {messages.length === 0 && !currentDraft && segments.filter(s => s.text && s.text.trim()).length === 0 && (
@@ -1069,7 +1105,7 @@ export default function ConsultationWorkspace() {
           </div>
 
           {/* Input area - Sticky bottom */}
-          <div className="shrink-0 border-t border-white/10 p-4 bg-[#0a0a14]">
+          <div className="shrink-0 border-t border-white/10 p-4 bg-[#0a0a14] flex-shrink-0">
             <div className="flex items-end gap-3">
               <div className="flex-1 rounded-xl bg-white/5 border border-white/10 focus-within:border-purple-500/50 transition-colors">
                 <textarea

@@ -91,8 +91,39 @@ public class OpenAiChatService {
     public String streamChat(
             List<com.zenlink.zenlink.dto.AiMessage> userMessages,
             String extraSystemContext,
+            OutputStream outputStream
+    ) throws Exception {
+        return streamChat(userMessages, extraSystemContext, null, outputStream, null, null, null);
+    }
+
+    public String streamChat(
+            List<com.zenlink.zenlink.dto.AiMessage> userMessages,
+            String extraSystemContext,
             String triageState,
             OutputStream outputStream
+    ) throws Exception {
+        return streamChat(userMessages, extraSystemContext, triageState, outputStream, null, null, null);
+    }
+
+    public String streamChat(
+            List<com.zenlink.zenlink.dto.AiMessage> userMessages,
+            String extraSystemContext,
+            OutputStream outputStream,
+            byte[] imageData,
+            String imageMimeType,
+            String scopeType
+    ) throws Exception {
+        return streamChat(userMessages, extraSystemContext, null, outputStream, imageData, imageMimeType, scopeType);
+    }
+
+    public String streamChat(
+            List<com.zenlink.zenlink.dto.AiMessage> userMessages,
+            String extraSystemContext,
+            String triageState,
+            OutputStream outputStream,
+            byte[] imageData,
+            String imageMimeType,
+            String scopeType
     ) throws Exception {
         if (!enabled) {
             throw new IllegalStateException("OpenAI service is disabled. Set OPENAI_API_KEY to enable.");
@@ -115,26 +146,66 @@ public class OpenAiChatService {
         }
 
         // Build messages array for OpenAI
-        List<Map<String, String>> messages = new ArrayList<>();
+        List<Map<String, Object>> messages = new ArrayList<>();
 
         // System message with healthcare safety guardrails and triage instructions
-        String systemMessage = buildSystemMessage(extraSystemContext, triageState);
+        String systemMessage = buildSystemMessage(extraSystemContext, triageState, scopeType, imageData != null);
         messages.add(Map.of("role", "system", "content", systemMessage));
 
+        // For FILE scope, add an explicit reminder at the start of conversation to use plain text
+        boolean isFileScope = "FILE".equalsIgnoreCase(scopeType);
+        if (isFileScope && limitedMessages.size() > 0) {
+            // Add a reminder message before the first user message
+            messages.add(Map.of("role", "system", "content", 
+                "REMINDER: You are in FILE analysis mode. You MUST respond with PLAIN TEXT ONLY. " +
+                "NO JSON format, NO mode fields, NO structured responses. " +
+                "Just write naturally like ChatGPT or Cursor would - detailed, conversational paragraphs."));
+        }
+
         // Add conversation messages
-        for (com.zenlink.zenlink.dto.AiMessage m : limitedMessages) {
+        boolean imageAdded = false;
+        for (int i = 0; i < limitedMessages.size(); i++) {
+            com.zenlink.zenlink.dto.AiMessage m = limitedMessages.get(i);
             if (m == null || m.getRole() == null || m.getContent() == null) continue;
             String role = m.getRole();
             if ("system".equals(role)) continue; // Skip system messages from user input
-            messages.add(Map.of("role", role, "content", m.getContent()));
+            
+            // If this is the last user message and we have an image, add image to it
+            if ("user".equals(role) && imageData != null && !imageAdded && i == limitedMessages.size() - 1) {
+                // Add image to the last user message
+                List<Map<String, Object>> contentList = new ArrayList<>();
+                contentList.add(Map.of("type", "text", "text", m.getContent()));
+                String base64Image = java.util.Base64.getEncoder().encodeToString(imageData);
+                contentList.add(Map.of(
+                    "type", "image_url",
+                    "image_url", Map.of("url", "data:" + imageMimeType + ";base64," + base64Image)
+                ));
+                messages.add(Map.of("role", role, "content", contentList));
+                imageAdded = true;
+            } else {
+                messages.add(Map.of("role", role, "content", m.getContent()));
+            }
+        }
+
+        // Use vision model if image is present, otherwise use configured model
+        // For FILE scope, prefer gpt-4o or gpt-4-turbo for better instruction following
+        String modelToUse;
+        if (imageData != null) {
+            modelToUse = "gpt-4o";
+        } else if ("FILE".equalsIgnoreCase(scopeType)) {
+            // For FILE scope without images, use a model that follows instructions better
+            modelToUse = model.contains("gpt-4") ? model : "gpt-4o-mini";
+        } else {
+            modelToUse = model;
         }
 
         // Build request payload
         Map<String, Object> payload = new HashMap<>();
-        payload.put("model", model);
+        payload.put("model", modelToUse);
         payload.put("messages", messages);
-        payload.put("max_tokens", maxOutputTokens);
-        payload.put("temperature", temperature);
+        payload.put("max_tokens", imageData != null ? Math.max(maxOutputTokens, 2000) : maxOutputTokens); // More tokens for image analysis
+        // For FILE scope, use slightly higher temperature for more natural responses
+        payload.put("temperature", "FILE".equalsIgnoreCase(scopeType) ? Math.min(temperature + 0.1, 0.7) : temperature);
         payload.put("stream", true);
 
         StringBuilder assistantText = new StringBuilder();
@@ -277,8 +348,49 @@ public class OpenAiChatService {
     /**
      * Build system message with healthcare safety guardrails and structured JSON output.
      */
-    private String buildSystemMessage(String extraContext, String triageState) {
+    private String buildSystemMessage(String extraContext, String triageState, String scopeType, boolean hasImage) {
         StringBuilder sb = new StringBuilder();
+        
+        // Special prompt for FILE scope - natural, conversational responses like ChatGPT/Cursor
+        if ("FILE".equalsIgnoreCase(scopeType)) {
+            sb.append("You are ZenLink AI, a helpful dental/healthcare assistant specialized in analyzing medical files and documents.\n\n");
+            sb.append("⚠️ CRITICAL OUTPUT RULES - YOU MUST FOLLOW THESE EXACTLY:\n");
+            sb.append("1. You MUST respond with PLAIN TEXT ONLY. NO JSON format whatsoever.\n");
+            sb.append("2. NEVER use JSON objects, mode fields, question structures, options arrays, or any structured format.\n");
+            sb.append("3. NEVER output anything that looks like: {\"mode\": \"...\", \"title\": \"...\", etc.}\n");
+            sb.append("4. Write like ChatGPT or Cursor: natural, conversational, detailed paragraphs of plain text.\n");
+            sb.append("5. Answer the user's question directly and thoroughly, as if you're having a normal conversation.\n");
+            sb.append("6. Be comprehensive: write at length, explain details, provide context in natural paragraphs.\n");
+            sb.append("7. Use paragraphs and natural language, NOT structured lists or JSON objects.\n");
+            sb.append("8. If you see JSON in previous messages, IGNORE IT - you are now in plain text mode.\n");
+            sb.append("9. Just write naturally, like you're explaining something to a friend in a chat.\n\n");
+            if (hasImage) {
+                sb.append("IMAGE ANALYSIS GUIDELINES:\n");
+                sb.append("- Analyze the provided medical image in DETAIL. Look at all visible structures, colors, textures, and any abnormalities.\n");
+                sb.append("- Describe teeth, gums, oral tissues, any visible issues, restorations, potential problems.\n");
+                sb.append("- Be thorough and detailed in your visual analysis.\n");
+                sb.append("- Write your analysis as natural paragraphs, NOT as structured data.\n\n");
+            } else {
+                sb.append("DOCUMENT ANALYSIS GUIDELINES:\n");
+                sb.append("- Analyze the provided medical document or file carefully.\n");
+                sb.append("- Extract and explain relevant medical information from the document.\n");
+                sb.append("- Write your analysis as natural paragraphs, NOT as structured data.\n\n");
+            }
+            sb.append("MEDICAL DISCLAIMERS:\n");
+            sb.append("- Provide informational guidance only; NEVER diagnose definitively.\n");
+            sb.append("- Always encourage consulting a licensed dentist/doctor for definitive diagnosis.\n");
+            sb.append("- Always respond in Romanian (română) unless the user explicitly requests another language.\n\n");
+            if (extraContext != null && !extraContext.trim().isEmpty()) {
+                sb.append("Additional context about the file:\n");
+                sb.append(extraContext);
+                sb.append("\n\n");
+            }
+            sb.append("FINAL REMINDER: You are in FILE analysis mode. PLAIN TEXT ONLY. NO JSON. NO STRUCTURED FORMAT. " +
+                      "Write like ChatGPT or Cursor - natural, detailed, conversational paragraphs.\n");
+            return sb.toString();
+        }
+        
+        // Default prompt for other scopes
         sb.append("You are ZenLink AI, a helpful dental/healthcare triage assistant.\n\n");
         sb.append("IMPORTANT RULES:\n");
         sb.append("- Provide informational guidance only; NEVER diagnose definitively.\n");

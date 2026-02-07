@@ -10,6 +10,8 @@ import { VisionSidebar } from './components/VisionSidebar';
 import { Input } from '../../components/ui/input';
 import { AiChat } from '../../components/AiChat';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { ConsultationsList } from '../../components/consultations/ConsultationsList';
+import { ConsultationDetail } from '../../components/consultations/ConsultationDetail';
 
 export default function DoctorDashboard() {
   const { user, setUser } = useAuth();
@@ -24,6 +26,7 @@ export default function DoctorDashboard() {
   });
   const [saving, setSaving] = useState(false);
   const [actionModal, setActionModal] = useState<{ type: 'files' | 'medical'; patient: any } | null>(null);
+  const [selectedConsultation, setSelectedConsultation] = useState<any>(null);
 
   // Real data - fetched from backend
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -213,6 +216,7 @@ export default function DoctorDashboard() {
     { id: 'profile', label: 'Cont', icon: User },
     { id: 'schedule', label: 'Programări', icon: CalendarIcon },
     { id: 'patients', label: 'Pacienți', icon: Users },
+    { id: 'consultations', label: 'Consultații', icon: Stethoscope },
     { id: 'ai', label: 'Asistent AI', icon: Bot },
   ];
 
@@ -1174,6 +1178,16 @@ export default function DoctorDashboard() {
                           </div>
                           <div className="flex gap-2">
                             <button
+                              onClick={() => {
+                                setActiveSection('consultations');
+                                setSelectedPatientId(patient.id);
+                              }}
+                              className="px-4 py-2 backdrop-blur-xl bg-purple-500/20 border border-purple-500/30 hover:border-purple-500/50 hover:bg-purple-500/30 text-purple-300 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center gap-2"
+                            >
+                              <Stethoscope className="w-4 h-4" />
+                              Consultații
+                            </button>
+                            <button
                               onClick={() => setActionModal({ type: 'files', patient })}
                               className="px-4 py-2 backdrop-blur-xl bg-white/5 border border-white/10 hover:border-purple-500/30 hover:bg-purple-500/10 text-white rounded-xl text-sm font-semibold transition-all duration-300"
                             >
@@ -1254,6 +1268,33 @@ export default function DoctorDashboard() {
                 )}
               </div>
             </div>
+          </div>
+        );
+
+      case 'consultations':
+        return (
+          <div className="space-y-8">
+            <div>
+              <h1 className="text-white text-3xl font-semibold mb-2">Consultații</h1>
+              <p className="text-white/40">Jurnal digital al tuturor consultațiilor finalizate</p>
+            </div>
+
+            {!user?.id ? (
+              <div className="flex items-center justify-center py-20">
+                <p className="text-sm text-white/50">Se încarcă...</p>
+              </div>
+            ) : selectedConsultation ? (
+              <ConsultationDetail
+                consultation={selectedConsultation}
+                onBack={() => setSelectedConsultation(null)}
+              />
+            ) : (
+              <ConsultationsList
+                doctorId={user.id}
+                onSelectConsultation={setSelectedConsultation}
+                filterPatientId={selectedPatientId ? Number(selectedPatientId) : undefined}
+              />
+            )}
           </div>
         );
 

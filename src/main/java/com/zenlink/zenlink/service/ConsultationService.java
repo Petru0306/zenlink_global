@@ -3,8 +3,14 @@ package com.zenlink.zenlink.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zenlink.zenlink.dto.*;
 import com.zenlink.zenlink.model.Appointment;
+import com.zenlink.zenlink.model.ConsultationSegment;
+import com.zenlink.zenlink.model.ConsultationMessage;
+import com.zenlink.zenlink.model.FinalizedConsultation;
 import com.zenlink.zenlink.model.User;
 import com.zenlink.zenlink.repository.AppointmentRepository;
+import com.zenlink.zenlink.repository.ConsultationSegmentRepository;
+import com.zenlink.zenlink.repository.ConsultationMessageRepository;
+import com.zenlink.zenlink.repository.FinalizedConsultationRepository;
 import com.zenlink.zenlink.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +37,15 @@ public class ConsultationService {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private ConsultationSegmentRepository consultationSegmentRepository;
+
+    @Autowired
+    private ConsultationMessageRepository consultationMessageRepository;
+
+    @Autowired
+    private FinalizedConsultationRepository finalizedConsultationRepository;
 
     /**
      * Analyze a consultation segment and return AI recommendations
@@ -474,41 +489,100 @@ public class ConsultationService {
             Long appointmentId,
             ConsultationFinalizeRequest request) throws Exception {
         
+        // Get appointment data
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+        
+        User doctor = userRepository.findById(appointment.getDoctorId())
+                .orElseThrow(() -> new RuntimeException("Doctor not found"));
+        
+        String doctorName = "Dr. " + doctor.getFirstName() + " " + doctor.getLastName();
+        String consultationDate = appointment.getDate().toString();
+        String specialty = "Stomatologie"; // Default, can be enhanced later with specialty field
+        
+        // Determine presentation type (simplified - can be enhanced)
+        String presentationType = "prima prezentare"; // Default, can be determined from history
+        
         // Build patient context
         String patientContextStr = buildPatientContextString(request.getPatientContext());
         
-        // System prompt for finalization
-        String systemPrompt = "You are ZenLink Clinical Assistant for dentists. Generate TWO structured outputs:\n" +
-                "1. Patient Clarity Sheet (friendly, non-technical language)\n" +
-                "2. Doctor Summary (technical, clinical notes)\n" +
-                "No medication dosing. Safe language. Informational only.\n" +
+        // System prompt for finalization - TWO DIFFERENT FORMATS
+        String systemPrompt = "You are ZenLink Clinical Assistant for dentists. Generate TWO different outputs:\n" +
+                "1. Patient Clarity Sheet: Simple, friendly, non-technical language for patients (6 sections)\n" +
+                "2. Doctor Summary: Technical, detailed clinical notes for doctors (9 sections)\n" +
                 "\n" +
-                "IMPORTANT: Return your response as valid JSON only. Use this exact structure:\n" +
+                "Return ONLY valid JSON, no markdown, no explanations:\n" +
                 "{\n" +
                 "  \"patientClaritySheet\": {\n" +
-                "    \"whatWeDiscussed\": \"[friendly summary of what was discussed]\",\n" +
-                "    \"whatDoctorFound\": \"[gentle language about findings]\",\n" +
-                "    \"plan\": [\"step1\", \"step2\", \"step3\"],\n" +
-                "    \"homeCareInstructions\": [\"instruction1\", \"instruction2\"],\n" +
-                "    \"whenToSeekUrgentCare\": \"[when to seek urgent care]\",\n" +
-                "    \"followUp\": \"[follow-up instructions]\"\n" +
+                "    \"whatHappenedToday\": \"[problema/disconfort descris de pacient, 1-2 propoziții simple]\",\n" +
+                "    \"todayActions\": [\"am vorbit despre ce simți\", \"am verificat zona care te îngrijora\", \"am strâns informațiile importante\"],\n" +
+                "    \"whatThisMeans\": [\"situația ta a fost evaluată\", \"informațiile sunt acum clare și organizate\", \"nu este nevoie să reții detalii medicale\"],\n" +
+                "    \"nextSteps\": [\"vom continua discuția la următoarea vizită\", \"vom reveni asupra situației tale când va fi necesar\", \"între timp, este util să fii atent la cum te simți\"],\n" +
+                "    \"nextAppointment\": \"[data următoarei întâlniri dacă este stabilită, altfel string gol]\",\n" +
+                "    \"whatToWatchFor\": [\"schimbări ale disconfortului\", \"senzații noi\", \"ceva care te îngrijorează\"],\n" +
+                "    \"quickCheckQuestions\": [\"Care este lucrul principal pe care l-ai reținut din vizită?\", \"Ce vei urmări până data viitoare?\", \"Ce întrebare ai vrea să pui?\"],\n" +
+                "    \"importantNote\": [\"te ajută să îți amintești ce s-a discutat\", \"te ajută să înțelegi situația ta\", \"nu îți cere să iei decizii medicale\"]\n" +
                 "  },\n" +
                 "  \"doctorSummary\": {\n" +
-                "    \"chiefComplaint\": \"[chief complaint]\",\n" +
-                "    \"historyOfPresentIllness\": \"[history]\",\n" +
-                "    \"examinationFindings\": \"[findings]\",\n" +
-                "    \"assessment\": \"[assessment]\",\n" +
-                "    \"plan\": \"[plan]\",\n" +
-                "    \"clinicalNotes\": [\"note1\", \"note2\"]\n" +
+                "    \"consultationDate\": \"" + consultationDate + "\",\n" +
+                "    \"clinician\": \"" + doctorName + "\",\n" +
+                "    \"specialty\": \"" + specialty + "\",\n" +
+                "    \"presentationType\": \"" + presentationType + "\",\n" +
+                "    \"chiefComplaint\": \"[motiv principal, 1-2 propoziții]\",\n" +
+                "    \"generalMedicalHistory\": [\"item1\", \"item2\"],\n" +
+                "    \"dentalHistory\": [\"item1\", \"item2\"],\n" +
+                "    \"generalObservations\": [\"item1\", \"item2\"],\n" +
+                "    \"specialtySpecificObservations\": [\"item1\", \"item2\"],\n" +
+                "    \"availableInvestigations\": [\"item1\"],\n" +
+                "    \"clinicalPhotos\": [\"item1\"],\n" +
+                "    \"otherDocuments\": [\"item1\"],\n" +
+                "    \"clinicianNote\": \"[notă clinică scurtă]\",\n" +
+                "    \"actionsPerformed\": [\"item1\", \"item2\"],\n" +
+                "    \"informationSources\": [\"raport pacient\", \"observații clinician\"],\n" +
+                "    \"includeChiefComplaint\": true,\n" +
+                "    \"includeObservationsSummary\": true,\n" +
+                "    \"includeActionsPerformed\": true,\n" +
+                "    \"includeNextSteps\": true,\n" +
+                "    \"excludeClinicianNote\": true,\n" +
+                "    \"excludeSensitiveObservations\": false\n" +
                 "  }\n" +
-                "}";
+                "}\n" +
+                "\n" +
+                "PATIENT CLARITY SHEET RULES (simple, friendly):\n" +
+                "- Use simple, everyday language. NO medical jargon.\n" +
+                "- whatHappenedToday: Extract patient's main concern in simple words.\n" +
+                "- todayActions: What was done during visit (talking, checking, gathering info).\n" +
+                "- whatThisMeans: Reassuring, simple explanation of what happened.\n" +
+                "- nextSteps: Simple next steps, not technical.\n" +
+                "- whatToWatchFor: Simple things to pay attention to.\n" +
+                "- quickCheckQuestions: Questions to help patient reflect.\n" +
+                "- importantNote: Reassuring note about the document and doctor's role.\n" +
+                "\n" +
+                "DOCTOR SUMMARY RULES (technical, detailed):\n" +
+                "- Extract ALL clinical information from transcript.\n" +
+                "- Be thorough, technical, and detailed.\n" +
+                "- MUST fill ALL 9 sections with meaningful data extracted from transcript.\n" +
+                "- generalMedicalHistory: Extract any mentioned conditions, medications, health issues.\n" +
+                "- dentalHistory: Extract past treatments, previous dental work, relevant dental context.\n" +
+                "- generalObservations: Extract observable clinical aspects mentioned during consultation.\n" +
+                "- specialtySpecificObservations: Extract dental-specific findings (gingival issues, periodontal status, caries, etc.).\n" +
+                "- availableInvestigations: Mention if images, radiographs were discussed or are available.\n" +
+                "- clinicianNote: Write brief clinical impressions, things to follow up, preliminary thoughts.\n" +
+                "- actionsPerformed: List what was actually done (examination, discussion, education, procedures).\n" +
+                "- If a section truly has no data, use [] or \"\" but ALWAYS include the field.\n" +
+                "- DO NOT skip sections. Extract and structure information from transcript.\n" +
+                "\n" +
+                "BE THOROUGH. Extract and structure ALL available information from transcript.";
         
         // User prompt
         StringBuilder userPromptBuilder = new StringBuilder();
         userPromptBuilder.append("PATIENT CONTEXT:\n").append(patientContextStr).append("\n\n");
         userPromptBuilder.append("FULL TRANSCRIPT:\n").append(request.getFullTranscript()).append("\n\n");
-        userPromptBuilder.append("Generate both sheets and return ONLY valid JSON in the exact format specified above.\n");
-        userPromptBuilder.append("Do not include any markdown code blocks, explanations, or extra text - only the JSON object.");
+        userPromptBuilder.append("Generate BOTH outputs:\n");
+        userPromptBuilder.append("1. Patient Clarity Sheet: Simple, friendly language (6 sections)\n");
+        userPromptBuilder.append("2. Doctor Summary: Technical, detailed notes (9 sections)\n");
+        userPromptBuilder.append("Extract REAL information. Be CONCISE. If not mentioned, use [] or \"\".\n");
+        userPromptBuilder.append("Return ONLY valid JSON, no markdown, no explanations.");
         
         List<com.zenlink.zenlink.dto.AiMessage> messages = new ArrayList<>();
         messages.add(new com.zenlink.zenlink.dto.AiMessage("system", systemPrompt));
@@ -518,11 +592,16 @@ public class ConsultationService {
         String aiResponse = openAiChatService.streamChat(messages, "", null, outputStream);
         
         // Parse AI response and create structured response
-        // For now, create a structured response from the AI text
-        ConsultationFinalizeResponse response = parseFinalizeResponse(aiResponse, request);
+        ConsultationFinalizeResponse response = parseFinalizeResponse(aiResponse, request, appointment, doctor);
         
-        // TODO: Save to database/link to appointment
-        log.info("Consultation {} finalized", appointmentId);
+        // Save finalized consultation to database
+        saveFinalizedConsultation(appointmentId, appointment, response);
+        
+        // Mark appointment as completed
+        appointment.setStatus("completed");
+        appointmentRepository.save(appointment);
+        
+        log.info("Consultation {} finalized and saved", appointmentId);
         
         return response;
     }
@@ -595,7 +674,7 @@ public class ConsultationService {
         return action;
     }
 
-    private ConsultationFinalizeResponse parseFinalizeResponse(String aiResponse, ConsultationFinalizeRequest request) {
+    private ConsultationFinalizeResponse parseFinalizeResponse(String aiResponse, ConsultationFinalizeRequest request, Appointment appointment, User doctor) {
         // Try to parse JSON from AI response
         try {
             // Remove markdown code blocks if present
@@ -614,49 +693,196 @@ public class ConsultationService {
             // Parse JSON
             Map<String, Object> parsed = objectMapper.readValue(jsonStr, Map.class);
             
-            // Extract patientClaritySheet
+            // Extract patientClaritySheet - NEW SIMPLE FORMAT (6 sections)
             Map<String, Object> patientSheetMap = (Map<String, Object>) parsed.get("patientClaritySheet");
             ConsultationFinalizeResponse.PatientClaritySheet claritySheet = new ConsultationFinalizeResponse.PatientClaritySheet();
             if (patientSheetMap != null) {
-                claritySheet.setWhatWeDiscussed((String) patientSheetMap.get("whatWeDiscussed"));
-                claritySheet.setWhatDoctorFound((String) patientSheetMap.get("whatDoctorFound"));
-                if (patientSheetMap.get("plan") instanceof List) {
-                    claritySheet.setPlan((List<String>) patientSheetMap.get("plan"));
+                // Section 1: Ce s-a întâmplat azi
+                claritySheet.setWhatHappenedToday((String) patientSheetMap.get("whatHappenedToday"));
+                if (patientSheetMap.get("todayActions") instanceof List) {
+                    claritySheet.setTodayActions((List<String>) patientSheetMap.get("todayActions"));
                 }
-                if (patientSheetMap.get("homeCareInstructions") instanceof List) {
-                    claritySheet.setHomeCareInstructions((List<String>) patientSheetMap.get("homeCareInstructions"));
+                
+                // Section 2: Ce înseamnă asta pentru tine
+                if (patientSheetMap.get("whatThisMeans") instanceof List) {
+                    claritySheet.setWhatThisMeans((List<String>) patientSheetMap.get("whatThisMeans"));
                 }
-                claritySheet.setWhenToSeekUrgentCare((String) patientSheetMap.get("whenToSeekUrgentCare"));
-                claritySheet.setFollowUp((String) patientSheetMap.get("followUp"));
+                
+                // Section 3: Ce urmează
+                if (patientSheetMap.get("nextSteps") instanceof List) {
+                    claritySheet.setNextSteps((List<String>) patientSheetMap.get("nextSteps"));
+                }
+                claritySheet.setNextAppointment((String) patientSheetMap.get("nextAppointment"));
+                
+                // Section 4: La ce să fii atent
+                if (patientSheetMap.get("whatToWatchFor") instanceof List) {
+                    claritySheet.setWhatToWatchFor((List<String>) patientSheetMap.get("whatToWatchFor"));
+                }
+                
+                // Section 5: Verificare rapidă
+                if (patientSheetMap.get("quickCheckQuestions") instanceof List) {
+                    claritySheet.setQuickCheckQuestions((List<String>) patientSheetMap.get("quickCheckQuestions"));
+                }
+                
+                // Section 6: Un lucru important
+                if (patientSheetMap.get("importantNote") instanceof List) {
+                    claritySheet.setImportantNote((List<String>) patientSheetMap.get("importantNote"));
+                }
             }
             
-            // Extract doctorSummary
+            // Fill in defaults for patient clarity sheet
+            if (claritySheet.getWhatHappenedToday() == null || claritySheet.getWhatHappenedToday().isEmpty()) {
+                String transcriptPreview = request.getFullTranscript().substring(0, Math.min(150, request.getFullTranscript().length()));
+                claritySheet.setWhatHappenedToday("Ai venit pentru o consultație stomatologică. " + transcriptPreview);
+            }
+            if (claritySheet.getTodayActions() == null) {
+                claritySheet.setTodayActions(Arrays.asList("am vorbit despre ce simți", "am verificat zona care te îngrijora", "am strâns informațiile importante"));
+            }
+            if (claritySheet.getWhatThisMeans() == null) {
+                claritySheet.setWhatThisMeans(Arrays.asList("situația ta a fost evaluată", "informațiile sunt acum clare și organizate", "nu este nevoie să reții detalii medicale"));
+            }
+            if (claritySheet.getNextSteps() == null) {
+                claritySheet.setNextSteps(Arrays.asList("vom continua discuția la următoarea vizită", "vom reveni asupra situației tale când va fi necesar", "între timp, este util să fii atent la cum te simți"));
+            }
+            if (claritySheet.getWhatToWatchFor() == null) {
+                claritySheet.setWhatToWatchFor(Arrays.asList("schimbări ale disconfortului", "senzații noi", "ceva care te îngrijorează"));
+            }
+            if (claritySheet.getQuickCheckQuestions() == null) {
+                claritySheet.setQuickCheckQuestions(Arrays.asList("Care este lucrul principal pe care l-ai reținut din vizită?", "Ce vei urmări până data viitoare?", "Ce întrebare ai vrea să pui?"));
+            }
+            if (claritySheet.getImportantNote() == null) {
+                claritySheet.setImportantNote(Arrays.asList("te ajută să îți amintești ce s-a discutat", "te ajută să înțelegi situația ta", "nu îți cere să iei decizii medicale"));
+            }
+            
+            // Extract doctorSummary - OLD FORMAT (9 sections) moved here
             Map<String, Object> doctorSummaryMap = (Map<String, Object>) parsed.get("doctorSummary");
             ConsultationFinalizeResponse.DoctorSummary doctorSummary = new ConsultationFinalizeResponse.DoctorSummary();
             if (doctorSummaryMap != null) {
+                // Section 1: Date generale caz
+                doctorSummary.setConsultationDate((String) doctorSummaryMap.get("consultationDate"));
+                doctorSummary.setClinician((String) doctorSummaryMap.get("clinician"));
+                doctorSummary.setSpecialty((String) doctorSummaryMap.get("specialty"));
+                doctorSummary.setPresentationType((String) doctorSummaryMap.get("presentationType"));
+                
+                // Section 2: Motivul prezentării
                 doctorSummary.setChiefComplaint((String) doctorSummaryMap.get("chiefComplaint"));
-                doctorSummary.setHistoryOfPresentIllness((String) doctorSummaryMap.get("historyOfPresentIllness"));
-                doctorSummary.setExaminationFindings((String) doctorSummaryMap.get("examinationFindings"));
-                doctorSummary.setAssessment((String) doctorSummaryMap.get("assessment"));
-                doctorSummary.setPlan((String) doctorSummaryMap.get("plan"));
-                if (doctorSummaryMap.get("clinicalNotes") instanceof List) {
-                    doctorSummary.setClinicalNotes((List<String>) doctorSummaryMap.get("clinicalNotes"));
+                
+                // Section 3: Anamneză
+                if (doctorSummaryMap.get("generalMedicalHistory") instanceof List) {
+                    doctorSummary.setGeneralMedicalHistory((List<String>) doctorSummaryMap.get("generalMedicalHistory"));
+                }
+                if (doctorSummaryMap.get("dentalHistory") instanceof List) {
+                    doctorSummary.setDentalHistory((List<String>) doctorSummaryMap.get("dentalHistory"));
+                }
+                
+                // Section 4: Observații clinice
+                if (doctorSummaryMap.get("generalObservations") instanceof List) {
+                    doctorSummary.setGeneralObservations((List<String>) doctorSummaryMap.get("generalObservations"));
+                }
+                if (doctorSummaryMap.get("specialtySpecificObservations") instanceof List) {
+                    doctorSummary.setSpecialtySpecificObservations((List<String>) doctorSummaryMap.get("specialtySpecificObservations"));
+                }
+                
+                // Section 5: Date suplimentare
+                if (doctorSummaryMap.get("availableInvestigations") instanceof List) {
+                    doctorSummary.setAvailableInvestigations((List<String>) doctorSummaryMap.get("availableInvestigations"));
+                }
+                if (doctorSummaryMap.get("clinicalPhotos") instanceof List) {
+                    doctorSummary.setClinicalPhotos((List<String>) doctorSummaryMap.get("clinicalPhotos"));
+                }
+                if (doctorSummaryMap.get("otherDocuments") instanceof List) {
+                    doctorSummary.setOtherDocuments((List<String>) doctorSummaryMap.get("otherDocuments"));
+                }
+                
+                // Section 6: Notă clinică
+                doctorSummary.setClinicianNote((String) doctorSummaryMap.get("clinicianNote"));
+                
+                // Section 7: Acțiuni realizate
+                if (doctorSummaryMap.get("actionsPerformed") instanceof List) {
+                    doctorSummary.setActionsPerformed((List<String>) doctorSummaryMap.get("actionsPerformed"));
+                }
+                
+                // Section 8: Proveniența informației
+                if (doctorSummaryMap.get("informationSources") instanceof List) {
+                    doctorSummary.setInformationSources((List<String>) doctorSummaryMap.get("informationSources"));
+                }
+                
+                // Section 9: Control export
+                if (doctorSummaryMap.get("includeChiefComplaint") instanceof Boolean) {
+                    doctorSummary.setIncludeChiefComplaint((Boolean) doctorSummaryMap.get("includeChiefComplaint"));
+                } else {
+                    doctorSummary.setIncludeChiefComplaint(true);
+                }
+                if (doctorSummaryMap.get("includeObservationsSummary") instanceof Boolean) {
+                    doctorSummary.setIncludeObservationsSummary((Boolean) doctorSummaryMap.get("includeObservationsSummary"));
+                } else {
+                    doctorSummary.setIncludeObservationsSummary(true);
+                }
+                if (doctorSummaryMap.get("includeActionsPerformed") instanceof Boolean) {
+                    doctorSummary.setIncludeActionsPerformed((Boolean) doctorSummaryMap.get("includeActionsPerformed"));
+                } else {
+                    doctorSummary.setIncludeActionsPerformed(true);
+                }
+                if (doctorSummaryMap.get("includeNextSteps") instanceof Boolean) {
+                    doctorSummary.setIncludeNextSteps((Boolean) doctorSummaryMap.get("includeNextSteps"));
+                } else {
+                    doctorSummary.setIncludeNextSteps(true);
+                }
+                if (doctorSummaryMap.get("excludeClinicianNote") instanceof Boolean) {
+                    doctorSummary.setExcludeClinicianNote((Boolean) doctorSummaryMap.get("excludeClinicianNote"));
+                } else {
+                    doctorSummary.setExcludeClinicianNote(true);
+                }
+                if (doctorSummaryMap.get("excludeSensitiveObservations") instanceof Boolean) {
+                    doctorSummary.setExcludeSensitiveObservations((Boolean) doctorSummaryMap.get("excludeSensitiveObservations"));
+                } else {
+                    doctorSummary.setExcludeSensitiveObservations(false);
                 }
             }
             
-            // Fill in defaults if missing
-            if (claritySheet.getWhatWeDiscussed() == null || claritySheet.getWhatWeDiscussed().isEmpty()) {
-                claritySheet.setWhatWeDiscussed("Discussed during consultation: " + 
-                    request.getFullTranscript().substring(0, Math.min(200, request.getFullTranscript().length())));
+            // Fill doctor summary defaults from appointment/doctor
+            if (doctorSummary.getConsultationDate() == null || doctorSummary.getConsultationDate().isEmpty()) {
+                doctorSummary.setConsultationDate(appointment.getDate().toString());
             }
-            if (claritySheet.getPlan() == null || claritySheet.getPlan().isEmpty()) {
-                claritySheet.setPlan(Arrays.asList("Follow doctor's recommendations", "Schedule follow-up if needed"));
+            if (doctorSummary.getClinician() == null || doctorSummary.getClinician().isEmpty()) {
+                doctorSummary.setClinician("Dr. " + doctor.getFirstName() + " " + doctor.getLastName());
+            }
+            if (doctorSummary.getSpecialty() == null || doctorSummary.getSpecialty().isEmpty()) {
+                doctorSummary.setSpecialty("Stomatologie");
+            }
+            if (doctorSummary.getPresentationType() == null || doctorSummary.getPresentationType().isEmpty()) {
+                doctorSummary.setPresentationType("prima prezentare");
             }
             if (doctorSummary.getChiefComplaint() == null || doctorSummary.getChiefComplaint().isEmpty()) {
-                doctorSummary.setChiefComplaint("Patient consultation");
+                String transcriptPreview = request.getFullTranscript().substring(0, Math.min(200, request.getFullTranscript().length()));
+                doctorSummary.setChiefComplaint("Pacientul se prezintă pentru: " + transcriptPreview);
             }
-            if (doctorSummary.getClinicalNotes() == null || doctorSummary.getClinicalNotes().isEmpty()) {
-                doctorSummary.setClinicalNotes(Arrays.asList("Full transcript available", "See consultation notes"));
+            if (doctorSummary.getGeneralMedicalHistory() == null) {
+                doctorSummary.setGeneralMedicalHistory(new ArrayList<>());
+            }
+            if (doctorSummary.getDentalHistory() == null) {
+                doctorSummary.setDentalHistory(new ArrayList<>());
+            }
+            if (doctorSummary.getGeneralObservations() == null) {
+                doctorSummary.setGeneralObservations(new ArrayList<>());
+            }
+            if (doctorSummary.getSpecialtySpecificObservations() == null) {
+                doctorSummary.setSpecialtySpecificObservations(new ArrayList<>());
+            }
+            if (doctorSummary.getAvailableInvestigations() == null) {
+                doctorSummary.setAvailableInvestigations(new ArrayList<>());
+            }
+            if (doctorSummary.getClinicalPhotos() == null) {
+                doctorSummary.setClinicalPhotos(new ArrayList<>());
+            }
+            if (doctorSummary.getOtherDocuments() == null) {
+                doctorSummary.setOtherDocuments(new ArrayList<>());
+            }
+            if (doctorSummary.getActionsPerformed() == null) {
+                doctorSummary.setActionsPerformed(new ArrayList<>());
+            }
+            if (doctorSummary.getInformationSources() == null) {
+                doctorSummary.setInformationSources(Arrays.asList("raport pacient", "observații clinician"));
             }
             
             return new ConsultationFinalizeResponse(claritySheet, doctorSummary);
@@ -664,25 +890,1749 @@ public class ConsultationService {
         } catch (Exception e) {
             log.warn("Failed to parse JSON from AI response, using fallback: {}", e.getMessage());
             
-            // Fallback: create structured response from text parsing
+            // Fallback: create structured response with new formats
             ConsultationFinalizeResponse.PatientClaritySheet claritySheet = new ConsultationFinalizeResponse.PatientClaritySheet();
-            claritySheet.setWhatWeDiscussed("Discussed during consultation: " + 
-                request.getFullTranscript().substring(0, Math.min(200, request.getFullTranscript().length())));
-            claritySheet.setWhatDoctorFound("Doctor's findings will be available after review.");
-            claritySheet.setPlan(Arrays.asList("Follow doctor's recommendations", "Schedule follow-up if needed"));
-            claritySheet.setHomeCareInstructions(Arrays.asList("Maintain good oral hygiene", "Follow any specific instructions given"));
-            claritySheet.setWhenToSeekUrgentCare("Seek urgent care if experiencing severe pain, swelling, or other concerning symptoms.");
-            claritySheet.setFollowUp("Follow-up appointment recommended as discussed.");
+            String transcriptPreview = request.getFullTranscript().substring(0, Math.min(150, request.getFullTranscript().length()));
+            claritySheet.setWhatHappenedToday("Ai venit pentru o consultație stomatologică. " + transcriptPreview);
+            claritySheet.setTodayActions(Arrays.asList("am vorbit despre ce simți", "am verificat zona care te îngrijora", "am strâns informațiile importante"));
+            claritySheet.setWhatThisMeans(Arrays.asList("situația ta a fost evaluată", "informațiile sunt acum clare și organizate", "nu este nevoie să reții detalii medicale"));
+            claritySheet.setNextSteps(Arrays.asList("vom continua discuția la următoarea vizită", "vom reveni asupra situației tale când va fi necesar", "între timp, este util să fii atent la cum te simți"));
+            claritySheet.setNextAppointment("");
+            claritySheet.setWhatToWatchFor(Arrays.asList("schimbări ale disconfortului", "senzații noi", "ceva care te îngrijorează"));
+            claritySheet.setQuickCheckQuestions(Arrays.asList("Care este lucrul principal pe care l-ai reținut din vizită?", "Ce vei urmări până data viitoare?", "Ce întrebare ai vrea să pui?"));
+            claritySheet.setImportantNote(Arrays.asList("te ajută să îți amintești ce s-a discutat", "te ajută să înțelegi situația ta", "nu îți cere să iei decizii medicale"));
             
             ConsultationFinalizeResponse.DoctorSummary doctorSummary = new ConsultationFinalizeResponse.DoctorSummary();
-            doctorSummary.setChiefComplaint("Patient consultation");
-            doctorSummary.setHistoryOfPresentIllness("As per transcript");
-            doctorSummary.setExaminationFindings("To be documented");
-            doctorSummary.setAssessment("Assessment pending");
-            doctorSummary.setPlan("Plan as discussed");
-            doctorSummary.setClinicalNotes(Arrays.asList("Full transcript available", "See consultation notes"));
+            doctorSummary.setConsultationDate(appointment.getDate().toString());
+            doctorSummary.setClinician("Dr. " + doctor.getFirstName() + " " + doctor.getLastName());
+            doctorSummary.setSpecialty("Stomatologie");
+            doctorSummary.setPresentationType("prima prezentare");
+            doctorSummary.setChiefComplaint("Pacientul se prezintă pentru: " + transcriptPreview);
+            doctorSummary.setGeneralMedicalHistory(new ArrayList<>());
+            doctorSummary.setDentalHistory(new ArrayList<>());
+            doctorSummary.setGeneralObservations(new ArrayList<>());
+            doctorSummary.setSpecialtySpecificObservations(new ArrayList<>());
+            doctorSummary.setAvailableInvestigations(new ArrayList<>());
+            doctorSummary.setClinicalPhotos(new ArrayList<>());
+            doctorSummary.setOtherDocuments(new ArrayList<>());
+            doctorSummary.setClinicianNote("Notă clinică va fi disponibilă după revizuire.");
+            doctorSummary.setActionsPerformed(Arrays.asList("examinare clinică", "discuții explicative cu pacientul"));
+            doctorSummary.setInformationSources(Arrays.asList("raport pacient", "observații clinician"));
+            doctorSummary.setIncludeChiefComplaint(true);
+            doctorSummary.setIncludeObservationsSummary(true);
+            doctorSummary.setIncludeActionsPerformed(true);
+            doctorSummary.setIncludeNextSteps(true);
+            doctorSummary.setExcludeClinicianNote(true);
+            doctorSummary.setExcludeSensitiveObservations(false);
             
             return new ConsultationFinalizeResponse(claritySheet, doctorSummary);
+        }
+    }
+
+    /**
+     * Save a consultation segment
+     */
+    public ConsultationSegmentResponse saveSegment(Long consultationId, ConsultationSegmentRequest request) {
+        ConsultationSegment segment = new ConsultationSegment();
+        segment.setConsultationId(consultationId);
+        segment.setText(request.getText());
+        segment.setStartTs(request.getStartTs());
+        segment.setEndTs(request.getEndTs());
+        segment.setSpeaker(request.getSpeaker());
+        
+        ConsultationSegment saved = consultationSegmentRepository.save(segment);
+        return new ConsultationSegmentResponse(saved.getId());
+    }
+
+    /**
+     * Save a consultation message
+     */
+    public ConsultationMessageResponse saveMessage(Long consultationId, ConsultationMessageRequest request) {
+        ConsultationMessage message = new ConsultationMessage();
+        message.setConsultationId(consultationId);
+        message.setRole(request.getRole());
+        message.setContent(request.getContent());
+        message.setOutputType(request.getOutputType());
+        
+        ConsultationMessage saved = consultationMessageRepository.save(message);
+        return new ConsultationMessageResponse(
+            saved.getId(),
+            saved.getRole(),
+            saved.getContent(),
+            saved.getOutputType(),
+            saved.getCreatedAt()
+        );
+    }
+
+    /**
+     * Get all messages for a consultation
+     */
+    public List<ConsultationMessageResponse> getMessages(Long consultationId) {
+        List<ConsultationMessage> messages = consultationMessageRepository.findByConsultationIdOrderByCreatedAtAsc(consultationId);
+        return messages.stream()
+            .map(msg -> new ConsultationMessageResponse(
+                msg.getId(),
+                msg.getRole(),
+                msg.getContent(),
+                msg.getOutputType(),
+                msg.getCreatedAt()
+            ))
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all segments for a consultation
+     */
+    public List<ConsultationSegment> getSegments(Long consultationId) {
+        return consultationSegmentRepository.findByConsultationIdOrderByStartTsAsc(consultationId);
+    }
+
+    /**
+     * Save finalized consultation data
+     */
+    private void saveFinalizedConsultation(Long appointmentId, Appointment appointment, ConsultationFinalizeResponse response) {
+        try {
+            // Check if already exists
+            Optional<FinalizedConsultation> existing = finalizedConsultationRepository.findByAppointmentId(appointmentId);
+            FinalizedConsultation finalized;
+            
+            if (existing.isPresent()) {
+                finalized = existing.get();
+            } else {
+                finalized = new FinalizedConsultation();
+                finalized.setAppointmentId(appointmentId);
+                finalized.setDoctorId(appointment.getDoctorId());
+                finalized.setPatientId(appointment.getPatientId());
+            }
+            
+            // Convert response to JSON strings
+            String patientClaritySheetJson = objectMapper.writeValueAsString(response.getPatientClaritySheet());
+            String doctorSummaryJson = objectMapper.writeValueAsString(response.getDoctorSummary());
+            
+            finalized.setPatientClaritySheet(patientClaritySheetJson);
+            finalized.setDoctorSummary(doctorSummaryJson);
+            
+            // Extract chief complaint for quick reference
+            String chiefComplaint = response.getDoctorSummary() != null && 
+                    response.getDoctorSummary().getChiefComplaint() != null ?
+                    response.getDoctorSummary().getChiefComplaint() : "";
+            finalized.setChiefComplaint(chiefComplaint.length() > 200 ? 
+                    chiefComplaint.substring(0, 200) + "..." : chiefComplaint);
+            
+            // Set consultation date from appointment
+            finalized.setConsultationDate(java.time.Instant.ofEpochMilli(
+                    java.sql.Timestamp.valueOf(
+                            appointment.getDate().atTime(appointment.getTime())
+                    ).getTime()
+            ));
+            
+            finalizedConsultationRepository.save(finalized);
+            log.info("Finalized consultation saved for appointment {}", appointmentId);
+        } catch (Exception e) {
+            log.error("Error saving finalized consultation for appointment " + appointmentId, e);
+            // Don't throw - finalization should still succeed even if save fails
+        }
+    }
+
+    /**
+     * Get all finalized consultations for a doctor
+     */
+    public List<FinalizedConsultation> getFinalizedConsultations(Long doctorId) {
+        return finalizedConsultationRepository.findByDoctorIdOrderByConsultationDateDesc(doctorId);
+    }
+
+    /**
+     * Get finalized consultation by appointment ID
+     */
+    public Optional<FinalizedConsultation> getFinalizedConsultation(Long appointmentId) {
+        return finalizedConsultationRepository.findByAppointmentId(appointmentId);
+    }
+
+    /**
+     * Structure consultation segments (facts only, no analysis)
+     */
+    public ConsultationStructureResponse structureConsultation(Long consultationId, ConsultationStructureRequest request) throws Exception {
+        // Get segments to structure
+        List<ConsultationSegment> segments;
+        if (request.getSegmentIds() != null && !request.getSegmentIds().isEmpty()) {
+            segments = consultationSegmentRepository.findByConsultationIdAndIdInOrderByStartTsAsc(consultationId, request.getSegmentIds());
+        } else {
+            // Get last segment
+            List<ConsultationSegment> allSegments = consultationSegmentRepository.findByConsultationIdOrderByStartTsAsc(consultationId);
+            if (allSegments.isEmpty()) {
+                throw new IllegalArgumentException("No segments found for consultation " + consultationId);
+            }
+            segments = Arrays.asList(allSegments.get(allSegments.size() - 1));
+        }
+
+        if (segments.isEmpty()) {
+            throw new IllegalArgumentException("No segments found");
+        }
+
+        // Build transcript from segments
+        StringBuilder transcriptBuilder = new StringBuilder();
+        for (ConsultationSegment seg : segments) {
+            if (seg.getSpeaker() != null) {
+                transcriptBuilder.append("[").append(seg.getSpeaker()).append("] ");
+            }
+            transcriptBuilder.append(seg.getText()).append(" ");
+        }
+        String transcript = transcriptBuilder.toString().trim();
+
+        // System prompt for Structure (facts only, NO analysis)
+        String systemPrompt = "You are a documentation assistant for dentists. Your role is to organize factual information from consultation transcripts.\n" +
+                "\n" +
+                "CRITICAL RULES:\n" +
+                "1. Extract ONLY facts that were explicitly stated. Do NOT infer causes or diagnoses.\n" +
+                "2. Do NOT use language like \"could be\", \"might be\", \"probably\", \"este\", \"cel mai probabil\".\n" +
+                "3. Do NOT provide diagnosis or treatment recommendations.\n" +
+                "4. Use neutral phrasing: \"de clarificat\", \"de documentat\", \"context din ghiduri\".\n" +
+                "5. Output language: match conversation (RO/EN) automatically.\n" +
+                "\n" +
+                "Return ONLY valid JSON in this EXACT format:\n" +
+                "{\n" +
+                "  \"type\": \"structured_notes\",\n" +
+                "  \"content\": {\n" +
+                "    \"chief_complaint\": \"[What patient said as reason for visit - direct quote or paraphrase]\",\n" +
+                "    \"history\": [\"fact 1\", \"fact 2\"],\n" +
+                "    \"symptoms\": [\"symptom 1\", \"symptom 2\"],\n" +
+                "    \"meds_allergies\": [\"medication/allergy mentioned\"],\n" +
+                "    \"exam_observations\": [\"observation 1\", \"observation 2\"],\n" +
+                "    \"patient_words\": [\"short quote 1\", \"short quote 2\"],\n" +
+                "    \"timeline\": [\"timeline item 1\", \"timeline item 2\"]\n" +
+                "  }\n" +
+                "}\n" +
+                "\n" +
+                "All fields should contain ONLY factual information from the transcript. No interpretations.";
+
+        String userPrompt = "Organize the following consultation transcript into structured notes (facts only):\n\n" +
+                transcript + "\n\n" +
+                "Return ONLY valid JSON in the format specified above. No other text.";
+
+        List<com.zenlink.zenlink.dto.AiMessage> messages = new ArrayList<>();
+        messages.add(new com.zenlink.zenlink.dto.AiMessage("system", systemPrompt));
+        messages.add(new com.zenlink.zenlink.dto.AiMessage("user", userPrompt));
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        String aiResponse = openAiChatService.streamChat(messages, "", null, outputStream);
+
+        // Parse response
+        ConsultationStructureResponse response = parseStructureResponse(aiResponse);
+        response.setGeneratedAt(java.time.Instant.now());
+        return response;
+    }
+
+    /**
+     * Analyze consultation segments (structure + literature + gaps, NO diagnosis/treatment)
+     */
+    public ConsultationAnalyzeResponse analyzeConsultation(Long consultationId, ConsultationAnalyzeRequest request) throws Exception {
+        // Get segments to analyze
+        List<ConsultationSegment> segments;
+        if (request.getSegmentIds() != null && !request.getSegmentIds().isEmpty()) {
+            segments = consultationSegmentRepository.findByConsultationIdAndIdInOrderByStartTsAsc(consultationId, request.getSegmentIds());
+        } else {
+            // Get last segment
+            List<ConsultationSegment> allSegments = consultationSegmentRepository.findByConsultationIdOrderByStartTsAsc(consultationId);
+            if (allSegments.isEmpty()) {
+                throw new IllegalArgumentException("No segments found for consultation " + consultationId);
+            }
+            segments = Arrays.asList(allSegments.get(allSegments.size() - 1));
+        }
+
+        if (segments.isEmpty()) {
+            throw new IllegalArgumentException("No segments found");
+        }
+
+        // Build transcript from segments
+        StringBuilder transcriptBuilder = new StringBuilder();
+        for (ConsultationSegment seg : segments) {
+            if (seg.getSpeaker() != null) {
+                transcriptBuilder.append("[").append(seg.getSpeaker()).append("] ");
+            }
+            transcriptBuilder.append(seg.getText()).append(" ");
+        }
+        String transcript = transcriptBuilder.toString().trim();
+
+        // System prompt for Analyze (documentation + literature, NO diagnosis/treatment)
+        String systemPrompt = "You are a documentation assistant for dentists. Your role is to help organize consultation notes and provide context from literature for documentation purposes.\n" +
+                "\n" +
+                "CRITICAL RULES:\n" +
+                "1. NEVER provide diagnosis or treatment recommendations.\n" +
+                "2. NEVER use language like \"este\", \"cel mai probabil\", \"tratament\", \"recomand\", \"prescrie\", \"antibiotic\".\n" +
+                "3. You can mention \"posibile explicații informaționale\" ONLY as \"things to consider documenting\", NOT as conclusions.\n" +
+                "4. Use neutral phrasing: \"de clarificat\", \"de documentat\", \"context din ghiduri\", \"întrebări utile\", \"posibile interpretări informaționale (nu concluzii)\".\n" +
+                "5. Include sources. If no credible sources found, return sources: [] and reduce output to only clarifications/questions.\n" +
+                "6. Output language: match conversation (RO/EN) automatically.\n" +
+                "\n" +
+                "Return ONLY valid JSON in this EXACT format:\n" +
+                "{\n" +
+                "  \"type\": \"zenlink_analyze\",\n" +
+                "  \"structured\": { ...same structure as structure endpoint... },\n" +
+                "  \"clarifications\": [\n" +
+                "    {\"title\": \"Clarificare utilă\", \"items\": [\"item1\", \"item2\"]}\n" +
+                "  ],\n" +
+                "  \"documentation_gaps\": [\n" +
+                "    {\"label\": \"Nu apare documentat explicit\", \"items\": [\"gap1\", \"gap2\"], \"severity\": \"low\"}\n" +
+                "  ],\n" +
+                "  \"suggested_questions\": [\"question1\", \"question2\"],\n" +
+                "  \"sources\": [\n" +
+                "    {\"title\": \"...\", \"publisher\": \"...\", \"year\": \"...\", \"url\": \"...\"}\n" +
+                "  ],\n" +
+                "  \"tone\": \"documentation_assistant\"\n" +
+                "}\n" +
+                "\n" +
+                "The voice must feel like \"assistant that helps you document and double-check completeness\". Never claim to diagnose or treat.";
+
+        String userPrompt = "Analyze this consultation transcript for documentation purposes:\n\n" +
+                transcript + "\n\n" +
+                "Return ONLY valid JSON in the format specified above. No other text.";
+
+        List<com.zenlink.zenlink.dto.AiMessage> messages = new ArrayList<>();
+        messages.add(new com.zenlink.zenlink.dto.AiMessage("system", systemPrompt));
+        messages.add(new com.zenlink.zenlink.dto.AiMessage("user", userPrompt));
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        String aiResponse = openAiChatService.streamChat(messages, "", null, outputStream);
+
+        // Post-process: check for banned terms
+        String lowerResponse = aiResponse.toLowerCase();
+        String[] bannedTerms = {"diagnostic", "este", "cel mai probabil", "tratament", "recomand", "prescrie", "antibiotic"};
+        boolean hasBannedTerm = false;
+        for (String term : bannedTerms) {
+            if (lowerResponse.contains(term)) {
+                hasBannedTerm = true;
+                log.warn("Banned term detected in AI response: {}", term);
+                break;
+            }
+        }
+
+        if (hasBannedTerm) {
+            // Regenerate with stricter prompt
+            systemPrompt += "\n\nCRITICAL: The previous response contained banned terms. Regenerate with even stricter adherence to documentation-only language.";
+            messages = new ArrayList<>();
+            messages.add(new com.zenlink.zenlink.dto.AiMessage("system", systemPrompt));
+            messages.add(new com.zenlink.zenlink.dto.AiMessage("user", userPrompt));
+            outputStream = new ByteArrayOutputStream();
+            aiResponse = openAiChatService.streamChat(messages, "", null, outputStream);
+        }
+
+        // Parse response
+        ConsultationAnalyzeResponse response = parseAnalyzeResponse(aiResponse);
+        response.setGeneratedAt(java.time.Instant.now());
+        return response;
+    }
+
+    private ConsultationStructureResponse parseStructureResponse(String aiResponse) throws Exception {
+        try {
+            // Remove markdown code blocks if present
+            String jsonStr = aiResponse.trim();
+            jsonStr = jsonStr.replaceAll("(?i)^```json\\s*", "");
+            jsonStr = jsonStr.replaceAll("^```\\s*", "");
+            jsonStr = jsonStr.replaceAll("\\s*```$", "");
+
+            // Extract JSON object
+            int jsonStart = jsonStr.indexOf("{");
+            int jsonEnd = jsonStr.lastIndexOf("}");
+            if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
+            }
+
+            // Parse JSON
+            Map<String, Object> parsed = objectMapper.readValue(jsonStr, Map.class);
+
+            ConsultationStructureResponse response = new ConsultationStructureResponse();
+            response.setType("structured_notes");
+
+            if (parsed.get("content") instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> contentMap = (Map<String, Object>) parsed.get("content");
+                ConsultationStructureResponse.StructuredContent content = new ConsultationStructureResponse.StructuredContent();
+                content.setChief_complaint((String) contentMap.get("chief_complaint"));
+                if (contentMap.get("history") instanceof List) {
+                    content.setHistory((List<String>) contentMap.get("history"));
+                }
+                if (contentMap.get("symptoms") instanceof List) {
+                    content.setSymptoms((List<String>) contentMap.get("symptoms"));
+                }
+                if (contentMap.get("meds_allergies") instanceof List) {
+                    content.setMeds_allergies((List<String>) contentMap.get("meds_allergies"));
+                }
+                if (contentMap.get("exam_observations") instanceof List) {
+                    content.setExam_observations((List<String>) contentMap.get("exam_observations"));
+                }
+                if (contentMap.get("patient_words") instanceof List) {
+                    content.setPatient_words((List<String>) contentMap.get("patient_words"));
+                }
+                if (contentMap.get("timeline") instanceof List) {
+                    content.setTimeline((List<String>) contentMap.get("timeline"));
+                }
+                response.setContent(content);
+            }
+
+            return response;
+        } catch (Exception e) {
+            log.warn("Failed to parse structure response, using fallback: {}", e.getMessage());
+            // Fallback
+            ConsultationStructureResponse response = new ConsultationStructureResponse();
+            response.setType("structured_notes");
+            ConsultationStructureResponse.StructuredContent content = new ConsultationStructureResponse.StructuredContent();
+            content.setChief_complaint("Consultation notes");
+            content.setHistory(new ArrayList<>());
+            content.setSymptoms(new ArrayList<>());
+            content.setMeds_allergies(new ArrayList<>());
+            content.setExam_observations(new ArrayList<>());
+            content.setPatient_words(new ArrayList<>());
+            content.setTimeline(new ArrayList<>());
+            response.setContent(content);
+            return response;
+        }
+    }
+
+    private ConsultationAnalyzeResponse parseAnalyzeResponse(String aiResponse) throws Exception {
+        try {
+            // Remove markdown code blocks if present
+            String jsonStr = aiResponse.trim();
+            jsonStr = jsonStr.replaceAll("(?i)^```json\\s*", "");
+            jsonStr = jsonStr.replaceAll("^```\\s*", "");
+            jsonStr = jsonStr.replaceAll("\\s*```$", "");
+
+            // Extract JSON object
+            int jsonStart = jsonStr.indexOf("{");
+            int jsonEnd = jsonStr.lastIndexOf("}");
+            if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
+            }
+
+            // Parse JSON
+            Map<String, Object> parsed = objectMapper.readValue(jsonStr, Map.class);
+
+            ConsultationAnalyzeResponse response = new ConsultationAnalyzeResponse();
+            response.setType("zenlink_analyze");
+            response.setTone("documentation_assistant");
+
+            // Parse structured content
+            if (parsed.get("structured") instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> structuredMap = (Map<String, Object>) parsed.get("structured");
+                ConsultationStructureResponse.StructuredContent structured = new ConsultationStructureResponse.StructuredContent();
+                structured.setChief_complaint((String) structuredMap.get("chief_complaint"));
+                if (structuredMap.get("history") instanceof List) {
+                    structured.setHistory((List<String>) structuredMap.get("history"));
+                }
+                if (structuredMap.get("symptoms") instanceof List) {
+                    structured.setSymptoms((List<String>) structuredMap.get("symptoms"));
+                }
+                if (structuredMap.get("meds_allergies") instanceof List) {
+                    structured.setMeds_allergies((List<String>) structuredMap.get("meds_allergies"));
+                }
+                if (structuredMap.get("exam_observations") instanceof List) {
+                    structured.setExam_observations((List<String>) structuredMap.get("exam_observations"));
+                }
+                if (structuredMap.get("patient_words") instanceof List) {
+                    structured.setPatient_words((List<String>) structuredMap.get("patient_words"));
+                }
+                if (structuredMap.get("timeline") instanceof List) {
+                    structured.setTimeline((List<String>) structuredMap.get("timeline"));
+                }
+                response.setStructured(structured);
+            }
+
+            // Parse clarifications
+            if (parsed.get("clarifications") instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> clarList = (List<Map<String, Object>>) parsed.get("clarifications");
+                List<ConsultationAnalyzeResponse.Clarification> clarifications = new ArrayList<>();
+                for (Map<String, Object> clarMap : clarList) {
+                    ConsultationAnalyzeResponse.Clarification clar = new ConsultationAnalyzeResponse.Clarification();
+                    clar.setTitle((String) clarMap.get("title"));
+                    if (clarMap.get("items") instanceof List) {
+                        clar.setItems((List<String>) clarMap.get("items"));
+                    }
+                    clarifications.add(clar);
+                }
+                response.setClarifications(clarifications);
+            }
+
+            // Parse documentation gaps
+            if (parsed.get("documentation_gaps") instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> gapsList = (List<Map<String, Object>>) parsed.get("documentation_gaps");
+                List<ConsultationAnalyzeResponse.DocumentationGap> gaps = new ArrayList<>();
+                for (Map<String, Object> gapMap : gapsList) {
+                    ConsultationAnalyzeResponse.DocumentationGap gap = new ConsultationAnalyzeResponse.DocumentationGap();
+                    gap.setLabel((String) gapMap.get("label"));
+                    if (gapMap.get("items") instanceof List) {
+                        gap.setItems((List<String>) gapMap.get("items"));
+                    }
+                    gap.setSeverity((String) gapMap.get("severity"));
+                    gaps.add(gap);
+                }
+                response.setDocumentation_gaps(gaps);
+            }
+
+            // Parse suggested questions
+            if (parsed.get("suggested_questions") instanceof List) {
+                response.setSuggested_questions((List<String>) parsed.get("suggested_questions"));
+            }
+
+            // Parse sources
+            if (parsed.get("sources") instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> sourcesList = (List<Map<String, Object>>) parsed.get("sources");
+                List<ConsultationAnalyzeResponse.Source> sources = new ArrayList<>();
+                for (Map<String, Object> sourceMap : sourcesList) {
+                    ConsultationAnalyzeResponse.Source source = new ConsultationAnalyzeResponse.Source();
+                    source.setTitle((String) sourceMap.get("title"));
+                    source.setPublisher((String) sourceMap.get("publisher"));
+                    source.setYear((String) sourceMap.get("year"));
+                    source.setUrl((String) sourceMap.get("url"));
+                    sources.add(source);
+                }
+                response.setSources(sources);
+            }
+
+            return response;
+        } catch (Exception e) {
+            log.warn("Failed to parse analyze response, using fallback: {}", e.getMessage());
+            // Fallback
+            ConsultationAnalyzeResponse response = new ConsultationAnalyzeResponse();
+            response.setType("zenlink_analyze");
+            response.setTone("documentation_assistant");
+            response.setStructured(new ConsultationStructureResponse.StructuredContent());
+            response.setClarifications(new ArrayList<>());
+            response.setDocumentation_gaps(new ArrayList<>());
+            response.setSuggested_questions(new ArrayList<>());
+            response.setSources(new ArrayList<>());
+            return response;
+        }
+    }
+
+    /**
+     * Structure consultation - NEW format with StructuredNote schema (exact match with frontend)
+     */
+    public StructuredNoteResponse structureConsultationNew(Long consultationId, StructureRequest request) throws Exception {
+        String requestId = "req-" + System.currentTimeMillis() + "-" + consultationId;
+        log.info("Structure request {} for consultation {} - transcript length: {}", 
+            requestId, consultationId, 
+            request.getFullTranscript() != null ? request.getFullTranscript().length() : 0);
+        
+        String inputText = request.getInputText();
+        String fullTranscript = request.getFullTranscript();
+        String lang = request.getLang() != null ? request.getLang() : "ro";
+
+        if ((inputText == null || inputText.trim().isEmpty()) && 
+            (fullTranscript == null || fullTranscript.trim().isEmpty())) {
+            throw new IllegalArgumentException("No text provided to structure");
+        }
+
+        // Build complete transcript from all sources - ALWAYS use FULL transcript
+        // Priority: fullTranscript (contains ALL segments merged) > messages > inputText
+        StringBuilder transcriptBuilder = new StringBuilder();
+        
+        // STEP 1: Use fullTranscript if available (contains ALL segments merged)
+        if (fullTranscript != null && !fullTranscript.trim().isEmpty()) {
+            transcriptBuilder.append(fullTranscript.trim());
+        }
+        
+        // STEP 2: Add messages if available (doctor/assistant conversation)
+        if (request.getMessages() != null && !request.getMessages().isEmpty()) {
+            // Filter to get only doctor messages (patient speech)
+            List<String> doctorMessages = new ArrayList<>();
+            for (StructureRequest.MessageDto msg : request.getMessages()) {
+                if ("doctor".equals(msg.getRole()) && msg.getContent() != null && !msg.getContent().trim().isEmpty()) {
+                    doctorMessages.add(msg.getContent().trim());
+                }
+            }
+            
+            // Add doctor messages if not already in fullTranscript
+            if (!doctorMessages.isEmpty()) {
+                String messagesText = String.join(" ", doctorMessages);
+                // Only add if it's not already in fullTranscript (avoid duplication)
+                if (transcriptBuilder.length() == 0 || !transcriptBuilder.toString().contains(messagesText.substring(0, Math.min(50, messagesText.length())))) {
+                    if (transcriptBuilder.length() > 0) {
+                        transcriptBuilder.append(" ");
+                    }
+                    transcriptBuilder.append(messagesText);
+                }
+            }
+        }
+        
+        // STEP 3: Add inputText only if it's different from fullTranscript (new draft)
+        if (inputText != null && !inputText.trim().isEmpty()) {
+            String inputTextTrimmed = inputText.trim();
+            // Only add if it's not already in the transcript
+            if (transcriptBuilder.length() == 0 || !transcriptBuilder.toString().contains(inputTextTrimmed.substring(0, Math.min(50, inputTextTrimmed.length())))) {
+                if (transcriptBuilder.length() > 0) {
+                    transcriptBuilder.append(" ");
+                }
+                transcriptBuilder.append(inputTextTrimmed);
+            }
+        }
+        
+        String transcript = transcriptBuilder.toString().trim();
+        log.info("Structure request {} - final transcript length: {} chars (fullTranscript: {}, inputText: {}, messages: {})", 
+            requestId, transcript.length(),
+            fullTranscript != null ? fullTranscript.length() : 0,
+            inputText != null ? inputText.length() : 0,
+            request.getMessages() != null ? request.getMessages().size() : 0);
+
+        if (transcript.length() < 10) {
+            throw new IllegalArgumentException("Transcript too short (minimum 10 characters)");
+        }
+
+        // Build patient context string
+        String patientContextStr = "";
+        if (request.getPatientContext() != null) {
+            StructureRequest.PatientContextDto pc = request.getPatientContext();
+            patientContextStr = String.format("Pacient: %s, %s ani. Motiv consultație: %s", 
+                pc.getName() != null ? pc.getName() : "N/A",
+                pc.getAge() != null ? pc.getAge() : "N/A",
+                pc.getReason() != null ? pc.getReason() : "N/A");
+        }
+
+        // System prompt for StructuredNote - CLEAR, DETAILED consultation note
+        String systemPrompt = "You are a clinical documentation assistant for dentists.\n\n" +
+                "Your task is to generate a CLEAR, DETAILED consultation note from the transcript.\n\n" +
+                "CRITICAL RULES:\n" +
+                "1. Extract REAL medical information from transcript - be DETAILED\n" +
+                "2. NEVER use generic labels like \"Durere menționată\" or \"Umflătură menționată\"\n" +
+                "3. Extract actual descriptions: pain type, location, characteristics, duration, triggers\n" +
+                "4. If something is NOT mentioned in transcript, leave field empty (don't invent)\n" +
+                "5. Write in clean Romanian, use bullet points, be detailed but clear\n" +
+                "6. Remove speaker tags (\"Medic:\", \"Pacient:\"), greetings, filler words\n" +
+                "7. Do NOT infer causes or diagnoses - only extract mentioned facts\n\n" +
+                "OUTPUT FORMAT - Return ONLY JSON (use these exact field names):\n" +
+                "{\n" +
+                "  \"title\": \"📝 Consultation Note\",\n" +
+                "  \"language\": \"ro\",\n" +
+                "  \"chiefComplaint\": \"Short clear sentence describing why patient came (max 200 chars) - Motiv principal\",\n" +
+                "  \"timeline\": [\"When it started - când a început\", \"How it evolved - cum a evoluat\", \"Triggers (cold, sweet, chewing) - triggeri\"],\n" +
+                "  \"symptoms\": [\"Swelling - Umflătură\", \"Headache - Cefalee\", \"Ear pain - Durere ureche\", \"Fever - Febră\", \"Fatigue - Oboseală\", \"etc from transcript - Simptome asociate\"],\n" +
+                "  \"riskFactors\": [\"Oral hygiene - Igienă orală\", \"Smoking - Fumat\", \"Sugar intake - Consum zahăr\", \"etc - Obiceiuri relevante\"],\n" +
+                "  \"meds\": [\"What patient took and effect - Medicație menționată\"],\n" +
+                "  \"allergies\": [\"If mentioned - Alergii\"],\n" +
+                "  \"observations\": [\"Fear of dentist - Frică de dentist\", \"Delayed visit - Amânare consultație\", \"Behavior-related - Observații din discuție\"],\n" +
+                "  \"dentalHistory\": [\"Last visit - Ultima vizită\", \"Old fillings - Plombe vechi\", \"Past problems - Probleme anterioare - Context dentar anterior\"],\n" +
+                "  \"disclaimer\": \"Structurare pentru documentare. Nu înlocuiește evaluarea clinică.\"\n" +
+                "}\n\n" +
+                "EXTRACTION EXAMPLES:\n" +
+                "If transcript says: \"zis că nu mai amân. Parcă pulsează uneori şi simt durerea până în obraz şi puţin spre ureche\"\n" +
+                "Extract:\n" +
+                "  chiefComplaint: \"Durere pulsatilă măsea, iradiază spre obraz și ureche\"\n" +
+                "  timeline: [\"Durere pulsatilă intermitentă\", \"Iradiere spre obraz și ureche\"]\n" +
+                "  symptoms: [\"Cefalee asociată\"]\n\n" +
+                "If transcript mentions swelling:\n" +
+                "  symptoms: [\"Umflătură gingivală\" or \"Umflătură la nivelul măselei\" - extract actual location]\n\n" +
+                "NEVER output generic labels. ALWAYS extract specific details from transcript.";
+
+        String userPrompt = "Generate a CLEAR, DETAILED consultation note from the following transcript.\n\n" +
+                "Extract REAL medical information. Be DETAILED. Use actual info from transcript.\n" +
+                "If something is NOT mentioned, leave that field empty (don't invent).\n\n" +
+                (patientContextStr.isEmpty() ? "" : patientContextStr + "\n\n") +
+                "FULL TRANSCRIPT:\n" + transcript + "\n\n" +
+                "Return ONLY valid JSON in the specified format. No markdown, no text before or after JSON.\n" +
+                "Extract specific details - pain type, location, duration, triggers, symptoms, habits, medication, allergies, observations, dental history.";
+
+        List<com.zenlink.zenlink.dto.AiMessage> messages = new ArrayList<>();
+        messages.add(new com.zenlink.zenlink.dto.AiMessage("system", systemPrompt));
+        messages.add(new com.zenlink.zenlink.dto.AiMessage("user", userPrompt));
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        
+        // Try up to 2 times
+        StructuredNoteResponse.StructuredNote structuredNote = null;
+        Exception lastError = null;
+        
+        for (int attempt = 0; attempt < 2; attempt++) {
+            try {
+                log.info("Structure attempt {} for request {}", attempt + 1, requestId);
+                String aiResponse = openAiChatService.streamChat(messages, "", null, outputStream);
+                log.info("Structure AI response length: {}", aiResponse != null ? aiResponse.length() : 0);
+                
+                // Parse and validate response
+                structuredNote = parseStructuredNote(aiResponse, lang, transcript);
+                
+                // STEP 4: Post-processing rules - fill empty fields
+                if (structuredNote != null) {
+                    if (structuredNote.getChiefComplaint() == null || structuredNote.getChiefComplaint().trim().isEmpty()) {
+                        structuredNote.setChiefComplaint("Nu a fost menționat explicit.");
+                    }
+                    if (structuredNote.getSymptoms() == null) {
+                        structuredNote.setSymptoms(new ArrayList<>());
+                    }
+                    if (structuredNote.getTimeline() == null) {
+                        structuredNote.setTimeline(new ArrayList<>());
+                    }
+                    if (structuredNote.getTriggers() == null) {
+                        structuredNote.setTriggers(new ArrayList<>());
+                    }
+                    if (structuredNote.getRiskFactors() == null) {
+                        structuredNote.setRiskFactors(new ArrayList<>());
+                    }
+                    if (structuredNote.getDentalHistory() == null) {
+                        structuredNote.setDentalHistory(new ArrayList<>());
+                    }
+                    if (structuredNote.getMeds() == null) {
+                        structuredNote.setMeds(new ArrayList<>());
+                    }
+                    if (structuredNote.getAllergies() == null) {
+                        structuredNote.setAllergies(new ArrayList<>());
+                    }
+                    if (structuredNote.getObservations() == null) {
+                        structuredNote.setObservations(new ArrayList<>());
+                    }
+                    if (structuredNote.getMissingInfo() == null) {
+                        structuredNote.setMissingInfo(new ArrayList<>());
+                    }
+                }
+                
+                // Validate: check for verbatim copying, speaker tags, and generic labels
+                if (structuredNote != null && validateStructuredNote(structuredNote, transcript)) {
+                    // Check if symptoms array < 2 items - if so, retry once
+                    if (structuredNote.getSymptoms() != null && structuredNote.getSymptoms().size() < 2 && attempt == 0) {
+                        log.warn("Structure response has < 2 symptoms, will retry extraction...");
+                        messages.add(new com.zenlink.zenlink.dto.AiMessage("user", 
+                            "Răspunsul anterior a avut prea puține simptome. Extrage cel puțin 2 simptome concrete din transcript. " +
+                            "NU folosi etichete generice precum \"Durere menționată\". Extrage descrieri reale: tip durere, localizare, caracteristici."));
+                        continue; // Retry
+                    }
+                    
+                    log.info("Structure response validated for request {}: chiefComplaint length: {}, symptoms: {}", 
+                        requestId, structuredNote.getChiefComplaint().length(), structuredNote.getSymptoms().size());
+                    break;
+                } else {
+                    log.warn("Structure response failed validation (verbatim copy, speaker tags, or generic labels), retrying...");
+                    if (attempt == 0) {
+                        messages.add(new com.zenlink.zenlink.dto.AiMessage("user", 
+                            "Răspunsul anterior conținea copiere verbatim, tag-uri de vorbitor sau etichete generice. " +
+                            "EXTRAGE și REFORMULEAZĂ informațiile, NU copia verbatim. Elimină \"Medic:\", \"Pacient:\", \"Bună ziua\". " +
+                            "NU folosi etichete generice precum \"Durere menționată\" - extrage descrieri reale. " +
+                            "Returnează DOAR JSON valid cu informații normalizate."));
+                    }
+                }
+            } catch (Exception e) {
+                lastError = e;
+                log.error("Structure attempt {} failed for request {}: {}", attempt + 1, requestId, e.getMessage());
+                if (attempt == 0) {
+                    messages.add(new com.zenlink.zenlink.dto.AiMessage("user", 
+                        "Răspunsul anterior nu a fost JSON valid. Returnează DOAR JSON valid în formatul specificat, fără text suplimentar."));
+                }
+            }
+        }
+        
+        if (structuredNote == null || structuredNote.getChiefComplaint() == null || 
+            structuredNote.getChiefComplaint().trim().isEmpty() ||
+            structuredNote.getChiefComplaint().toLowerCase().contains("consultație pentru") ||
+            structuredNote.getChiefComplaint().toLowerCase().contains("evaluare")) {
+            log.error("Failed to get valid structured note after 2 attempts for request {} - using fallback extraction", requestId);
+            // Create fallback with REAL content extracted from transcript
+            structuredNote = createFallbackStructuredNote(transcript, lang);
+            // Validate fallback has real content
+            if (structuredNote.getChiefComplaint() == null || structuredNote.getChiefComplaint().trim().isEmpty()) {
+                throw new RuntimeException("Cannot extract meaningful content from transcript. Please provide more details.");
+            }
+        }
+        
+        StructuredNoteResponse response = new StructuredNoteResponse();
+        response.setRequestId(requestId);
+        response.setStructuredNote(structuredNote);
+        
+        log.info("Structure completed for request {} - chiefComplaint: {}, symptoms: {}, missingInfo: {}", 
+            requestId, 
+            structuredNote.getChiefComplaint() != null ? structuredNote.getChiefComplaint().substring(0, Math.min(50, structuredNote.getChiefComplaint().length())) : "null",
+            structuredNote.getSymptoms() != null ? structuredNote.getSymptoms().size() : 0,
+            structuredNote.getMissingInfo() != null ? structuredNote.getMissingInfo().size() : 0);
+        
+        return response;
+    }
+
+    /**
+     * Validate StructuredNote - check for verbatim copying, speaker tags, and generic labels
+     */
+    private boolean validateStructuredNote(StructuredNoteResponse.StructuredNote note, String transcript) {
+        // Check for speaker tags
+        String[] speakerTags = {"medic:", "pacient:", "bună ziua", "buna ziua", "salut", "mulțumesc", "înțeleg", "zis că", "a zis"};
+        String lowerChiefComplaint = note.getChiefComplaint() != null ? note.getChiefComplaint().toLowerCase() : "";
+        for (String tag : speakerTags) {
+            if (lowerChiefComplaint.contains(tag)) {
+                log.warn("Validation failed: chiefComplaint contains speaker tag: {}", tag);
+                return false;
+            }
+        }
+        
+        // Check for generic labels - STRICT validation
+        String[] genericLabels = {
+            "durere menționată",
+            "umflătură menționată",
+            "simptom menționat",
+            "observație menționată",
+            "durere raportată",
+            "umflătură raportată",
+            "menționat în discuție",
+            "raportat în discuție"
+        };
+        
+        // Check chiefComplaint
+        for (String label : genericLabels) {
+            if (lowerChiefComplaint.contains(label)) {
+                log.warn("Validation failed: chiefComplaint contains generic label: {}", label);
+                return false;
+            }
+        }
+        
+        // Check symptoms
+        if (note.getSymptoms() != null) {
+            for (String symptom : note.getSymptoms()) {
+                String lowerSymptom = symptom.toLowerCase();
+                for (String label : genericLabels) {
+                    if (lowerSymptom.equals(label) || lowerSymptom.startsWith(label + " ") || lowerSymptom.endsWith(" " + label)) {
+                        log.warn("Validation failed: symptom contains generic label: {}", label);
+                        return false;
+                    }
+                }
+            }
+        }
+        
+        // Check observations
+        if (note.getObservations() != null) {
+            for (String observation : note.getObservations()) {
+                String lowerObs = observation.toLowerCase();
+                for (String label : genericLabels) {
+                    if (lowerObs.equals(label) || lowerObs.startsWith(label + " ") || lowerObs.endsWith(" " + label)) {
+                        log.warn("Validation failed: observation contains generic label: {}", label);
+                        return false;
+                    }
+                }
+            }
+        }
+        
+        // Check for verbatim copying - more aggressive detection
+        String[] fieldsToCheck = {
+            note.getChiefComplaint(),
+            String.join(" ", note.getSymptoms() != null ? note.getSymptoms() : new ArrayList<>()),
+            String.join(" ", note.getObservations() != null ? note.getObservations() : new ArrayList<>())
+        };
+        
+        String lowerTranscript = transcript.toLowerCase().replaceAll("[^a-zăâîșț ]", " ");
+        
+        for (String field : fieldsToCheck) {
+            if (field == null || field.trim().isEmpty()) continue;
+            String lowerField = field.toLowerCase().replaceAll("[^a-zăâîșț ]", " ");
+            
+            // Check for >8 consecutive matching words (more strict)
+            String[] fieldWords = lowerField.split("\\s+");
+            String[] transcriptWords = lowerTranscript.split("\\s+");
+            
+            for (int i = 0; i <= transcriptWords.length - 9; i++) {
+                int matchCount = 0;
+                for (int j = 0; j < fieldWords.length && (i + j) < transcriptWords.length; j++) {
+                    if (fieldWords[j].equals(transcriptWords[i + j])) {
+                        matchCount++;
+                    } else {
+                        break;
+                    }
+                }
+                if (matchCount >= 8) {
+                    log.warn("Validation failed: verbatim copy detected ({} consecutive words)", matchCount);
+                    return false;
+                }
+            }
+            
+            // Also check if field is too long and contains too many words from transcript (>70% match)
+            if (field.length() > 50) {
+                int matchingWords = 0;
+                int totalWords = fieldWords.length;
+                for (String word : fieldWords) {
+                    if (word.length() > 2 && lowerTranscript.contains(" " + word + " ")) {
+                        matchingWords++;
+                    }
+                }
+                if (totalWords > 0 && (matchingWords * 100.0 / totalWords) > 70) {
+                    log.warn("Validation failed: too many words match transcript ({}%)", (matchingWords * 100 / totalWords));
+                    return false;
+                }
+            }
+        }
+        
+        // Check length constraints
+        if (note.getChiefComplaint() != null && note.getChiefComplaint().length() > 180) {
+            log.warn("Validation failed: chiefComplaint too long: {}", note.getChiefComplaint().length());
+            return false;
+        }
+        
+        if (note.getObservations() != null && note.getObservations().size() > 8) {
+            log.warn("Validation failed: observations too many: {}", note.getObservations().size());
+            return false;
+        }
+        
+        if (note.getMissingInfo() != null && note.getMissingInfo().size() > 6) {
+            log.warn("Validation failed: missingInfo too many: {}", note.getMissingInfo().size());
+            return false;
+        }
+        
+        // Check bullet lengths
+        if (note.getSymptoms() != null) {
+            for (String symptom : note.getSymptoms()) {
+                if (symptom.length() > 110) {
+                    log.warn("Validation failed: symptom bullet too long: {}", symptom.length());
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Normalize StructuredNote - remove speaker tags, trim, enforce length constraints
+     */
+    private void normalizeStructuredNote(StructuredNoteResponse.StructuredNote note) {
+        // Normalize chiefComplaint
+        if (note.getChiefComplaint() != null) {
+            String cc = note.getChiefComplaint();
+            // Remove speaker tags
+            cc = cc.replaceAll("(?i)(medic|pacient|doctor):\\s*", "");
+            cc = cc.replaceAll("(?i)^(bună ziua|buna ziua|salut|mulțumesc|înțeleg)[,\\.]?\\s*", "");
+            cc = cc.trim();
+            // Enforce max length
+            if (cc.length() > 180) {
+                cc = cc.substring(0, 177) + "...";
+            }
+            note.setChiefComplaint(cc);
+        }
+        
+        // Normalize all list fields
+        normalizeList(note.getSymptoms(), 110);
+        normalizeList(note.getTimeline(), 110);
+        normalizeList(note.getTriggers(), 110);
+        normalizeList(note.getRiskFactors(), 110);
+        normalizeList(note.getDentalHistory(), 110);
+        normalizeList(note.getMeds(), 110);
+        normalizeList(note.getAllergies(), 110);
+        normalizeList(note.getObservations(), 110, 8); // Max 8 items
+        normalizeList(note.getMissingInfo(), 110, 6); // Max 6 items
+    }
+    
+    private void normalizeList(List<String> list, int maxLength) {
+        normalizeList(list, maxLength, Integer.MAX_VALUE);
+    }
+    
+    private void normalizeList(List<String> list, int maxLength, int maxItems) {
+        if (list == null) return;
+        
+        // Remove speaker tags and normalize
+        list.replaceAll(item -> {
+            String normalized = item.replaceAll("(?i)(medic|pacient|doctor):\\s*", "");
+            normalized = normalized.replaceAll("(?i)^(bună ziua|buna ziua|salut|mulțumesc|înțeleg|zis că|a zis)[,\\.]?\\s*", "");
+            normalized = normalized.replaceAll("(?i)\\b(zis că|a zis|spus că|mi-a zis)\\b", "");
+            normalized = normalized.trim();
+            if (normalized.length() > maxLength) {
+                normalized = normalized.substring(0, maxLength - 3) + "...";
+            }
+            return normalized;
+        });
+        
+        // Remove empty items
+        list.removeIf(String::isEmpty);
+        
+        // Limit items
+        if (list.size() > maxItems) {
+            list.subList(maxItems, list.size()).clear();
+        }
+    }
+    
+    /**
+     * Post-process StructuredNote - aggressively clean up verbatim text
+     */
+    private void postProcessStructuredNote(StructuredNoteResponse.StructuredNote note, String transcript) {
+        // Clean chiefComplaint - remove common verbatim patterns
+        if (note.getChiefComplaint() != null && note.getChiefComplaint().length() > 50) {
+            String cc = note.getChiefComplaint();
+            // Remove patterns like "zis că", "a zis", etc.
+            cc = cc.replaceAll("(?i)\\b(zis că|a zis|spus că|mi-a zis|mi a zis|pacientul a zis|pacientul spus)\\b[,\\.]?\\s*", "");
+            // Remove quotes if it looks like a direct quote
+            if (cc.startsWith("\"") && cc.endsWith("\"")) {
+                cc = cc.substring(1, cc.length() - 1);
+            }
+            // If still too long and looks like verbatim, truncate and summarize
+            if (cc.length() > 180) {
+                // Try to extract key info: look for pain, location, duration
+                String summary = extractKeyInfo(cc);
+                if (summary.length() > 0 && summary.length() < cc.length()) {
+                    cc = summary;
+                } else {
+                    cc = cc.substring(0, 177) + "...";
+                }
+            }
+            note.setChiefComplaint(cc.trim());
+        }
+        
+        // Clean all list fields - remove generic bullets and verbatim text
+        cleanList(note.getSymptoms());
+        cleanList(note.getObservations());
+        cleanList(note.getTimeline());
+        cleanList(note.getTriggers());
+    }
+    
+    private void cleanList(List<String> list) {
+        if (list == null) return;
+        
+        list.replaceAll(item -> {
+            // Remove verbatim patterns
+            String cleaned = item.replaceAll("(?i)\\b(zis că|a zis|spus că|mi-a zis|pacientul a zis|pacientul spus|menționat în discuție|menționat în|menționat că)\\b[,\\.]?\\s*", "");
+            // Remove generic patterns
+            cleaned = cleaned.replaceAll("(?i)^(durere|umflătură|simptom|observație)\\s+(menționat|raportat|discutat)", "");
+            cleaned = cleaned.trim();
+            return cleaned;
+        });
+        
+        // Remove generic labels - STRICT filtering
+        list.removeIf(item -> {
+            if (item == null || item.isEmpty() || item.length() < 5) return true;
+            
+            String lower = item.toLowerCase().trim();
+            
+            // Remove generic labels
+            String[] genericPatterns = {
+                "durere menționată",
+                "umflătură menționată",
+                "simptom menționat",
+                "observație menționată",
+                "durere raportată",
+                "umflătură raportată",
+                "durere discutată",
+                "umflătură discutată",
+                "menționat în discuție",
+                "raportat în discuție",
+                "discutat în consultație"
+            };
+            
+            for (String pattern : genericPatterns) {
+                if (lower.equals(pattern) || lower.startsWith(pattern + " ") || lower.endsWith(" " + pattern)) {
+                    return true;
+                }
+            }
+            
+            // Remove if it matches generic pattern
+            if (lower.matches("^(durere|umflătură|simptom|observație)\\s+(menționat|raportat|discutat).*")) {
+                return true;
+            }
+            
+            return false;
+        });
+    }
+    
+    private String extractKeyInfo(String text) {
+        // Extract key phrases: pain, location, duration, triggers
+        StringBuilder summary = new StringBuilder();
+        String lower = text.toLowerCase();
+        
+        // Look for pain mentions
+        if (lower.contains("durere")) {
+            int durereIdx = lower.indexOf("durere");
+            String context = text.substring(Math.max(0, durereIdx - 20), Math.min(text.length(), durereIdx + 100));
+            summary.append(context.trim());
+        }
+        
+        // Look for location
+        if (lower.contains("măsea") || lower.contains("dinte")) {
+            int idx = lower.indexOf("măsea");
+            if (idx == -1) idx = lower.indexOf("dinte");
+            String location = text.substring(Math.max(0, idx - 10), Math.min(text.length(), idx + 30));
+            if (summary.length() > 0) summary.append(". ");
+            summary.append(location.trim());
+        }
+        
+        // Look for duration
+        if (lower.contains("săptămân") || lower.contains("zi") || lower.contains("lună")) {
+            String[] words = text.split("\\s+");
+            for (int i = 0; i < words.length; i++) {
+                if (words[i].toLowerCase().contains("săptămân") || 
+                    words[i].toLowerCase().contains("zi") || 
+                    words[i].toLowerCase().contains("lună")) {
+                    String duration = "";
+                    if (i > 0) duration += words[i-1] + " ";
+                    duration += words[i];
+                    if (i < words.length - 1) duration += " " + words[i+1];
+                    if (summary.length() > 0) summary.append(". ");
+                    summary.append(duration.trim());
+                    break;
+                }
+            }
+        }
+        
+        return summary.length() > 0 ? summary.toString() : text.substring(0, Math.min(180, text.length()));
+    }
+
+    /**
+     * Parse StructuredNote from AI response
+     */
+    private StructuredNoteResponse.StructuredNote parseStructuredNote(String aiResponse, String lang, String transcript) throws Exception {
+        try {
+            log.info("Parsing structured note, length: {}", aiResponse != null ? aiResponse.length() : 0);
+            
+            // Remove markdown code blocks if present
+            String jsonStr = aiResponse.trim();
+            jsonStr = jsonStr.replaceAll("(?i)^```json\\s*", "");
+            jsonStr = jsonStr.replaceAll("^```\\s*", "");
+            jsonStr = jsonStr.replaceAll("\\s*```$", "");
+
+            // Extract JSON object
+            int jsonStart = jsonStr.indexOf("{");
+            int jsonEnd = jsonStr.lastIndexOf("}");
+            if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
+            }
+
+            log.debug("Extracted JSON string length: {}", jsonStr.length());
+
+            // Parse JSON
+            StructuredNoteResponse.StructuredNote note = objectMapper.readValue(jsonStr, StructuredNoteResponse.StructuredNote.class);
+            
+            // Validate and fix required fields
+            if (note.getTitle() == null || note.getTitle().isEmpty()) {
+                note.setTitle("📝 Notă consultație (Structurare)");
+            }
+            if (note.getLanguage() == null || note.getLanguage().isEmpty()) {
+                note.setLanguage(lang);
+            }
+            // NEVER use generic placeholders - extract from transcript if needed
+            if (note.getChiefComplaint() == null || note.getChiefComplaint().isEmpty() || 
+                note.getChiefComplaint().toLowerCase().contains("consultație pentru") ||
+                note.getChiefComplaint().toLowerCase().contains("evaluare")) {
+                // Try to extract from transcript - this should not happen if AI follows instructions
+                log.warn("ChiefComplaint is generic or empty, attempting extraction from transcript");
+                // Don't set generic - let it fail and retry
+                throw new RuntimeException("ChiefComplaint is generic or empty. Retry with better extraction.");
+            }
+            if (note.getSymptoms() == null) {
+                note.setSymptoms(new ArrayList<>());
+            }
+            if (note.getTimeline() == null) {
+                note.setTimeline(new ArrayList<>());
+            }
+            if (note.getTriggers() == null) {
+                note.setTriggers(new ArrayList<>());
+            }
+            if (note.getRiskFactors() == null) {
+                note.setRiskFactors(new ArrayList<>());
+            }
+            if (note.getDentalHistory() == null) {
+                note.setDentalHistory(new ArrayList<>());
+            }
+            if (note.getMeds() == null) {
+                note.setMeds(new ArrayList<>());
+            }
+            if (note.getAllergies() == null) {
+                note.setAllergies(new ArrayList<>());
+            }
+            if (note.getObservations() == null) {
+                note.setObservations(new ArrayList<>());
+            }
+            if (note.getMissingInfo() == null) {
+                note.setMissingInfo(new ArrayList<>());
+            }
+            if (note.getDisclaimer() == null || note.getDisclaimer().isEmpty()) {
+                note.setDisclaimer("Structurare pentru documentare. Nu înlocuiește evaluarea clinică.");
+            }
+
+            // Normalize: remove speaker tags, enforce length constraints
+            normalizeStructuredNote(note);
+            
+            // Post-process: aggressively clean up any remaining verbatim text
+            postProcessStructuredNote(note, transcript);
+
+            log.info("Parsed structured note: chiefComplaint length: {}, symptoms: {}, missingInfo: {}",
+                note.getChiefComplaint().length(),
+                note.getSymptoms().size(),
+                note.getMissingInfo().size());
+
+            return note;
+        } catch (Exception e) {
+            log.error("Failed to parse structured note: {}", e.getMessage(), e);
+            log.error("Response was: {}", aiResponse != null ? aiResponse.substring(0, Math.min(500, aiResponse.length())) : "null");
+            throw new RuntimeException("Eroare la parsarea răspunsului: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Create fallback structured note from transcript (when AI fails) - EXTRACT REAL CONTENT, NO GENERIC LABELS
+     */
+    private StructuredNoteResponse.StructuredNote createFallbackStructuredNote(String transcript, String lang) {
+        log.warn("Creating fallback structured note from transcript - EXTRACTING REAL CONTENT");
+        StructuredNoteResponse.StructuredNote note = new StructuredNoteResponse.StructuredNote();
+        note.setTitle("📝 Notă consultație (Structurare)");
+        note.setLanguage(lang);
+        
+        // Clean transcript - remove speaker tags
+        String cleanTranscript = transcript
+            .replaceAll("(?i)(medic|pacient|doctor):\\s*", "")
+            .replaceAll("(?i)(bună ziua|buna ziua|salut|mulțumesc|înțeleg)[,\\.]?\\s*", "")
+            .replaceAll("(?i)\\b(zis că|a zis|spus că|mi-a zis)\\b", "")
+            .trim();
+        
+        String lowerTranscript = cleanTranscript.toLowerCase();
+        String chiefComplaint = "";
+        
+        // Extract REAL chief complaint - find first meaningful sentence about the problem
+        if (lowerTranscript.contains("durere") || lowerTranscript.contains("durer")) {
+            int durereIdx = lowerTranscript.indexOf("durere");
+            if (durereIdx == -1) durereIdx = lowerTranscript.indexOf("durer");
+            // Extract sentence containing "durere"
+            String before = cleanTranscript.substring(Math.max(0, durereIdx - 80));
+            String after = cleanTranscript.substring(Math.min(cleanTranscript.length(), durereIdx + 150));
+            String context = (before + after).trim();
+            // Extract first sentence
+            String[] sentences = context.split("[.!?]");
+            for (String sentence : sentences) {
+                String trimmed = sentence.trim();
+                if (trimmed.length() > 15 && trimmed.toLowerCase().contains("durere")) {
+                    chiefComplaint = trimmed.substring(0, Math.min(180, trimmed.length())).trim();
+                    break;
+                }
+            }
+        }
+        
+        // If still empty, use first meaningful sentence
+        if (chiefComplaint.isEmpty()) {
+            String[] sentences = cleanTranscript.split("[.!?]");
+            for (String sentence : sentences) {
+                String trimmed = sentence.trim();
+                if (trimmed.length() > 15 && !trimmed.matches("^[\\s\\p{Punct}]+$")) {
+                    chiefComplaint = trimmed.substring(0, Math.min(180, trimmed.length())).trim();
+                    break;
+                }
+            }
+        }
+        
+        // If still empty, use first 150 chars
+        if (chiefComplaint.isEmpty() || chiefComplaint.length() < 10) {
+            chiefComplaint = cleanTranscript.substring(0, Math.min(180, cleanTranscript.length())).trim();
+        }
+        
+        note.setChiefComplaint(chiefComplaint);
+        
+        // Extract REAL symptoms - find actual descriptions, not generic labels
+        List<String> symptoms = new ArrayList<>();
+        if (lowerTranscript.contains("puls") || lowerTranscript.contains("pulsează")) {
+            symptoms.add("Durere pulsatilă");
+        }
+        if (lowerTranscript.contains("iradiază") || lowerTranscript.contains("iradiere") || lowerTranscript.contains("spre")) {
+            // Extract where it radiates
+            int idx = lowerTranscript.indexOf("spre");
+            if (idx > 0) {
+                String context = cleanTranscript.substring(Math.max(0, idx - 20), Math.min(cleanTranscript.length(), idx + 40));
+                String extracted = "Iradiere " + context.substring(context.indexOf("spre")).split("[.!?]")[0].trim();
+                if (extracted.length() < 110 && extracted.length() > 5) {
+                    symptoms.add(extracted);
+                }
+            }
+        }
+        if (lowerTranscript.contains("umfl") || lowerTranscript.contains("inflama")) {
+            // Extract location if mentioned
+            int idx = lowerTranscript.indexOf("umfl");
+            if (idx == -1) idx = lowerTranscript.indexOf("inflama");
+            String context = cleanTranscript.substring(Math.max(0, idx - 30), Math.min(cleanTranscript.length(), idx + 50));
+            String extracted = context.trim().substring(0, Math.min(110, context.length()));
+            if (extracted.length() > 5 && !extracted.toLowerCase().contains("menționat")) {
+                symptoms.add(extracted);
+            }
+        }
+        if (lowerTranscript.contains("durere") && symptoms.isEmpty()) {
+            // Extract actual pain description
+            int idx = lowerTranscript.indexOf("durere");
+            String context = cleanTranscript.substring(Math.max(0, idx - 20), Math.min(cleanTranscript.length(), idx + 80));
+            String[] words = context.split("\\s+");
+            StringBuilder painDesc = new StringBuilder();
+            for (int i = 0; i < Math.min(15, words.length); i++) {
+                if (painDesc.length() + words[i].length() < 100) {
+                    painDesc.append(words[i]).append(" ");
+                }
+            }
+            String extracted = painDesc.toString().trim();
+            if (extracted.length() > 10 && !extracted.toLowerCase().contains("menționat")) {
+                symptoms.add(extracted);
+            }
+        }
+        
+        // Extract REAL observations
+        List<String> observations = new ArrayList<>();
+        if (lowerTranscript.contains("frică") || lowerTranscript.contains("teamă")) {
+            observations.add("Frică de intervenții dentare");
+        }
+        if (lowerTranscript.contains("amânat") || lowerTranscript.contains("amân")) {
+            observations.add("Amânare consultație");
+        }
+        
+        note.setSymptoms(symptoms.isEmpty() ? new ArrayList<>() : symptoms);
+        note.setObservations(observations.isEmpty() ? new ArrayList<>() : observations);
+        note.setTimeline(new ArrayList<>());
+        note.setTriggers(new ArrayList<>());
+        note.setRiskFactors(new ArrayList<>());
+        note.setDentalHistory(new ArrayList<>());
+        note.setMeds(new ArrayList<>());
+        note.setAllergies(new ArrayList<>());
+        
+        // Add missing info if transcript is very short
+        List<String> missingInfo = new ArrayList<>();
+        if (transcript.length() < 100) {
+            missingInfo.add("Durata simptomelor");
+            missingInfo.add("Intensitate durere (scală 1-10)");
+        }
+        note.setMissingInfo(missingInfo);
+        note.setDisclaimer("Structurare pentru documentare. Nu înlocuiește evaluarea clinică.");
+        
+        return note;
+    }
+
+    /**
+     * Structure consultation - OLD format (kept for backward compatibility)
+     */
+    public StructureResponse structureConsultationNewOld(Long consultationId, StructureRequest request) throws Exception {
+        String inputText = request.getInputText();
+        String fullTranscript = request.getFullTranscript();
+        String lang = request.getLang() != null ? request.getLang() : "ro";
+
+        if ((inputText == null || inputText.trim().isEmpty()) && 
+            (fullTranscript == null || fullTranscript.trim().isEmpty())) {
+            throw new IllegalArgumentException("No text provided to structure");
+        }
+
+        // Use inputText if available, otherwise fullTranscript
+        String transcript = (inputText != null && !inputText.trim().isEmpty()) ? inputText : fullTranscript;
+
+        // Build patient context string
+        String patientContextStr = "";
+        if (request.getPatientContext() != null) {
+            StructureRequest.PatientContextDto pc = request.getPatientContext();
+            patientContextStr = String.format("Pacient: %s, %s ani. Motiv: %s", 
+                pc.getName() != null ? pc.getName() : "N/A",
+                pc.getAge() != null ? pc.getAge() : "N/A",
+                pc.getReason() != null ? pc.getReason() : "N/A");
+        }
+
+        // System prompt for Structure (Romanian, concise)
+        String systemPrompt = "Ești un asistent de documentare pentru medici dentisti. Rolul tău este să organizezi informațiile factuale din transcrierile consultațiilor.\n\n" +
+                "REGULI CRITICE:\n" +
+                "1. Extrage DOAR faptele care au fost explicit menționate. NU face inferențe despre cauze sau diagnostice.\n" +
+                "2. NU folosi limbaj precum \"ar putea fi\", \"probabil\", \"este\", \"cel mai probabil\".\n" +
+                "3. NU oferi diagnostic sau recomandări de tratament.\n" +
+                "4. Folosește formulări neutre: \"de clarificat\", \"de documentat\".\n" +
+                "5. Păstrează scurt și practic.\n" +
+                "6. TREBUIE să returnezi cel puțin 3-5 secțiuni cu bullets. Fiecare secțiune trebuie să aibă cel puțin 2 bullets.\n\n" +
+                "Returnează DOAR JSON valid în acest format EXACT (fără markdown, fără text înainte/după):\n" +
+                "{\n" +
+                "  \"mode\": \"structure\",\n" +
+                "  \"title\": \"Structură consultație\",\n" +
+                "  \"summary\": \"Rezumat de 2-3 rânduri despre ce s-a discutat\",\n" +
+                "  \"sections\": [\n" +
+                "    {\"heading\": \"Problema principală (as reported)\", \"bullets\": [\"...\", \"...\"], \"tags\": []},\n" +
+                "    {\"heading\": \"Simptome / Triggers\", \"bullets\": [\"...\", \"...\"], \"tags\": []},\n" +
+                "    {\"heading\": \"Istoric relevant (as said)\", \"bullets\": [\"...\"], \"tags\": []},\n" +
+                "    {\"heading\": \"Alergii/Medicație (if mentioned)\", \"bullets\": [\"...\"], \"tags\": []},\n" +
+                "    {\"heading\": \"Observații (from transcript)\", \"bullets\": [\"...\"], \"tags\": []}\n" +
+                "  ],\n" +
+                "  \"timeline\": [{\"when\": \"când\", \"what\": \"ce\"}],\n" +
+                "  \"missingInfo\": [\"clarifică durata durerii\", \"confirmă momentul traumei\"],\n" +
+                "  \"safetyNote\": \"Această structură este doar pentru documentare. Nu înlocuiește evaluarea clinică.\"\n" +
+                "}\n\n" +
+                "IMPORTANT: sections trebuie să fie un array cu cel puțin 3 obiecte. Fiecare obiect trebuie să aibă heading și bullets (array cu cel puțin 1 element).";
+
+        String userPrompt = "Organizează următoarea transcriere a consultației în note structurate (doar fapte):\n\n" +
+                (patientContextStr.isEmpty() ? "" : patientContextStr + "\n\n") +
+                transcript + "\n\n" +
+                "Returnează DOAR JSON valid în formatul specificat mai sus. Fără markdown, fără text înainte sau după JSON.";
+
+        List<com.zenlink.zenlink.dto.AiMessage> messages = new ArrayList<>();
+        messages.add(new com.zenlink.zenlink.dto.AiMessage("system", systemPrompt));
+        messages.add(new com.zenlink.zenlink.dto.AiMessage("user", userPrompt));
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        
+        // Try up to 2 times
+        StructureResponse response = null;
+        Exception lastError = null;
+        
+        for (int attempt = 0; attempt < 2; attempt++) {
+            try {
+                log.info("Structure attempt {} for consultation {}", attempt + 1, consultationId);
+                String aiResponse = openAiChatService.streamChat(messages, "", null, outputStream);
+                log.info("Structure AI response length: {}", aiResponse != null ? aiResponse.length() : 0);
+                
+                // Parse and validate response
+                response = parseStructureResponseNew(aiResponse);
+                
+                // Validate that we have sections
+                if (response.getSections() != null && response.getSections().size() > 0) {
+                    log.info("Structure response validated: {} sections", response.getSections().size());
+                    break;
+                } else {
+                    log.warn("Structure response has no sections, retrying...");
+                    if (attempt == 0) {
+                        // Add retry instruction
+                        messages.add(new com.zenlink.zenlink.dto.AiMessage("user", 
+                            "Răspunsul anterior nu a avut secțiuni. Returnează DOAR JSON valid cu cel puțin 3 secțiuni, fiecare cu heading și bullets."));
+                    }
+                }
+            } catch (Exception e) {
+                lastError = e;
+                log.error("Structure attempt {} failed: {}", attempt + 1, e.getMessage());
+                if (attempt == 0) {
+                    // Add retry instruction
+                    messages.add(new com.zenlink.zenlink.dto.AiMessage("user", 
+                        "Răspunsul anterior nu a fost JSON valid. Returnează DOAR JSON valid în formatul specificat, fără text suplimentar."));
+                }
+            }
+        }
+        
+        if (response == null || response.getSections() == null || response.getSections().isEmpty()) {
+            log.error("Failed to get valid structure response after 2 attempts");
+            throw new RuntimeException("Nu s-a putut genera structura. Te rugăm să încerci din nou. " + 
+                (lastError != null ? lastError.getMessage() : ""));
+        }
+        
+        return response;
+    }
+
+    /**
+     * Analyze consultation - NEW format with strict JSON schema
+     */
+    public AnalyzeResponse analyzeConsultationNew(Long consultationId, AnalyzeRequest request) throws Exception {
+        String inputText = request.getInputText();
+        String fullTranscript = request.getFullTranscript();
+        String lang = request.getLang() != null ? request.getLang() : "ro";
+
+        if ((inputText == null || inputText.trim().isEmpty()) && 
+            (fullTranscript == null || fullTranscript.trim().isEmpty())) {
+            throw new IllegalArgumentException("No text provided to analyze");
+        }
+
+        // Build complete transcript from all sources - ALWAYS use FULL transcript
+        StringBuilder transcriptBuilder = new StringBuilder();
+        
+        // STEP 1: Use fullTranscript if available (contains ALL segments merged)
+        if (fullTranscript != null && !fullTranscript.trim().isEmpty()) {
+            transcriptBuilder.append(fullTranscript.trim());
+        }
+        
+        // STEP 2: Add messages if available (doctor/assistant conversation)
+        if (request.getMessages() != null && !request.getMessages().isEmpty()) {
+            List<String> doctorMessages = new ArrayList<>();
+            for (StructureRequest.MessageDto msg : request.getMessages()) {
+                if ("doctor".equals(msg.getRole()) && msg.getContent() != null && !msg.getContent().trim().isEmpty()) {
+                    doctorMessages.add(msg.getContent().trim());
+                }
+            }
+            
+            if (!doctorMessages.isEmpty()) {
+                String messagesText = String.join(" ", doctorMessages);
+                if (transcriptBuilder.length() == 0 || !transcriptBuilder.toString().contains(messagesText.substring(0, Math.min(50, messagesText.length())))) {
+                    if (transcriptBuilder.length() > 0) {
+                        transcriptBuilder.append(" ");
+                    }
+                    transcriptBuilder.append(messagesText);
+                }
+            }
+        }
+        
+        // STEP 3: Add inputText only if it's different from fullTranscript (new draft)
+        if (inputText != null && !inputText.trim().isEmpty()) {
+            String inputTextTrimmed = inputText.trim();
+            if (transcriptBuilder.length() == 0 || !transcriptBuilder.toString().contains(inputTextTrimmed.substring(0, Math.min(50, inputTextTrimmed.length())))) {
+                if (transcriptBuilder.length() > 0) {
+                    transcriptBuilder.append(" ");
+                }
+                transcriptBuilder.append(inputTextTrimmed);
+            }
+        }
+        
+        String transcript = transcriptBuilder.toString().trim();
+        log.info("Analyze request for consultation {} - final transcript length: {} chars", consultationId, transcript.length());
+
+        if (transcript.length() < 10) {
+            throw new IllegalArgumentException("Transcript too short (minimum 10 characters)");
+        }
+
+        // Build patient context string
+        String patientContextStr = "";
+        if (request.getPatientContext() != null) {
+            StructureRequest.PatientContextDto pc = request.getPatientContext();
+            patientContextStr = String.format("Pacient: %s, %s ani. Motiv: %s", 
+                pc.getName() != null ? pc.getName() : "N/A",
+                pc.getAge() != null ? pc.getAge() : "N/A",
+                pc.getReason() != null ? pc.getReason() : "N/A");
+        }
+
+        // System prompt for ZenLink Analyze - smart assistant helping doctor think better
+        String systemPrompt = "You are ZenLink, a smart assistant helping dentists think better during consultations.\n\n" +
+                "Your role: Supportive assistant, NOT replacing the doctor. Help organize thinking and save time.\n\n" +
+                "CRITICAL BEHAVIOR RULES:\n" +
+                "1. NEVER say \"diagnostic\" or \"tratament recomandat\"\n" +
+                "2. NEVER sound like you're replacing the doctor\n" +
+                "3. Tone = supportive assistant, doctor is in control\n" +
+                "4. Extract meaningful medical info from transcript\n" +
+                "5. Highlight patterns, suggest questions, provide general context\n\n" +
+                "OUTPUT FORMAT - Return ONLY JSON:\n" +
+                "{\n" +
+                "  \"mode\": \"analyze\",\n" +
+                "  \"title\": \"🧠 ZenLink Insights\",\n" +
+                "  \"summary\": \"Brief summary of consultation\",\n" +
+                "  \"aspectsToConsider\": [\"Highlight patterns from transcript\", \"e.g. pain worsening, sensitivity, swelling\"],\n" +
+                "  \"usefulClarificationQuestions\": [\"4-6 specific follow-up questions doctor could ask\"],\n" +
+                "  \"possibleGeneralExplanations\": [\"Mention general dental issues linked to symptoms\", \"Keep neutral wording\", \"No diagnosis claims\"],\n" +
+                "  \"observedRiskFactors\": [\"Hygiene\", \"Sugar\", \"Smoking\", \"Delay\", \"etc\"],\n" +
+                "  \"informativeReferences\": [\"Mention general sources like 'ghiduri stomatologice generale'\", \"'literatură dentară standard'\", \"No need for real links\"],\n" +
+                "  \"safetyNote\": \"Această analiză este doar informațională. Nu înlocuiește evaluarea clinică.\"\n" +
+                "}\n\n" +
+                "EXAMPLES:\n" +
+                "aspectsToConsider: [\"Durere agravată în ultimele zile\", \"Sensibilitate la rece și dulce\", \"Umflătură localizată la nivelul gingiei\"]\n" +
+                "usefulClarificationQuestions: [\"Intensitatea durerii pe o scală de 0-10?\", \"Durerea apare spontan sau doar la triggeri?\", \"Există febră asociată?\"]\n" +
+                "possibleGeneralExplanations: [\"Sensibilitatea la rece/dulce poate indica expunere dentină sau carie\", \"Umflătura gingivală poate sugera inflamație locală\"]\n" +
+                "observedRiskFactors: [\"Amânare consultație\", \"Consum zilnic de dulciuri\"]\n" +
+                "informativeReferences: [\"Ghiduri stomatologice generale pentru evaluarea durerii dentare\", \"Literatură dentară standard despre sensibilitate dentară\"]";
+
+        String userPrompt = "Analizează următoarea transcriere COMPLETĂ a consultației și oferă insights utile pentru doctor:\n\n" +
+                (patientContextStr.isEmpty() ? "" : patientContextStr + "\n\n") +
+                "TRANSCRIPT COMPLET:\n" + transcript + "\n\n" +
+                "Extrage informații medicale semnificative. Evidențiază pattern-uri. Sugerează întrebări utile. Oferă context general informativ.\n" +
+                "Returnează DOAR JSON valid în formatul specificat. Fără alt text.";
+
+        List<com.zenlink.zenlink.dto.AiMessage> messages = new ArrayList<>();
+        messages.add(new com.zenlink.zenlink.dto.AiMessage("system", systemPrompt));
+        messages.add(new com.zenlink.zenlink.dto.AiMessage("user", userPrompt));
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        String aiResponse = openAiChatService.streamChat(messages, "", null, outputStream);
+
+        // Parse and validate response
+        AnalyzeResponse response = parseAnalyzeResponseNew(aiResponse);
+        return response;
+    }
+
+    private StructureResponse parseStructureResponseNew(String aiResponse) throws Exception {
+        try {
+            log.info("Parsing structure response, length: {}", aiResponse != null ? aiResponse.length() : 0);
+            
+            // Remove markdown code blocks if present
+            String jsonStr = aiResponse.trim();
+            jsonStr = jsonStr.replaceAll("(?i)^```json\\s*", "");
+            jsonStr = jsonStr.replaceAll("^```\\s*", "");
+            jsonStr = jsonStr.replaceAll("\\s*```$", "");
+
+            // Extract JSON object
+            int jsonStart = jsonStr.indexOf("{");
+            int jsonEnd = jsonStr.lastIndexOf("}");
+            if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
+            }
+
+            log.debug("Extracted JSON string length: {}", jsonStr.length());
+
+            // Parse JSON
+            StructureResponse response = objectMapper.readValue(jsonStr, StructureResponse.class);
+            log.info("Parsed structure response, mode: {}, sections count: {}", 
+                response.getMode(), 
+                response.getSections() != null ? response.getSections().size() : 0);
+
+            // Validate and fix required fields
+            if (response.getMode() == null || !response.getMode().equals("structure")) {
+                response.setMode("structure");
+            }
+            if (response.getTitle() == null || response.getTitle().isEmpty()) {
+                response.setTitle("Structură consultație");
+            }
+            if (response.getSummary() == null || response.getSummary().isEmpty()) {
+                response.setSummary("Consultație structurată pentru documentare.");
+            }
+            if (response.getSections() == null) {
+                response.setSections(new ArrayList<>());
+            }
+            
+            // Ensure sections have at least some content
+            if (response.getSections().isEmpty()) {
+                log.warn("Response has no sections, throwing error instead of placeholder");
+                throw new RuntimeException("Răspunsul nu conține secțiuni structurate. Te rugăm să încerci din nou.");
+            } else {
+                // Validate each section has bullets
+                for (StructureResponse.SectionDto section : response.getSections()) {
+                    if (section.getBullets() == null || section.getBullets().isEmpty()) {
+                        log.warn("Section '{}' has no bullets, adding fallback", section.getHeading());
+                        section.setBullets(Arrays.asList("Informație de documentat"));
+                    }
+                    if (section.getTags() == null) {
+                        section.setTags(new ArrayList<>());
+                    }
+                }
+            }
+            
+            if (response.getTimeline() == null) {
+                response.setTimeline(new ArrayList<>());
+            }
+            if (response.getMissingInfo() == null) {
+                response.setMissingInfo(new ArrayList<>());
+            }
+            if (response.getSafetyNote() == null || response.getSafetyNote().isEmpty()) {
+                response.setSafetyNote("Această structură este doar pentru documentare. Nu înlocuiește evaluarea clinică.");
+            }
+
+            log.info("Final structure response: {} sections, {} timeline items, {} missing info items",
+                response.getSections().size(),
+                response.getTimeline().size(),
+                response.getMissingInfo().size());
+
+            return response;
+        } catch (Exception e) {
+            log.error("Failed to parse structure response: {}", e.getMessage(), e);
+            log.error("Response was: {}", aiResponse != null ? aiResponse.substring(0, Math.min(500, aiResponse.length())) : "null");
+            throw new RuntimeException("Eroare la parsarea răspunsului: " + e.getMessage(), e);
+        }
+    }
+
+    // Helper methods for parsing
+    @SuppressWarnings("unchecked")
+    private String getString(Map<String, Object> map, String key, String defaultValue) {
+        Object value = map.get(key);
+        if (value == null) return defaultValue;
+        return value.toString();
+    }
+    
+    @SuppressWarnings("unchecked")
+    private List<String> getStringList(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value == null) return new ArrayList<>();
+        if (value instanceof List) {
+            return (List<String>) value;
+        }
+        return new ArrayList<>();
+    }
+    
+    private AnalyzeResponse parseAnalyzeResponseNew(String aiResponse) throws Exception {
+        try {
+            // Remove markdown code blocks if present
+            String jsonStr = aiResponse.trim();
+            jsonStr = jsonStr.replaceAll("(?i)^```json\\s*", "");
+            jsonStr = jsonStr.replaceAll("^```\\s*", "");
+            jsonStr = jsonStr.replaceAll("\\s*```$", "");
+
+            // Extract JSON object
+            int jsonStart = jsonStr.indexOf("{");
+            int jsonEnd = jsonStr.lastIndexOf("}");
+            if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
+            }
+
+            // Parse JSON - handle both old and new formats
+            Map<String, Object> parsed = objectMapper.readValue(jsonStr, Map.class);
+            AnalyzeResponse response = new AnalyzeResponse();
+            
+            // Set basic fields
+            response.setMode("analyze");
+            response.setTitle(getString(parsed, "title", "🧠 ZenLink Insights"));
+            response.setSummary(getString(parsed, "summary", ""));
+            
+            // Handle new format fields
+            response.setAspectsToConsider(getStringList(parsed, "aspectsToConsider"));
+            response.setUsefulClarificationQuestions(getStringList(parsed, "usefulClarificationQuestions"));
+            response.setPossibleGeneralExplanations(getStringList(parsed, "possibleGeneralExplanations"));
+            response.setObservedRiskFactors(getStringList(parsed, "observedRiskFactors"));
+            response.setInformativeReferences(getStringList(parsed, "informativeReferences"));
+            
+            // Handle legacy format fields (for backward compatibility)
+            if (parsed.containsKey("insights")) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> insightsList = (List<Map<String, Object>>) parsed.get("insights");
+                List<AnalyzeResponse.InsightDto> insights = new ArrayList<>();
+                if (insightsList != null) {
+                    for (Map<String, Object> insight : insightsList) {
+                        AnalyzeResponse.InsightDto dto = new AnalyzeResponse.InsightDto();
+                        dto.setHeading(getString(insight, "heading", ""));
+                        @SuppressWarnings("unchecked")
+                        List<String> bullets = (List<String>) insight.get("bullets");
+                        dto.setBullets(bullets != null ? bullets : new ArrayList<>());
+                        insights.add(dto);
+                    }
+                }
+                response.setInsights(insights);
+            } else {
+                response.setInsights(new ArrayList<>());
+            }
+            
+            if (parsed.containsKey("suggestedQuestions")) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> questionsList = (List<Map<String, Object>>) parsed.get("suggestedQuestions");
+                List<AnalyzeResponse.SuggestedQuestionDto> questions = new ArrayList<>();
+                if (questionsList != null) {
+                    for (Map<String, Object> question : questionsList) {
+                        AnalyzeResponse.SuggestedQuestionDto dto = new AnalyzeResponse.SuggestedQuestionDto();
+                        dto.setQuestion(getString(question, "question", ""));
+                        @SuppressWarnings("unchecked")
+                        List<String> options = (List<String>) question.get("options");
+                        dto.setOptions(options != null ? options : new ArrayList<>());
+                        questions.add(dto);
+                    }
+                }
+                response.setSuggestedQuestions(questions);
+            } else {
+                response.setSuggestedQuestions(new ArrayList<>());
+            }
+            
+            if (parsed.containsKey("citations")) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> citationsList = (List<Map<String, Object>>) parsed.get("citations");
+                List<AnalyzeResponse.CitationDto> citations = new ArrayList<>();
+                if (citationsList != null) {
+                    for (Map<String, Object> citation : citationsList) {
+                        AnalyzeResponse.CitationDto dto = new AnalyzeResponse.CitationDto();
+                        dto.setLabel(getString(citation, "label", ""));
+                        dto.setUrl(getString(citation, "url", ""));
+                        dto.setNote(getString(citation, "note", ""));
+                        citations.add(dto);
+                    }
+                }
+                response.setCitations(citations);
+            } else {
+                response.setCitations(new ArrayList<>());
+            }
+            
+            // Handle structured content (legacy)
+            if (parsed.containsKey("structured")) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> structuredMap = (Map<String, Object>) parsed.get("structured");
+                StructureResponse structure = objectMapper.convertValue(structuredMap, StructureResponse.class);
+                response.setStructured(structure);
+            } else {
+                // Create minimal structure
+                StructureResponse structure = new StructureResponse();
+                structure.setMode("structure");
+                structure.setTitle("Structură consultație");
+                structure.setSummary("");
+                structure.setSections(new ArrayList<>());
+                structure.setSafetyNote("");
+                response.setStructured(structure);
+            }
+            
+            response.setSafetyNote(getString(parsed, "safetyNote", "Această analiză este doar informațională. Nu înlocuiește evaluarea clinică."));
+
+            return response;
+        } catch (Exception e) {
+            log.error("Failed to parse analyze response, retrying with corrected prompt", e);
+            // Return minimal valid response
+            AnalyzeResponse response = new AnalyzeResponse();
+            response.setMode("analyze");
+            response.setTitle("Analiză ZenLink");
+            response.setSummary("Eroare la parsarea răspunsului. Te rugăm să încerci din nou.");
+            StructureResponse structure = new StructureResponse();
+            structure.setMode("structure");
+            structure.setTitle("Structură consultație");
+            structure.setSummary("");
+            structure.setSections(new ArrayList<>());
+            structure.setSafetyNote("");
+            response.setStructured(structure);
+            response.setInsights(new ArrayList<>());
+            response.setSuggestedQuestions(new ArrayList<>());
+            response.setCitations(new ArrayList<>());
+            response.setSafetyNote("Această analiză este doar informațională.");
+            return response;
         }
     }
 }

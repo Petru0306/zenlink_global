@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
-import { ArrowRight, Facebook, Instagram, Twitter, Youtube, Activity, Shield, Sparkles, Send } from "lucide-react";
-import { Brain } from "lucide-react";
-import { CounterAnimation } from "../../components/CounterAnimation";
+import { ArrowRight, Facebook, Instagram, Twitter, Youtube, Activity, Shield, Sparkles, Send, FileText, MessageSquare, Bot, Sparkle, TrendingUp, Layers, Brain } from "lucide-react";
 import { AIPreviewWidget } from "../../components/ai/AIPreviewWidget";
 
 export function HomePage() {
@@ -52,6 +50,47 @@ export function HomePage() {
     }
     return { far, mid, near };
   }, [particles]);
+
+  // Force scroll to top when component mounts
+  useEffect(() => {
+    // Clear any hash from URL
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+    
+    // Force scroll to top immediately and after delays to ensure it sticks
+    const scrollToTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    
+    scrollToTop();
+    
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      scrollToTop();
+      // Also scroll after delays to handle any async layout updates
+      setTimeout(scrollToTop, 0);
+      setTimeout(scrollToTop, 50);
+      setTimeout(scrollToTop, 100);
+      setTimeout(scrollToTop, 200);
+    });
+    
+    // Prevent any unwanted scroll for a short period after mount
+    let preventScrollUntil = Date.now() + 500; // Prevent for 500ms after mount
+    const preventScroll = () => {
+      if (Date.now() < preventScrollUntil && window.scrollY > 10) {
+        scrollToTop();
+      }
+    };
+    
+    window.addEventListener('scroll', preventScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', preventScroll);
+    };
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -501,50 +540,50 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Clinic Slider Band */}
+      {/* ZenLink Values Slider Band */}
       <section className="relative py-16 overflow-hidden border-y border-white/10 bg-[hsl(240,10%,6%)]/30">
         <div className="relative">
           <div className="flex animate-scroll gap-6">
-            {/* First set of clinics */}
+            {/* First set of values */}
             <div className="flex items-center gap-6 shrink-0">
               <div className="px-12 py-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-colors">
-                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Mayo Clinic</span>
+                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Securitate & Confidențialitate</span>
               </div>
               <div className="px-12 py-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-colors">
-                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Cleveland Clinic</span>
+                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Inovație AI</span>
               </div>
               <div className="px-12 py-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-colors">
-                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Johns Hopkins</span>
+                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Accesibilitate</span>
               </div>
               <div className="px-12 py-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-colors">
-                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Mass General</span>
+                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Calitate Medicală</span>
               </div>
               <div className="px-12 py-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-colors">
-                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">UCSF Health</span>
+                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Transparență</span>
               </div>
               <div className="px-12 py-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-colors">
-                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Stanford Health</span>
+                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Eficiență</span>
               </div>
             </div>
             {/* Duplicate set for seamless loop */}
             <div className="flex items-center gap-6 shrink-0">
               <div className="px-12 py-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-colors">
-                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Mayo Clinic</span>
+                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Securitate & Confidențialitate</span>
               </div>
               <div className="px-12 py-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-colors">
-                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Cleveland Clinic</span>
+                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Inovație AI</span>
               </div>
               <div className="px-12 py-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-colors">
-                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Johns Hopkins</span>
+                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Accesibilitate</span>
               </div>
               <div className="px-12 py-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-colors">
-                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Mass General</span>
+                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Calitate Medicală</span>
               </div>
               <div className="px-12 py-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-colors">
-                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">UCSF Health</span>
+                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Transparență</span>
               </div>
               <div className="px-12 py-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-colors">
-                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Stanford Health</span>
+                <span className="text-lg text-[hsl(220,12%,85%)] whitespace-nowrap">Eficiență</span>
               </div>
             </div>
           </div>
@@ -561,35 +600,35 @@ export function HomePage() {
                 <Sparkles className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-[clamp(2.15rem,5vw,3.15rem)] font-bold text-[hsl(220,12%,98%)]">
-                AI Assistant PRO
+                Asistent AI PRO
               </h2>
               <p className="text-[clamp(1rem,2vw,1.125rem)] text-[hsl(220,12%,85%)] leading-relaxed">
-                Healthcare-aware AI that helps patients understand dental care, prepare for visits, and make informed decisions.
+                AI conștient de context medical care ajută pacienții să înțeleagă îngrijirea dentară, să se pregătească pentru consultații și să ia decizii informate.
               </p>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3 text-[hsl(220,12%,90%)]">
                   <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5">
                     <div className="w-2 h-2 rounded-full bg-purple-400"></div>
                   </div>
-                  <span>Instant answers to dental questions</span>
+                  <span>Răspunsuri instantanee la întrebări despre sănătatea dentară</span>
                 </li>
                 <li className="flex items-start gap-3 text-[hsl(220,12%,90%)]">
                   <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5">
                     <div className="w-2 h-2 rounded-full bg-purple-400"></div>
                   </div>
-                  <span>Visit preparation guidance</span>
+                  <span>Ghidare pentru pregătirea consultațiilor</span>
                 </li>
                 <li className="flex items-start gap-3 text-[hsl(220,12%,90%)]">
                   <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5">
                     <div className="w-2 h-2 rounded-full bg-purple-400"></div>
                   </div>
-                  <span>Post-treatment care tips</span>
+                  <span>Sfaturi pentru îngrijirea post-tratament</span>
                 </li>
                 <li className="flex items-start gap-3 text-[hsl(220,12%,90%)]">
                   <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5">
                     <div className="w-2 h-2 rounded-full bg-purple-400"></div>
                   </div>
-                  <span>AI trained for healthcare context</span>
+                  <span>AI antrenat pentru context medical</span>
                 </li>
               </ul>
               <div className="pt-4">
@@ -597,7 +636,7 @@ export function HomePage() {
                   onClick={() => navigate('/ai')}
                   className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 font-semibold"
                 >
-                  Open Full AI Assistant
+                  Deschide Asistentul AI Complet
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </div>
@@ -611,136 +650,196 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Feature Section 2 - Split */}
+      {/* Feature Section 2 - Din conversație în claritate */}
       <section className="relative py-32 px-6 bg-[hsl(240,10%,6%)]/50">
         <div className="max-w-[75rem] mx-auto grid md:grid-cols-2 gap-16 items-center">
           <div>
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-500/30 mb-6 shadow-xl shadow-purple-500/20">
+              <FileText className="w-8 h-8 text-purple-400" />
+            </div>
             <h2 className="text-[clamp(2.15rem,5vw,3.15rem)] font-bold mb-6 text-[hsl(220,12%,98%)]">
-              Real-time Patient Monitoring
+              Din conversație în claritate
             </h2>
-            <p className="text-[clamp(1rem,2vw,1.125rem)] text-[hsl(220,12%,85%)] mb-8">
-              Track vitals, analyze trends, and receive instant alerts. 
-              All from a single, beautiful interface.
+            <p className="text-[clamp(1rem,2vw,1.125rem)] text-[hsl(220,12%,85%)] mb-8 leading-relaxed">
+              O consultație nu este doar o discuție — este o sursă de informație valoroasă. ZenLink ascultă, organizează și sintetizează tot ce contează. Dintr-o conversație liberă, apare un clarity sheet structurat, ușor de revizuit și de urmărit în timp.
             </p>
             <ul className="space-y-4 mb-8">
-              <li className="flex items-center gap-3 text-[hsl(220,12%,90%)]">
-                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+              <li className="flex items-start gap-3 text-[hsl(220,12%,90%)] group">
+                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-purple-500/30 transition-colors">
+                  <Sparkle className="w-3 h-3 text-purple-400" />
                 </div>
-                Live vital sign tracking
+                <span>AI-ul extrage simptomele și detaliile relevante din discuție</span>
               </li>
-              <li className="flex items-center gap-3 text-[hsl(220,12%,90%)]">
-                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+              <li className="flex items-start gap-3 text-[hsl(220,12%,90%)] group">
+                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-purple-500/30 transition-colors">
+                  <Layers className="w-3 h-3 text-purple-400" />
                 </div>
-                Predictive health analytics
+                <span>Consultațiile devin clarity sheets clare și ordonate</span>
               </li>
-              <li className="flex items-center gap-3 text-[hsl(220,12%,90%)]">
-                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+              <li className="flex items-start gap-3 text-[hsl(220,12%,90%)] group">
+                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-purple-500/30 transition-colors">
+                  <TrendingUp className="w-3 h-3 text-purple-400" />
                 </div>
-                Automated alert system
+                <span>Medicul vede rapid esențialul, fără să caute prin note haotice</span>
+              </li>
+              <li className="flex items-start gap-3 text-[hsl(220,12%,90%)] group">
+                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-purple-500/30 transition-colors">
+                  <MessageSquare className="w-3 h-3 text-purple-400" />
+                </div>
+                <span>Fiecare vizită devine parte dintr-o poveste medicală coerentă</span>
+              </li>
+              <li className="flex items-start gap-3 text-[hsl(220,12%,90%)] group">
+                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-purple-500/30 transition-colors">
+                  <FileText className="w-3 h-3 text-purple-400" />
+                </div>
+                <span>Evoluția pacientului poate fi urmărită în timp</span>
               </li>
             </ul>
-            <Button className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 font-semibold">
-              Explore Monitoring
-              <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
+            <div className="relative inline-block">
+              <p className="text-sm text-purple-300/80 italic font-medium mb-4">
+                „ZenLink transformă conversațiile dezordonate în claritate medicală."
+              </p>
+            </div>
           </div>
           
-          <div className="relative aspect-square rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-sm shadow-2xl shadow-purple-500/20">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Activity className="w-32 h-32 text-purple-400/40" />
+          <div className="relative aspect-square rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 via-indigo-500/20 to-purple-600/20 backdrop-blur-sm shadow-2xl shadow-purple-500/20 group hover:shadow-purple-500/30 transition-all duration-500">
+            {/* Animated background pattern */}
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute inset-0" style={{
+                backgroundImage: `radial-gradient(circle at 2px 2px, rgba(168, 85, 247, 0.3) 1px, transparent 0)`,
+                backgroundSize: '40px 40px'
+              }}></div>
             </div>
+            
+            {/* Floating document icons */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative">
+                <div className="absolute -top-8 -left-8 w-16 h-16 rounded-xl bg-white/5 border border-purple-500/30 backdrop-blur-sm flex items-center justify-center transform rotate-12 group-hover:rotate-6 transition-transform duration-500">
+                  <FileText className="w-8 h-8 text-purple-400/60" />
+                </div>
+                <div className="w-32 h-32 rounded-2xl bg-white/5 border border-purple-500/30 backdrop-blur-sm flex items-center justify-center shadow-xl">
+                  <FileText className="w-16 h-16 text-purple-400" />
+                </div>
+                <div className="absolute -bottom-8 -right-8 w-12 h-12 rounded-lg bg-white/5 border border-purple-500/30 backdrop-blur-sm flex items-center justify-center transform -rotate-12 group-hover:-rotate-6 transition-transform duration-500">
+                  <Sparkle className="w-6 h-6 text-purple-300/60" />
+                </div>
+              </div>
+            </div>
+            
+            {/* Glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           </div>
         </div>
       </section>
 
-      {/* Feature Section 3 - Split Reversed */}
+      {/* Feature Section 3 - Copilotul AI pentru sănătatea ta */}
       <section className="relative py-32 px-6">
         <div className="max-w-[75rem] mx-auto grid md:grid-cols-2 gap-16 items-center">
-          <div className="order-2 md:order-1 relative aspect-square rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-sm shadow-2xl shadow-purple-500/20">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Shield className="w-32 h-32 text-purple-400/40" />
+          <div className="order-2 md:order-1 relative aspect-square rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 backdrop-blur-sm shadow-2xl shadow-purple-500/20 group hover:shadow-purple-500/30 transition-all duration-500">
+            {/* Animated AI brain/network pattern */}
+            <div className="absolute inset-0 opacity-30">
+              <div className="absolute top-1/4 left-1/4 w-24 h-24 rounded-full bg-purple-400/20 blur-xl animate-pulse"></div>
+              <div className="absolute bottom-1/4 right-1/4 w-32 h-32 rounded-full bg-indigo-400/20 blur-xl animate-pulse" style={{ animationDelay: '1s' }}></div>
             </div>
+            
+            {/* Central AI icon with animated glow */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative">
+                <div className="absolute inset-0 bg-purple-400/20 rounded-full blur-2xl animate-pulse"></div>
+                <div className="relative w-32 h-32 rounded-2xl bg-white/5 border border-purple-500/30 backdrop-blur-sm flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-500">
+                  <Bot className="w-16 h-16 text-purple-400" />
+                </div>
+              </div>
+            </div>
+            
+            {/* Floating conversation bubbles */}
+            <div className="absolute top-8 right-8 w-16 h-16 rounded-xl bg-white/5 border border-purple-500/30 backdrop-blur-sm flex items-center justify-center transform rotate-12 group-hover:rotate-6 transition-transform duration-500">
+              <MessageSquare className="w-8 h-8 text-purple-300/60" />
+            </div>
+            <div className="absolute bottom-8 left-8 w-12 h-12 rounded-lg bg-white/5 border border-indigo-500/30 backdrop-blur-sm flex items-center justify-center transform -rotate-12 group-hover:-rotate-6 transition-transform duration-500">
+              <Sparkle className="w-6 h-6 text-indigo-300/60" />
+            </div>
+            
+            {/* Interactive glow on hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-purple-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           </div>
           
           <div className="order-1 md:order-2">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 mb-6 shadow-xl shadow-indigo-500/20">
+              <Bot className="w-8 h-8 text-indigo-400" />
+            </div>
             <h2 className="text-[clamp(2.15rem,5vw,3.15rem)] font-bold mb-6 text-[hsl(220,12%,98%)]">
-              Enterprise-Grade Security
+              Copilotul AI pentru sănătatea ta
             </h2>
-            <p className="text-[clamp(1rem,2vw,1.125rem)] text-[hsl(220,12%,85%)] mb-8">
-              HIPAA compliant, end-to-end encrypted, and built with 
-              privacy at its core. Your patients' data is always protected.
+            <p className="text-[clamp(1rem,2vw,1.125rem)] text-[hsl(220,12%,85%)] mb-8 leading-relaxed">
+              Înainte să ajungi în cabinet, ZenLink deja te ajută să-ți înțelegi simptomele. Modulele AI interactive pun întrebări relevante, construiesc un profil de sănătate și oferă context real pentru consultație.
             </p>
             <ul className="space-y-4 mb-8">
-              <li className="flex items-center gap-3 text-[hsl(220,12%,90%)]">
-                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+              <li className="flex items-start gap-3 text-[hsl(220,12%,90%)] group">
+                <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-indigo-500/30 transition-colors">
+                  <MessageSquare className="w-3 h-3 text-indigo-400" />
                 </div>
-                256-bit encryption
+                <span>Interviuri medicale interactive ghidate de AI</span>
               </li>
-              <li className="flex items-center gap-3 text-[hsl(220,12%,90%)]">
-                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+              <li className="flex items-start gap-3 text-[hsl(220,12%,90%)] group">
+                <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-indigo-500/30 transition-colors">
+                  <Sparkle className="w-3 h-3 text-indigo-400" />
                 </div>
-                HIPAA & GDPR compliant
+                <span>Întrebări bazate pe cercetare reală, nu formulare generice</span>
               </li>
-              <li className="flex items-center gap-3 text-[hsl(220,12%,90%)]">
-                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+              <li className="flex items-start gap-3 text-[hsl(220,12%,90%)] group">
+                <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-indigo-500/30 transition-colors">
+                  <Brain className="w-3 h-3 text-indigo-400" />
                 </div>
-                Regular security audits
+                <span>Profil psihologic și de stil de viață</span>
+              </li>
+              <li className="flex items-start gap-3 text-[hsl(220,12%,90%)] group">
+                <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-indigo-500/30 transition-colors">
+                  <TrendingUp className="w-3 h-3 text-indigo-400" />
+                </div>
+                <span>Explorarea inteligentă a simptomelor</span>
+              </li>
+              <li className="flex items-start gap-3 text-[hsl(220,12%,90%)] group">
+                <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-indigo-500/30 transition-colors">
+                  <FileText className="w-3 h-3 text-indigo-400" />
+                </div>
+                <span>Medicul primește deja contextul înainte de consultație</span>
               </li>
             </ul>
-            <Button className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 font-semibold">
-              Security Details
-              <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="relative py-32 px-6 bg-[hsl(240,10%,6%)]/50">
-        <div className="max-w-[75rem] mx-auto text-center">
-          <h2 className="text-[clamp(2.15rem,5vw,3.15rem)] font-bold mb-16 text-[hsl(220,12%,98%)]">
-            Trusted by healthcare leaders worldwide
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            <div>
-              <CounterAnimation end={10000} suffix="+" duration={2500} />
-              <p className="text-[hsl(220,12%,85%)] text-lg">Active Clinics</p>
-            </div>
-            <div>
-              <CounterAnimation end={2} suffix="M+" decimals={0} duration={2500} />
-              <p className="text-[hsl(220,12%,85%)] text-lg">Patients Served</p>
-            </div>
-            <div>
-              <CounterAnimation end={98.5} suffix="%" decimals={1} duration={2500} />
-              <p className="text-[hsl(220,12%,85%)] text-lg">Accuracy Rate</p>
+            <div className="relative inline-block">
+              <p className="text-sm text-indigo-300/80 italic font-medium mb-4">
+                „Ca o discuție cu un medic, dar înainte să ajungi la medic."
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
+{/* CTA Section */}
       <section className="relative py-32 px-6">
         <div className="max-w-[75rem] mx-auto text-center">
           <h2 className="text-[clamp(2.15rem,5vw,3.15rem)] font-bold mb-6 text-[hsl(220,12%,98%)]">
-            Ready to transform your practice?
+            Gata să transformi practica ta?
           </h2>
           <p className="text-[clamp(1rem,2vw,1.125rem)] text-[hsl(220,12%,85%)] mb-12">
-            Join thousands of healthcare providers using ZenLink every day.
+            Alătură-te miilor de furnizori de servicii medicale care folosesc ZenLink în fiecare zi.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white text-lg px-8 py-6 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 font-bold">
-              Start Your Free Trial
+            <Button 
+              size="lg" 
+              onClick={() => navigate('/about')}
+              className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white text-lg px-8 py-6 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 font-bold"
+            >
+              Începe Trial-ul Gratuit
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
-            <Button size="lg" variant="outline" className="border-white/20 hover:bg-white/10 text-white text-lg px-8 py-6">
-              Contact Sales
+            <Button 
+              size="lg" 
+              variant="outline" 
+              onClick={() => navigate('/about')}
+              className="border-white/20 hover:bg-white/10 text-white text-lg px-8 py-6"
+            >
+              Contactează Vânzările
             </Button>
           </div>
         </div>

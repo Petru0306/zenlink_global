@@ -53,17 +53,20 @@ public class AiController {
     private final AiConversationService aiConversationService;
     private final PatientFileRagIndexService ragIndexService;
     private final PatientFileRagQueryService ragQueryService;
+    private final com.zenlink.zenlink.repository.PatientFileRepository patientFileRepository;
 
     public AiController(
             OpenAiChatService openAiChatService,
             AiConversationService aiConversationService,
             @Autowired(required = false) PatientFileRagIndexService ragIndexService,
-            @Autowired(required = false) PatientFileRagQueryService ragQueryService
+            @Autowired(required = false) PatientFileRagQueryService ragQueryService,
+            com.zenlink.zenlink.repository.PatientFileRepository patientFileRepository
     ) {
         this.openAiChatService = openAiChatService;
         this.aiConversationService = aiConversationService;
         this.ragIndexService = ragIndexService;
         this.ragQueryService = ragQueryService;
+        this.patientFileRepository = patientFileRepository;
     }
 
     @GetMapping(value = "/conversations", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -320,10 +323,30 @@ public class AiController {
                 String scopeType = normScope(request.getScopeType());
                 String scopeId = normScopeId(request.getScopeId());
                 String ragContext = buildRagContextForScope(scopeType, scopeId, userText);
+                
+                // Check if FILE scope and if it's an image - prepare image data for Vision API
+                byte[] imageData = null;
+                String imageMimeType = null;
+                if ("FILE".equalsIgnoreCase(scopeType) && scopeId != null) {
+                    try {
+                        java.util.UUID fileId = java.util.UUID.fromString(scopeId);
+                        var fileOpt = patientFileRepository.findById(fileId);
+                        if (fileOpt.isPresent()) {
+                            var file = fileOpt.get();
+                            if (file.getContentType() != null && file.getContentType().startsWith("image/")) {
+                                imageData = file.getContent();
+                                imageMimeType = file.getContentType();
+                            }
+                        }
+                    } catch (Exception e) {
+                        // If file not found or not an image, continue without image
+                        log.debug("Could not load image for file scope: {}", e.getMessage());
+                    }
+                }
 
                 // Build context from DB (last N turns), then stream the assistant reply.
                 List<AiMessage> context = aiConversationService.getMessagesForContext(conversation.getId(), 20);
-                String assistant = openAiChatService.streamChat(context, ragContext, outputStream);
+                String assistant = openAiChatService.streamChat(context, ragContext, outputStream, imageData, imageMimeType, scopeType);
 
                 // Persist assistant answer after streaming completes (1 write, not per token).
                 aiConversationService.appendMessage(conversation, "assistant", assistant);
