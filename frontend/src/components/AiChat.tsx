@@ -87,7 +87,7 @@ export function AiChat({
     return () => {
       cancelled = true;
     };
-  }, [baseUrl, initialMessage, userId, userRole]);
+  }, [baseUrl, initialMessage, userId, userRole, scopeType, scopeId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,7 +118,7 @@ export function AiChat({
     return () => {
       cancelled = true;
     };
-  }, [baseUrl, conversationId, userId, userRole]);
+  }, [baseUrl, conversationId, userId, userRole, scopeType, scopeId]);
 
   async function createConversation() {
     if (!userId || !userRole) return;

@@ -4,6 +4,7 @@ import { ThemeProvider } from '@mui/material/styles'
 // @ts-ignore - JS file
 import CssBaseline from '@mui/material/CssBaseline'
 import { useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import { AuthProvider } from './context/AuthContext'
 import { AppointmentProvider } from './context/AppointmentContext'
 import Navbar from './components/Navbar'
@@ -15,8 +16,12 @@ import AboutPage from './pages/AboutPage'
 import DoctorProfilePage from './pages/DoctorProfilePage'
 import ClinicProfilePage from './pages/ClinicProfilePage'
 import AppointmentBookingPage from './pages/AppointmentBookingPage'
+<<<<<<< HEAD
 import ConsultationWorkspace from './pages/ConsultationWorkspace'
 import ClinicianClaritySheet from './pages/ClinicianClaritySheet'
+=======
+import ConsultationWorkspacePage from './pages/ConsultationWorkspacePage'
+>>>>>>> e352de85a6b61be8778fb46323d12a8bc1b07b62
 // @ts-ignore - JS file
 import Flowchart from './layouts/flowchart'
 // @ts-ignore - JS file
@@ -36,6 +41,40 @@ function App() {
     location.pathname === '/auth' ||
     location.pathname.startsWith('/onboarding')
 
+  // Disable browser scroll restoration
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual'
+    }
+  }, [])
+
+  // Scroll to top when route changes
+  useEffect(() => {
+    // Clear any hash from URL first
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+    
+    // Force scroll to top immediately
+    const scrollToTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+    }
+    
+    scrollToTop()
+    
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      scrollToTop()
+      // Also scroll after delays to handle any async layout updates
+      setTimeout(scrollToTop, 0)
+      setTimeout(scrollToTop, 50)
+      setTimeout(scrollToTop, 100)
+      setTimeout(scrollToTop, 200)
+    })
+  }, [location.pathname])
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -47,8 +86,12 @@ function App() {
             <Route path="/doctori" element={<DoctorsPage />} />
             <Route path="/doctor/:id" element={<DoctorProfilePage />} />
             <Route path="/doctor/:id/book" element={<AppointmentBookingPage />} />
+<<<<<<< HEAD
             <Route path="/consult/:appointmentId" element={<ConsultationWorkspace />} />
             <Route path="/consult/:appointmentId/clinician-sheet" element={<ClinicianClaritySheet />} />
+=======
+            <Route path="/consult/:appointmentId" element={<ConsultationWorkspacePage />} />
+>>>>>>> e352de85a6b61be8778fb46323d12a8bc1b07b62
             <Route path="/clinici" element={<ClinicsPage />} />
             <Route path="/ai" element={<AiPage />} />
             <Route path="/about" element={<AboutPage />} />

@@ -41,7 +41,12 @@ export default function AiPage() {
 
   // Initial message from Home page: create conversation, add message, trigger AI (o singură dată)
   useEffect(() => {
-    const state = location.state as { initialMessage?: string } | null;
+    const state = location.state as { 
+      initialMessage?: string;
+      previewQuestion?: string;
+      previewAnswer?: string;
+    } | null;
+    
     const initialMessage = state?.initialMessage?.trim();
     if (!initialMessage || initialMessageHandledRef.current) return;
     initialMessageHandledRef.current = true;
@@ -50,7 +55,15 @@ export default function AiPage() {
     navigate(location.pathname, { replace: true, state: {} });
 
     const newConv = createConversation();
-    const withUser = addMessage(newConv, 'user', initialMessage);
+    
+    // If coming from preview widget, format message nicely with context for next question
+    let formattedMessage = initialMessage;
+    if (state?.previewQuestion && state?.previewAnswer) {
+      // Format for display: show question and answer clearly
+      formattedMessage = `**Întrebare:** ${state.previewQuestion}\n\n**Răspuns:** ${state.previewAnswer}\n\n---\n\n*Te rog să generezi următoarea întrebare relevantă pentru a continua interviul medical, bazându-te pe răspunsul meu.*`;
+    }
+    
+    const withUser = addMessage(newConv, 'user', formattedMessage);
     setConversations((prev) => appendConversation(prev, withUser));
     setActiveId(withUser.id);
     setIsTyping(true);
@@ -58,7 +71,7 @@ export default function AiPage() {
     // Determine triage state for initial message
     const nextTriageState = determineNextTriageState(
       withUser.triage,
-      initialMessage,
+      formattedMessage,
       withUser.messages.length
     );
     const updatedTriage = updateTriageContext(withUser.triage, nextTriageState);
@@ -80,7 +93,7 @@ export default function AiPage() {
         const updated = updateLastAssistantMessage(convToUpdate, accumulatedText);
         return prev.map((c) => (c.id === updated.id ? updated : c));
       });
-    }, nextTriageState)
+    }, nextTriageState, systemContext)
       .then((fullReply) => {
         const isConclusion = isConclusionMessage(fullReply) || nextTriageState === 'conclusion';
         const finalTriage = isConclusion 

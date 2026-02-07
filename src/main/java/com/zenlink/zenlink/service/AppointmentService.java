@@ -3,10 +3,16 @@ package com.zenlink.zenlink.service;
 import com.zenlink.zenlink.dto.AppointmentResponse;
 import com.zenlink.zenlink.dto.ConsultationContextResponse;
 import com.zenlink.zenlink.dto.ConsultationDraftDto;
+import com.zenlink.zenlink.dto.ConsultationMessageResponse;
+import com.zenlink.zenlink.dto.ConsultationSegmentDto;
 import com.zenlink.zenlink.dto.CreateAppointmentRequest;
 import com.zenlink.zenlink.model.Appointment;
+import com.zenlink.zenlink.model.ConsultationMessage;
+import com.zenlink.zenlink.model.ConsultationSegment;
 import com.zenlink.zenlink.model.User;
 import com.zenlink.zenlink.repository.AppointmentRepository;
+import com.zenlink.zenlink.repository.ConsultationMessageRepository;
+import com.zenlink.zenlink.repository.ConsultationSegmentRepository;
 import com.zenlink.zenlink.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,6 +32,12 @@ public class AppointmentService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ConsultationMessageRepository consultationMessageRepository;
+
+    @Autowired
+    private ConsultationSegmentRepository consultationSegmentRepository;
 
     private final Map<Long, ConsultationDraftDto> consultationDrafts = new ConcurrentHashMap<>();
 
@@ -130,12 +142,39 @@ public class AppointmentService {
 
         ConsultationDraftDto existingDraft = consultationDrafts.get(appointmentId);
 
+        // Load saved messages
+        List<ConsultationMessage> savedMessages = consultationMessageRepository.findByConsultationIdOrderByCreatedAtAsc(appointmentId);
+        List<ConsultationMessageResponse> messages = savedMessages.stream()
+            .map(msg -> new ConsultationMessageResponse(
+                msg.getId(),
+                msg.getRole(),
+                msg.getContent(),
+                msg.getOutputType(),
+                msg.getCreatedAt()
+            ))
+            .collect(Collectors.toList());
+
+        // Load saved segments
+        List<ConsultationSegment> savedSegments = consultationSegmentRepository.findByConsultationIdOrderByStartTsAsc(appointmentId);
+        List<ConsultationSegmentDto> segments = savedSegments.stream()
+            .map(seg -> new ConsultationSegmentDto(
+                seg.getId(),
+                seg.getText(),
+                seg.getStartTs(),
+                seg.getEndTs(),
+                seg.getSpeaker(),
+                seg.getCreatedAt()
+            ))
+            .collect(Collectors.toList());
+
         return new ConsultationContextResponse(
                 appointmentId,
                 patientSummary,
                 internalKey,
                 Collections.emptyList(),
-                existingDraft
+                existingDraft,
+                messages,
+                segments
         );
     }
 

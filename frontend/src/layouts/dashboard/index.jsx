@@ -1276,7 +1276,7 @@ export default function Dashboard() {
                       className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.05] hover:border-purple-500/30 flex flex-col gap-4 animate-fade-in-up"
                       style={{ animationDelay: `${0.1 * idx}s` }}
                     >
-                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl pointer-events-none" />
                       <div className="relative z-10 flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
@@ -1288,6 +1288,14 @@ export default function Dashboard() {
                                 <Input
                                   value={renamingValue}
                                   onChange={(e) => setRenamingValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      handleRename(file.id);
+                                    } else if (e.key === 'Escape') {
+                                      setRenamingId(null);
+                                      setRenamingValue('');
+                                    }
+                                  }}
                                   className="bg-white/5 border-white/10 text-white h-9 focus:border-purple-500/50"
                                   autoFocus
                                 />
@@ -1296,6 +1304,15 @@ export default function Dashboard() {
                                   className="px-3 py-1.5 text-xs rounded-lg bg-gradient-to-r from-purple-500/20 to-purple-600/20 border border-purple-500/30 text-purple-200 hover:from-purple-500/30 hover:to-purple-600/30 transition-all"
                                 >
                                   OK
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setRenamingId(null);
+                                    setRenamingValue('');
+                                  }}
+                                  className="px-3 py-1.5 text-xs rounded-lg bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 transition-all"
+                                >
+                                  Anulează
                                 </button>
                               </div>
                             ) : (
@@ -1330,7 +1347,7 @@ export default function Dashboard() {
 
                       <div
                         className="rounded-2xl overflow-hidden bg-white/5 border border-white/10 h-48 flex items-center justify-center cursor-pointer hover:border-purple-500/30 transition-all duration-300"
-                        onClick={() => setPreviewFile(file)}
+                        onClick={() => openPreview(file)}
                       >
                         {isImage ? (
                           file.dataUrl ? (
@@ -1354,17 +1371,21 @@ export default function Dashboard() {
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center justify-between gap-2 relative z-20">
                         <div className="flex items-center gap-2">
                           <button
-                            className="px-3 py-2 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 hover:border-purple-500/30 flex items-center gap-1 text-purple-200 text-xs font-medium transition-all duration-300"
-                            onClick={() => setPreviewFile(file)}
+                            className="px-3 py-2 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 hover:border-purple-500/30 flex items-center gap-1 text-purple-200 text-xs font-medium transition-all duration-300 relative z-20"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openPreview(file);
+                            }}
                           >
                             <Eye className="w-4 h-4" /> Vizualizează
                           </button>
                           <button
-                            className="px-3 py-2 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 hover:border-purple-500/30 flex items-center gap-1 text-purple-200 text-xs font-medium transition-all duration-300"
-                            onClick={() => {
+                            className="px-3 py-2 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 hover:border-purple-500/30 flex items-center gap-1 text-purple-200 text-xs font-medium transition-all duration-300 relative z-20"
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setRenamingId(file.id);
                               setRenamingValue(file.name);
                             }}
@@ -1373,8 +1394,11 @@ export default function Dashboard() {
                           </button>
                         </div>
                         <button
-                          className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 transition-all duration-300 hover:scale-110"
-                          onClick={() => handleDeleteFile(file.id)}
+                          className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 transition-all duration-300 hover:scale-110 relative z-20"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteFile(file.id);
+                          }}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1386,44 +1410,89 @@ export default function Dashboard() {
             )}
 
             {previewFile && (
-              <div className="fixed inset-0 bg-black/70 backdrop-blur-xl z-[80] flex items-center justify-center p-6">
-                <div className="relative backdrop-blur-xl bg-gradient-to-br from-black/90 via-black/80 to-black/90 border border-white/20 rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl shadow-purple-500/20">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-purple-600/10 to-purple-500/10 opacity-50 blur-2xl" />
-                  <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/10">
+              <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[80] flex items-center justify-center p-2">
+                <div className="relative backdrop-blur-xl bg-gradient-to-br from-[#0a0a14] via-[#0a0a14] to-[#0a0a14] border border-white/20 rounded-2xl w-full h-full max-w-[98vw] max-h-[98vh] overflow-hidden flex flex-col shadow-2xl shadow-purple-500/20">
+                  {/* Header */}
+                  <div className="relative z-10 flex items-center justify-between px-6 py-3 border-b border-white/10 bg-[#0a0a14]">
                     <div>
                       <p className="text-white text-lg font-bold">{previewFile.name}</p>
                       <p className="text-purple-200/70 text-xs font-medium">{formatSize(previewFile.size)}</p>
                     </div>
-                    <button
-                      className="px-4 py-2 rounded-xl bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/30 text-white/80 hover:text-white transition-all duration-300 font-medium"
-                      onClick={() => {
-                        setPreviewAiOpen(false);
-                        setPreviewFile(null);
-                      }}
-                    >
-                      Închide
-                    </button>
+                    <div className="flex items-center gap-3">
+                      {!previewAiOpen && (
+                        <button
+                          type="button"
+                          aria-label="AI"
+                          className="px-4 py-2 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-400/50 hover:border-purple-300/70 text-white flex items-center gap-2 shadow-lg shadow-purple-500/30 hover:scale-105 transition-all duration-300"
+                          onClick={() => setPreviewAiOpen(true)}
+                        >
+                          <Brain className="w-5 h-5" />
+                          <span className="text-sm font-medium">AI Analiză</span>
+                        </button>
+                      )}
+                      <button
+                        className="px-4 py-2 rounded-xl bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/30 text-white/80 hover:text-white transition-all duration-300 font-medium text-sm"
+                        onClick={() => {
+                          setPreviewAiOpen(false);
+                          setPreviewFile(null);
+                        }}
+                      >
+                        Închide
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex-1 bg-black/30 flex items-center justify-center overflow-auto relative">
-                    <button
-                      type="button"
-                      aria-label="AI"
-                      className="absolute bottom-6 left-6 z-10 w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border-2 border-purple-400/50 hover:border-purple-300/70 text-white flex items-center justify-center shadow-2xl shadow-purple-500/50 hover:scale-110 transition-all duration-300"
-                      onClick={() => setPreviewAiOpen(true)}
+                  
+                  {/* Content Area - Split Layout */}
+                  <div className="flex-1 flex overflow-hidden relative bg-[#0a0a14]">
+                    {/* Image Preview Area */}
+                    <div 
+                      className={`flex-1 flex items-center justify-center overflow-auto p-4 transition-all duration-300 ${
+                        previewAiOpen ? 'pr-0' : ''
+                      }`}
                     >
-                      <Brain className="w-6 h-6" />
-                    </button>
+                      {previewFile.type?.startsWith('image/') ? (
+                        previewFile.dataUrl ? (
+                          <img 
+                            src={previewFile.dataUrl} 
+                            alt={previewFile.name} 
+                            className="max-w-full max-h-full object-contain"
+                            style={{ 
+                              maxWidth: previewAiOpen ? 'calc(100% - 520px)' : '100%',
+                              maxHeight: 'calc(98vh - 80px)',
+                              width: 'auto',
+                              height: 'auto'
+                            }}
+                          />
+                        ) : (
+                          <div className="text-white/60 p-6 text-lg">Se încarcă...</div>
+                        )
+                      ) : previewFile.type?.includes('pdf') ? (
+                        previewFile.dataUrl ? (
+                          <iframe 
+                            src={previewFile.dataUrl} 
+                            title={previewFile.name} 
+                            className="w-full h-full"
+                            style={{ height: 'calc(98vh - 80px)' }}
+                          />
+                        ) : (
+                          <div className="text-white/60 p-6 text-lg">Se încarcă...</div>
+                        )
+                      ) : (
+                        <div className="text-white/60 p-6 text-lg">Previzualizare indisponibilă pentru acest tip de fișier.</div>
+                      )}
+                    </div>
+
+                    {/* AI Sidebar */}
                     {previewAiOpen && (
-                      <div className="absolute inset-y-0 right-0 w-[360px] max-w-[90vw] backdrop-blur-xl bg-gradient-to-br from-black/90 via-black/80 to-black/90 border-l border-purple-500/30 z-20 flex flex-col shadow-2xl shadow-purple-500/20">
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-purple-600/10 to-purple-500/10 opacity-50 blur-2xl" />
-                        <div className="relative z-10 flex items-center justify-between px-4 py-3 border-b border-white/10">
+                      <div className="w-[500px] border-l border-purple-500/30 bg-[#0a0a14] flex flex-col shadow-2xl shadow-purple-500/20 flex-shrink-0">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-[#0a0a14]">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center">
                               <Brain className="w-5 h-5 text-purple-200" />
                             </div>
                             <div>
-                              <p className="text-white font-bold leading-tight">AI</p>
-                              <p className="text-purple-200/70 text-xs leading-tight font-medium">Pentru fișierul curent</p>
+                              <p className="text-white font-bold text-base">AI Analiză</p>
+                              <p className="text-purple-200/70 text-xs font-medium">Pentru fișierul curent</p>
                             </div>
                           </div>
                           <button
@@ -1435,33 +1504,35 @@ export default function Dashboard() {
                           </button>
                         </div>
 
-                        <div className="flex-1 overflow-auto p-3">
-                          <AiChat
-                            userId={String(user?.id || '')}
-                            userRole={user?.role || 'PATIENT'}
-                            scopeType="FILE"
-                            scopeId={String(previewFile?.id || '')}
-                            layout="stacked"
-                            title="Chat document"
-                            subtitle="Întrebări doar despre acest fișier (cu citări)."
-                          />
+                        <div className="flex-1 overflow-auto p-4">
+                          <style>{`
+                            .ai-chat-container * {
+                              font-size: 15px !important;
+                            }
+                            .ai-chat-container p, .ai-chat-container div, .ai-chat-container span {
+                              font-size: 15px !important;
+                              line-height: 1.7 !important;
+                            }
+                            .ai-chat-container input, .ai-chat-container textarea {
+                              font-size: 15px !important;
+                            }
+                            .ai-chat-container h1, .ai-chat-container h2, .ai-chat-container h3 {
+                              font-size: 18px !important;
+                            }
+                          `}</style>
+                          <div className="ai-chat-container">
+                            <AiChat
+                              userId={String(user?.id || '')}
+                              userRole={user?.role || 'PATIENT'}
+                              scopeType="FILE"
+                              scopeId={String(previewFile?.id || '')}
+                              layout="stacked"
+                              title="Analiză AI"
+                              subtitle="Întreabă despre acest fișier medical."
+                            />
+                          </div>
                         </div>
                       </div>
-                    )}
-                    {previewFile.type?.startsWith('image/') ? (
-                      previewFile.dataUrl ? (
-                        <img src={previewFile.dataUrl} alt={previewFile.name} className="max-h-[80vh] object-contain" />
-                      ) : (
-                        <div className="text-white/60 p-6">Se încarcă...</div>
-                      )
-                    ) : previewFile.type?.includes('pdf') ? (
-                      previewFile.dataUrl ? (
-                        <iframe src={previewFile.dataUrl} title={previewFile.name} className="w-full h-[80vh]" />
-                      ) : (
-                        <div className="text-white/60 p-6">Se încarcă...</div>
-                      )
-                    ) : (
-                      <div className="text-white/60 p-6">Previzualizare indisponibilă pentru acest tip de fișier.</div>
                     )}
                   </div>
                 </div>

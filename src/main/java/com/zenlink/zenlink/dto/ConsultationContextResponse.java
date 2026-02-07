@@ -15,6 +15,8 @@ public class ConsultationContextResponse {
     private String internalPatientKey;
     private List<TimelineItem> timeline;
     private ConsultationDraftDto existingDraft;
+    private List<ConsultationMessageResponse> messages;
+    private List<ConsultationSegmentDto> segments;
 
     @Data
     @NoArgsConstructor
