@@ -217,8 +217,10 @@ public class AppointmentController {
             ConsultationSegmentResponse response = consultationService.saveSegment(appointmentId, request);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            ConsultationSegmentResponse errorResponse = new ConsultationSegmentResponse();
+            errorResponse.setSegmentId(null);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ConsultationSegmentResponse(null));
+                    .body(errorResponse);
         }
     }
 

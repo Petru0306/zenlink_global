@@ -91,14 +91,6 @@ public class OpenAiChatService {
     public String streamChat(
             List<com.zenlink.zenlink.dto.AiMessage> userMessages,
             String extraSystemContext,
-            OutputStream outputStream
-    ) throws Exception {
-        return streamChat(userMessages, extraSystemContext, null, outputStream, null, null, null);
-    }
-
-    public String streamChat(
-            List<com.zenlink.zenlink.dto.AiMessage> userMessages,
-            String extraSystemContext,
             String triageState,
             OutputStream outputStream
     ) throws Exception {

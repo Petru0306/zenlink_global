@@ -58,8 +58,17 @@ export default function Composer({
   }
 
   return (
-    <div className="shrink-0 border-t border-white/10 bg-[#0a0a14]">
-      <div className="max-w-4xl mx-auto px-6 py-4 min-h-[100px]">
+    <div 
+      className="shrink-0 border-t border-white/10 bg-[#0a0a14] relative z-20 w-full" 
+      style={{ 
+        flexShrink: 0,
+        display: 'block',
+        visibility: 'visible',
+        opacity: 1,
+        position: 'relative'
+      }}
+    >
+      <div className="max-w-4xl mx-auto px-6 py-4 min-h-[100px] w-full">
         <div className="flex items-end gap-3">
           {/* Mic button */}
           <button

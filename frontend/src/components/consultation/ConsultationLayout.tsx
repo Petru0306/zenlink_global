@@ -18,7 +18,7 @@ export default function ConsultationLayout({
   conversation,
   composer,
 }: ConsultationLayoutProps) {
-  const [navbarHeight, setNavbarHeight] = useState(96) // Default fallback
+  const [navbarHeight, setNavbarHeight] = useState(0) // Start with 0, will be measured
 
   // Measure navbar height dynamically
   useEffect(() => {
@@ -36,12 +36,16 @@ export default function ConsultationLayout({
     measureNavbar()
     window.addEventListener('resize', measureNavbar)
     
-    // Also measure after a short delay to ensure navbar is rendered
-    const timeout = setTimeout(measureNavbar, 100)
+    // Also measure after delays to ensure navbar is rendered
+    const timeout1 = setTimeout(measureNavbar, 100)
+    const timeout2 = setTimeout(measureNavbar, 300)
+    const timeout3 = setTimeout(measureNavbar, 500)
 
     return () => {
       window.removeEventListener('resize', measureNavbar)
-      clearTimeout(timeout)
+      clearTimeout(timeout1)
+      clearTimeout(timeout2)
+      clearTimeout(timeout3)
     }
   }, [])
 
@@ -67,32 +71,45 @@ export default function ConsultationLayout({
 
   return (
     <div 
-      className="bg-[#0a0a14] text-white flex flex-col overflow-hidden" 
+      className="bg-[#0a0a14] text-white flex flex-col h-full" 
       style={{ 
         height: `calc(100vh - ${navbarHeight}px)`, 
-        marginTop: `${navbarHeight}px` 
+        marginTop: `${navbarHeight}px`,
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column'
       }}
     >
       {/* Top bar - Fixed height */}
-      <div className="shrink-0 border-b border-white/10 px-6 py-4 flex items-center justify-between bg-[#0a0a14]">
+      <div className="shrink-0 border-b border-white/10 px-6 py-4 flex items-center justify-between bg-[#0a0a14]" style={{ flexShrink: 0 }}>
         {topBar}
       </div>
 
       {/* Main content - Flex-1 with overflow-hidden, inner panels scroll */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
+      <div className="flex-1 flex overflow-hidden" style={{ minHeight: 0, flex: '1 1 auto', overflow: 'hidden' }}>
         {/* Left sidebar - Scrollable internally */}
         <div className="shrink-0 w-80 border-r border-white/10 overflow-y-auto">
           {sidebar}
         </div>
 
         {/* Center - Conversation area - Scrollable internally */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden" style={{ minHeight: 0, flex: '1 1 auto' }}>
           {conversation}
         </div>
       </div>
 
-      {/* Bottom composer - Fixed height, sticky */}
-      <div className="shrink-0">
+      {/* Bottom composer - Fixed height, sticky, always visible */}
+      <div 
+        className="shrink-0 relative z-20 bg-[#0a0a14]" 
+        style={{ 
+          flexShrink: 0, 
+          flex: '0 0 auto',
+          display: 'block',
+          visibility: 'visible',
+          opacity: 1,
+          minHeight: '100px'
+        }}
+      >
         {composer}
       </div>
     </div>

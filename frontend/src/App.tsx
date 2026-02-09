@@ -35,6 +35,7 @@ function App() {
     location.pathname.startsWith('/authentication') ||
     location.pathname === '/auth' ||
     location.pathname.startsWith('/onboarding')
+  const isConsultationPage = location.pathname.startsWith('/consult')
 
   // Disable browser scroll restoration
   useEffect(() => {

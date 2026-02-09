@@ -9,6 +9,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
   const onDashboard = location.pathname.startsWith('/dashboard');
+  const onConsultation = location.pathname.startsWith('/consult');
   const [isScrolled, setIsScrolled] = useState(false);
   const navbarRef = useRef<HTMLElement>(null);
   const [navbarHeight, setNavbarHeight] = useState(0);
@@ -67,12 +68,12 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Full navbar - background bar disappears when scrolled */}
+      {/* Full navbar - background bar disappears when scrolled or on consultation page */}
       <nav 
         ref={navbarRef}
         className={`sticky top-0 z-50 transition-all duration-300 ${
-          isScrolled 
-            ? 'backdrop-blur-none bg-transparent border-b-0 shadow-none pointer-events-none' 
+          isScrolled || onConsultation
+            ? 'backdrop-blur-none bg-transparent border-b-0 shadow-none' 
             : 'backdrop-blur-xl bg-black/40 border-b border-white/10 shadow-2xl'
         }`}
       >
@@ -177,10 +178,12 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Navigation - background bar disappears when scrolled */}
+      {/* Mobile Navigation - background bar disappears when scrolled or on consultation page */}
       <div className={`md:hidden transition-all duration-300 ${
-        isScrolled 
+        isScrolled
           ? 'opacity-0 pointer-events-none border-t-0 backdrop-blur-none bg-transparent' 
+          : onConsultation
+          ? 'border-t-0 backdrop-blur-none bg-transparent'
           : 'opacity-100 border-t border-white/10 backdrop-blur-xl bg-black/40'
       }`}>
         <div className="px-6 py-4 flex flex-wrap gap-3">
@@ -203,7 +206,7 @@ export default function Navbar() {
       {/* Mobile Navigation - centered pill when scrolled */}
       <nav 
         className={`md:hidden sticky top-0 z-50 flex justify-center pt-4 transition-all duration-300 ${
-          isScrolled 
+          isScrolled && !onConsultation
             ? 'opacity-100 delay-300' 
             : 'opacity-0 pointer-events-none delay-0'
         }`}
