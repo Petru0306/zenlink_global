@@ -1,6 +1,6 @@
 import { useState, type FormEvent, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { User, Mail, Lock, AlertCircle, Loader2, CheckCircle, Phone } from 'lucide-react';
+import { User, Mail, Lock, AlertCircle, Loader2, CheckCircle, Phone, Stethoscope, Building2, Heart } from 'lucide-react';
 import { useAuth, type UserRole } from '../../context/AuthContext';
 import zenlinkLogo from '../../images/zenlink-logo.png';
 
@@ -18,6 +18,8 @@ export default function AuthPage() {
   const [signUpPassword, setSignUpPassword] = useState('');
   const [signUpConfirmPassword, setSignUpConfirmPassword] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [accountType, setAccountType] = useState<UserRole>('PATIENT');
+  const [referralCode, setReferralCode] = useState('');
 
   // Sign In form state
   const [signInEmail, setSignInEmail] = useState('');
@@ -28,7 +30,7 @@ export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState('');
 
-  const { login, signup, refreshPsychProfile } = useAuth();
+  const { login, signup, refreshPsychProfile, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as any)?.from?.pathname || '/dashboard';
@@ -37,6 +39,14 @@ export default function AuthPage() {
   useEffect(() => {
     setError('');
     setSuccess('');
+  }, [isSignUp]);
+
+  // Reset account type when switching to sign up
+  useEffect(() => {
+    if (isSignUp) {
+      setAccountType('PATIENT');
+      setReferralCode('');
+    }
   }, [isSignUp]);
 
   const toggleAuthMode = () => {
@@ -94,12 +104,33 @@ export default function AuthPage() {
       return;
     }
 
+    // Validate referral code for DOCTOR and CLINIC
+    if ((accountType === 'DOCTOR' || accountType === 'CLINIC') && !referralCode.trim()) {
+      setError('Referral code is required for Doctor and Clinic accounts');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await signup(signUpFirstName, signUpLastName, signUpEmail, signUpPassword, signUpPhone || undefined, 'PATIENT' as UserRole);
+      await signup(
+        signUpFirstName, 
+        signUpLastName, 
+        signUpEmail, 
+        signUpPassword, 
+        signUpPhone || undefined, 
+        accountType,
+        accountType === 'DOCTOR' || accountType === 'CLINIC' ? referralCode : undefined
+      );
       setSuccess('Account created successfully! Redirecting...');
-      await refreshPsychProfile();
-      setTimeout(() => navigate('/onboarding/psych-profile'), 1500);
+      
+      // Only redirect to psych profile for PATIENT accounts
+      if (accountType === 'PATIENT') {
+        await refreshPsychProfile();
+        setTimeout(() => navigate('/onboarding/psych-profile'), 1500);
+      } else {
+        // For DOCTOR and CLINIC, go directly to dashboard
+        setTimeout(() => navigate('/dashboard'), 1500);
+      }
     } catch (err: any) {
       setError(err?.message || 'Signup failed. Please try again.');
     } finally {
@@ -124,11 +155,18 @@ export default function AuthPage() {
 
     setIsLoading(true);
     try {
-      await login(signInEmail, signInPassword);
+      const loggedInUser = await login(signInEmail, signInPassword);
       setSuccess('Login successful! Redirecting...');
-      const profile = await refreshPsychProfile();
-      const nextPath = profile?.completed ? from : '/onboarding/psych-profile';
-      setTimeout(() => navigate(nextPath, { replace: true }), 1000);
+      
+      // Only check psych profile for PATIENT accounts
+      if (loggedInUser?.role === 'PATIENT') {
+        const profile = await refreshPsychProfile();
+        const nextPath = profile?.completed ? from : '/onboarding/psych-profile';
+        setTimeout(() => navigate(nextPath, { replace: true }), 1000);
+      } else {
+        // For DOCTOR and CLINIC, go directly to dashboard
+        setTimeout(() => navigate(from, { replace: true }), 1000);
+      }
     } catch (err: any) {
       setError(err?.message || 'Login failed. Please check your credentials.');
     } finally {
@@ -167,7 +205,7 @@ export default function AuthPage() {
 
       {/* Main Card Container - wider for Sign Up */}
       <div 
-        className="relative w-full h-[580px]"
+        className="relative w-full h-[680px]"
         style={{
           maxWidth: isSignUp ? '1150px' : '1050px',
           transition: 'max-width 800ms cubic-bezier(0.4, 0.0, 0.2, 1)',
@@ -231,6 +269,68 @@ export default function AuthPage() {
                   </h1>
 
                   <form onSubmit={handleSignUp} className="space-y-3">
+                    {/* Account Type Selection */}
+                    <div className="mb-1.5">
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setAccountType('PATIENT')}
+                          className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 flex-1 rounded-lg border transition-all duration-200 ${
+                            accountType === 'PATIENT'
+                              ? 'border-purple-400 bg-purple-500/20 shadow-sm shadow-purple-500/20'
+                              : 'border-purple-300/20 bg-white/5 hover:border-purple-300/40 hover:bg-white/10'
+                          }`}
+                        >
+                          <Heart className={`w-3.5 h-3.5 ${accountType === 'PATIENT' ? 'text-purple-300' : 'text-purple-300/60'}`} />
+                          <span className={`text-[11px] font-medium ${accountType === 'PATIENT' ? 'text-purple-200' : 'text-purple-200/70'}`}>
+                            Pacient
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAccountType('DOCTOR')}
+                          className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 flex-1 rounded-lg border transition-all duration-200 ${
+                            accountType === 'DOCTOR'
+                              ? 'border-purple-400 bg-purple-500/20 shadow-sm shadow-purple-500/20'
+                              : 'border-purple-300/20 bg-white/5 hover:border-purple-300/40 hover:bg-white/10'
+                          }`}
+                        >
+                          <Stethoscope className={`w-3.5 h-3.5 ${accountType === 'DOCTOR' ? 'text-purple-300' : 'text-purple-300/60'}`} />
+                          <span className={`text-[11px] font-medium ${accountType === 'DOCTOR' ? 'text-purple-200' : 'text-purple-200/70'}`}>
+                            Doctor
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAccountType('CLINIC')}
+                          className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 flex-1 rounded-lg border transition-all duration-200 ${
+                            accountType === 'CLINIC'
+                              ? 'border-purple-400 bg-purple-500/20 shadow-sm shadow-purple-500/20'
+                              : 'border-purple-300/20 bg-white/5 hover:border-purple-300/40 hover:bg-white/10'
+                          }`}
+                        >
+                          <Building2 className={`w-3.5 h-3.5 ${accountType === 'CLINIC' ? 'text-purple-300' : 'text-purple-300/60'}`} />
+                          <span className={`text-[11px] font-medium ${accountType === 'CLINIC' ? 'text-purple-200' : 'text-purple-200/70'}`}>
+                            Clinică
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Referral Code (for Doctor and Clinic) */}
+                    {(accountType === 'DOCTOR' || accountType === 'CLINIC') && (
+                      <div className="relative group">
+                        <input
+                          type="text"
+                          value={referralCode}
+                          onChange={(e) => setReferralCode(e.target.value)}
+                          placeholder="Referral Code (required)"
+                          className="auth-input"
+                        />
+                        <Lock className="auth-input-icon-right" />
+                      </div>
+                    )}
+
                     {/* Name Row */}
                     <div className="flex gap-3">
                       <div className="flex-1 relative group">

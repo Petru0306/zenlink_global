@@ -23,13 +23,32 @@ export default function ConsultationLayout({
   // Measure navbar height dynamically
   useEffect(() => {
     const measureNavbar = () => {
-      const navbar = document.querySelector('nav[class*="sticky"]') as HTMLElement
+      // Try multiple selectors to find navbar
+      let navbar: HTMLElement | null = null
+      navbar = document.querySelector('nav[class*="sticky"]') as HTMLElement
+      if (!navbar) {
+        navbar = document.querySelector('nav[class*="z-50"]') as HTMLElement
+      }
+      if (!navbar) {
+        navbar = document.querySelector('nav') as HTMLElement
+      }
+      
       if (navbar) {
-        const height = navbar.offsetHeight
+        const height = navbar.offsetHeight || navbar.getBoundingClientRect().height
         // Also check for mobile nav
         const mobileNav = document.querySelector('div[class*="md:hidden"]') as HTMLElement
-        const mobileHeight = mobileNav && window.innerWidth < 768 ? mobileNav.offsetHeight : 0
-        setNavbarHeight(height + mobileHeight)
+        const mobileHeight = mobileNav && window.innerWidth < 768 ? (mobileNav.offsetHeight || mobileNav.getBoundingClientRect().height) : 0
+        const totalHeight = height + mobileHeight
+        // Only update if height is valid and greater than 0
+        if (totalHeight > 0) {
+          setNavbarHeight(totalHeight)
+        } else {
+          // Fallback: use a default height if navbar not found
+          setNavbarHeight(80)
+        }
+      } else {
+        // Fallback: use a default height if navbar not found
+        setNavbarHeight(80)
       }
     }
 
@@ -40,12 +59,14 @@ export default function ConsultationLayout({
     const timeout1 = setTimeout(measureNavbar, 100)
     const timeout2 = setTimeout(measureNavbar, 300)
     const timeout3 = setTimeout(measureNavbar, 500)
+    const timeout4 = setTimeout(measureNavbar, 1000)
 
     return () => {
       window.removeEventListener('resize', measureNavbar)
       clearTimeout(timeout1)
       clearTimeout(timeout2)
       clearTimeout(timeout3)
+      clearTimeout(timeout4)
     }
   }, [])
 
@@ -71,22 +92,23 @@ export default function ConsultationLayout({
 
   return (
     <div 
-      className="bg-[#0a0a14] text-white flex flex-col h-full" 
+      className="bg-[#0a0a14] text-white flex flex-col fixed inset-0" 
       style={{ 
-        height: `calc(100vh - ${navbarHeight}px)`, 
-        marginTop: `${navbarHeight}px`,
-        position: 'relative',
+        top: `${navbarHeight}px`,
+        height: `calc(100vh - ${navbarHeight}px)`,
+        position: 'fixed',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        overflow: 'hidden'
       }}
     >
       {/* Top bar - Fixed height */}
-      <div className="shrink-0 border-b border-white/10 px-6 py-4 flex items-center justify-between bg-[#0a0a14]" style={{ flexShrink: 0 }}>
+      <div className="shrink-0 border-b border-white/10 px-6 py-4 flex items-center justify-between bg-[#0a0a14] z-10" style={{ flexShrink: 0 }}>
         {topBar}
       </div>
 
       {/* Main content - Flex-1 with overflow-hidden, inner panels scroll */}
-      <div className="flex-1 flex overflow-hidden" style={{ minHeight: 0, flex: '1 1 auto', overflow: 'hidden' }}>
+      <div className="flex-1 flex overflow-hidden min-h-0" style={{ minHeight: 0, flex: '1 1 auto', overflow: 'hidden' }}>
         {/* Left sidebar - Scrollable internally */}
         <div className="shrink-0 w-80 border-r border-white/10 overflow-y-auto">
           {sidebar}
@@ -100,7 +122,7 @@ export default function ConsultationLayout({
 
       {/* Bottom composer - Fixed height, sticky, always visible */}
       <div 
-        className="shrink-0 relative z-20 bg-[#0a0a14]" 
+        className="shrink-0 relative z-20 bg-[#0a0a14] border-t border-white/10" 
         style={{ 
           flexShrink: 0, 
           flex: '0 0 auto',

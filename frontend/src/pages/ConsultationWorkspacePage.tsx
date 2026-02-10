@@ -12,6 +12,7 @@ import ConversationPanel from '../components/consultation/ConversationPanel'
 import Composer from '../components/consultation/Composer'
 import { generatePDF, formatSheetAsHTML } from '../lib/pdf/exportClaritySheet'
 import { renderAssistantOutput } from '../lib/renderAssistantOutput'
+import { psychProfileService, type PsychProfileResponse } from '../services/psychProfileService'
 import type {
   SessionContext,
   Segment,
@@ -77,6 +78,12 @@ export default function ConsultationWorkspacePage() {
 
   // Patient context
   const [patientContext, setPatientContext] = useState<PatientContext | null>(null)
+  const [patientPsychProfile, setPatientPsychProfile] = useState<PsychProfileResponse | null>(null)
+  const [patientMedicalData, setPatientMedicalData] = useState<{
+    allergies?: string
+    conditions?: string
+    medications?: string
+  } | null>(null)
 
   // Update segments ref
   useEffect(() => {
@@ -156,6 +163,39 @@ export default function ConsultationWorkspacePage() {
           reason: data.patient.reason,
         }
         setPatientContext(pc)
+
+        // Load patient psych profile and medical data
+        if (data.patient.id) {
+          // Load psych profile for patient
+          fetch(`${apiBase}/api/patients/${data.patient.id}/psych-profile`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+            },
+          })
+            .then((res) => {
+              if (res.ok) {
+                return res.json()
+              }
+              return null
+            })
+            .then((profile: PsychProfileResponse | null) => {
+              if (profile) {
+                setPatientPsychProfile(profile)
+              }
+            })
+            .catch((err) => {
+              console.log('Could not load psych profile:', err)
+            })
+
+          // Load medical data (allergies, conditions, medications)
+          // TODO: Add endpoint for patient medical data
+          // For now, we'll set empty values
+          setPatientMedicalData({
+            allergies: undefined,
+            conditions: undefined,
+            medications: undefined,
+          })
+        }
 
         // Restore saved messages
         if (data.messages && data.messages.length > 0) {
@@ -425,6 +465,25 @@ export default function ConsultationWorkspacePage() {
     setMessages((prev) => [...prev, assistantMessage])
 
     try {
+      // Build extended patient context with medical data and psych profile
+      const extendedPatientContext = {
+        ...patientContext,
+        allergies: patientMedicalData?.allergies,
+        conditions: patientMedicalData?.conditions,
+        medications: patientMedicalData?.medications,
+        psychProfile: patientPsychProfile && patientPsychProfile.completed ? {
+          temperament: patientPsychProfile.temperament,
+          anxietyLevel: patientPsychProfile.anxietyLevel,
+          anxietyScore: patientPsychProfile.anxietyScore,
+          controlNeed: patientPsychProfile.controlNeed,
+          controlScore: patientPsychProfile.controlScore,
+          communicationStyle: patientPsychProfile.communicationStyle,
+          procedurePreference: patientPsychProfile.procedurePreference,
+          triggers: patientPsychProfile.triggers,
+          notes: patientPsychProfile.notes,
+        } : undefined,
+      }
+
       // Stream the response - send ALL conversation messages for context
       const response = await fetch(`${apiBase}/api/appointments/${appointmentId}/structure`, {
         method: 'POST',
@@ -437,6 +496,7 @@ export default function ConsultationWorkspacePage() {
             role: m.role,
             content: m.content,
           })),
+          patientContext: extendedPatientContext,
           lang: languageMode === 'auto' ? 'ro' : languageMode,
         }),
       })
@@ -474,11 +534,48 @@ export default function ConsultationWorkspacePage() {
           }
         }
         
+        // Parse JSON response and set outputData
+        let parsedData: StructureResponse | null = null
+        try {
+          const trimmed = accumulatedText.trim()
+          // Try to extract JSON from text (might have extra text before/after)
+          let jsonStr = trimmed
+          
+          // Remove markdown code blocks if present
+          jsonStr = jsonStr.replace(/^```json\s*/i, '')
+          jsonStr = jsonStr.replace(/^```\s*/, '')
+          jsonStr = jsonStr.replace(/\s*```$/g, '')
+          
+          // Try to extract JSON object if wrapped in text
+          const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
+          if (jsonMatch) {
+            jsonStr = jsonMatch[0]
+          }
+          
+          if (jsonStr.startsWith('{') && jsonStr.endsWith('}')) {
+            const parsed = JSON.parse(jsonStr)
+            if (parsed.mode === 'structure') {
+              parsedData = parsed as StructureResponse
+              console.log('✅ Parsed structure response:', parsedData)
+            } else {
+              console.log('⚠️ Parsed JSON but mode is not structure:', parsed.mode)
+            }
+          }
+        } catch (e) {
+          console.log('❌ Response is not valid JSON, using as text:', e)
+        }
+
         // Final update to ensure all text is displayed
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === messageId
-              ? { ...msg, content: accumulatedText, isTyping: false, outputType: 'structure' }
+              ? { 
+                  ...msg, 
+                  content: accumulatedText, 
+                  isTyping: false, 
+                  outputType: 'structure',
+                  outputData: parsedData || undefined
+                }
               : msg
           )
         )
@@ -493,6 +590,7 @@ export default function ConsultationWorkspacePage() {
                 role: 'assistant',
                 content: accumulatedText,
                 outputType: 'structure',
+                outputData: parsedData,
               }),
             })
           } catch (error) {
@@ -515,6 +613,8 @@ export default function ConsultationWorkspacePage() {
   }, [
     appointmentId,
     patientContext,
+    patientMedicalData,
+    patientPsychProfile,
     sessionContext,
     isStructuring,
     isAnalyzing,
@@ -588,6 +688,41 @@ export default function ConsultationWorkspacePage() {
       }
     }
     
+    // Add edited Structure/Analyze responses as context
+    const editedResponses = messages
+      .filter((m) => m.role === 'assistant' && m.outputData && (m.outputData.mode === 'structure' || m.outputData.mode === 'analyze'))
+      .map((m) => {
+        const data = m.outputData!
+        if (data.mode === 'structure') {
+          const struct = data as StructureResponse
+          let text = `[Versiune editată anterior - ${struct.title || 'Structură'}]\n`
+          if (struct.summary) text += `Rezumat: ${struct.summary}\n\n`
+          struct.sections?.forEach((section) => {
+            text += `${section.heading}:\n`
+            section.bullets?.forEach((bullet) => {
+              text += `  • ${bullet}\n`
+            })
+            text += '\n'
+          })
+          return text.trim()
+        } else {
+          const analyze = data as any
+          let text = `[Versiune editată anterior - ${analyze.title || 'ZenLink Insights'}]\n`
+          if (analyze.summary) text += `Rezumat: ${analyze.summary}\n\n`
+          if (analyze.aspectsToConsider?.length) {
+            text += `Aspecte: ${analyze.aspectsToConsider.join('; ')}\n`
+          }
+          if (analyze.usefulClarificationQuestions?.length) {
+            text += `Întrebări: ${analyze.usefulClarificationQuestions.join('; ')}\n`
+          }
+          return text.trim()
+        }
+      })
+    
+    if (editedResponses.length > 0) {
+      transcriptParts.push('\n[CONTEXT: Versiuni editate anterior]\n' + editedResponses.join('\n\n'))
+    }
+    
     const fullTranscriptText = transcriptParts.filter(Boolean).join(' ').trim()
 
     // Allow Analyze even if no new text - analyze entire conversation
@@ -614,6 +749,25 @@ export default function ConsultationWorkspacePage() {
     setMessages((prev) => [...prev, assistantMessage])
 
     try {
+      // Build extended patient context with medical data and psych profile
+      const extendedPatientContext = {
+        ...patientContext,
+        allergies: patientMedicalData?.allergies,
+        conditions: patientMedicalData?.conditions,
+        medications: patientMedicalData?.medications,
+        psychProfile: patientPsychProfile && patientPsychProfile.completed ? {
+          temperament: patientPsychProfile.temperament,
+          anxietyLevel: patientPsychProfile.anxietyLevel,
+          anxietyScore: patientPsychProfile.anxietyScore,
+          controlNeed: patientPsychProfile.controlNeed,
+          controlScore: patientPsychProfile.controlScore,
+          communicationStyle: patientPsychProfile.communicationStyle,
+          procedurePreference: patientPsychProfile.procedurePreference,
+          triggers: patientPsychProfile.triggers,
+          notes: patientPsychProfile.notes,
+        } : undefined,
+      }
+
       // Stream the response - send ALL conversation messages for context
       const response = await fetch(`${apiBase}/api/appointments/${appointmentId}/analyze`, {
         method: 'POST',
@@ -626,6 +780,7 @@ export default function ConsultationWorkspacePage() {
             role: m.role,
             content: m.content,
           })),
+          patientContext: extendedPatientContext,
           lang: languageMode === 'auto' ? 'ro' : languageMode,
         }),
       })
@@ -663,11 +818,48 @@ export default function ConsultationWorkspacePage() {
           }
         }
         
+        // Parse JSON response and set outputData
+        let parsedData: AnalyzeResponse | null = null
+        try {
+          const trimmed = accumulatedText.trim()
+          // Try to extract JSON from text (might have extra text before/after)
+          let jsonStr = trimmed
+          
+          // Remove markdown code blocks if present
+          jsonStr = jsonStr.replace(/^```json\s*/i, '')
+          jsonStr = jsonStr.replace(/^```\s*/, '')
+          jsonStr = jsonStr.replace(/\s*```$/g, '')
+          
+          // Try to extract JSON object if wrapped in text
+          const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
+          if (jsonMatch) {
+            jsonStr = jsonMatch[0]
+          }
+          
+          if (jsonStr.startsWith('{') && jsonStr.endsWith('}')) {
+            const parsed = JSON.parse(jsonStr)
+            if (parsed.mode === 'analyze') {
+              parsedData = parsed as AnalyzeResponse
+              console.log('✅ Parsed analyze response:', parsedData)
+            } else {
+              console.log('⚠️ Parsed JSON but mode is not analyze:', parsed.mode)
+            }
+          }
+        } catch (e) {
+          console.log('❌ Response is not valid JSON, using as text:', e)
+        }
+
         // Final update to ensure all text is displayed
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === messageId
-              ? { ...msg, content: accumulatedText, isTyping: false, outputType: 'analyze' }
+              ? { 
+                  ...msg, 
+                  content: accumulatedText, 
+                  isTyping: false, 
+                  outputType: 'analyze',
+                  outputData: parsedData || undefined
+                }
               : msg
           )
         )
@@ -682,6 +874,7 @@ export default function ConsultationWorkspacePage() {
                 role: 'assistant',
                 content: accumulatedText,
                 outputType: 'analyze',
+                outputData: parsedData,
               }),
             })
           } catch (error) {
@@ -704,6 +897,8 @@ export default function ConsultationWorkspacePage() {
   }, [
     appointmentId,
     patientContext,
+    patientMedicalData,
+    patientPsychProfile,
     sessionContext,
     isStructuring,
     isAnalyzing,
@@ -842,7 +1037,7 @@ export default function ConsultationWorkspacePage() {
 
   // Render sidebar
   const sidebar = (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 overflow-y-auto">
       {/* Patient card */}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
         <div className="flex items-center gap-3 mb-4">
@@ -874,6 +1069,96 @@ export default function ConsultationWorkspacePage() {
           </div>
         </div>
       </div>
+
+      {/* Medical Data */}
+      {(patientMedicalData?.allergies || patientMedicalData?.conditions || patientMedicalData?.medications) && (
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+          <h4 className="text-xs font-medium text-white/40 uppercase tracking-wider mb-3">Date Medicale</h4>
+          <div className="space-y-3 text-sm">
+            {patientMedicalData.allergies && (
+              <div>
+                <span className="text-white/50 block mb-1">Alergii:</span>
+                <span className="text-white/80">{patientMedicalData.allergies}</span>
+              </div>
+            )}
+            {patientMedicalData.conditions && (
+              <div>
+                <span className="text-white/50 block mb-1">Afecțiuni:</span>
+                <span className="text-white/80">{patientMedicalData.conditions}</span>
+              </div>
+            )}
+            {patientMedicalData.medications && (
+              <div>
+                <span className="text-white/50 block mb-1">Medicație:</span>
+                <span className="text-white/80">{patientMedicalData.medications}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Psych Profile */}
+      {patientPsychProfile && patientPsychProfile.completed && (
+        <div className="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-5">
+          <h4 className="text-xs font-medium text-purple-300/80 uppercase tracking-wider mb-3">Profil Psihologic</h4>
+          <div className="space-y-3 text-sm">
+            {patientPsychProfile.temperament && (
+              <div>
+                <span className="text-white/50 block mb-1">Temperament:</span>
+                <span className="text-white font-medium">{patientPsychProfile.temperament}</span>
+              </div>
+            )}
+            {patientPsychProfile.anxietyLevel && (
+              <div>
+                <span className="text-white/50 block mb-1">Nivel anxietate:</span>
+                <span className="text-white font-medium">
+                  {patientPsychProfile.anxietyLevel}
+                  {patientPsychProfile.anxietyScore !== undefined && ` (${patientPsychProfile.anxietyScore})`}
+                </span>
+              </div>
+            )}
+            {patientPsychProfile.controlNeed && (
+              <div>
+                <span className="text-white/50 block mb-1">Nevoie de control:</span>
+                <span className="text-white font-medium">
+                  {patientPsychProfile.controlNeed}
+                  {patientPsychProfile.controlScore !== undefined && ` (${patientPsychProfile.controlScore})`}
+                </span>
+              </div>
+            )}
+            {patientPsychProfile.communicationStyle && (
+              <div>
+                <span className="text-white/50 block mb-1">Stil comunicare:</span>
+                <span className="text-white font-medium">{patientPsychProfile.communicationStyle}</span>
+              </div>
+            )}
+            {patientPsychProfile.procedurePreference && (
+              <div>
+                <span className="text-white/50 block mb-1">Preferințe proceduri:</span>
+                <span className="text-white font-medium">{patientPsychProfile.procedurePreference}</span>
+              </div>
+            )}
+            {patientPsychProfile.triggers && patientPsychProfile.triggers.length > 0 && (
+              <div>
+                <span className="text-white/50 block mb-1">Trigger-uri:</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {patientPsychProfile.triggers.map((trigger, idx) => (
+                    <span key={idx} className="px-2 py-0.5 bg-purple-500/20 border border-purple-500/30 rounded text-xs text-purple-200">
+                      {trigger}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {patientPsychProfile.notes && (
+              <div>
+                <span className="text-white/50 block mb-1">Note:</span>
+                <span className="text-white/70 text-xs">{patientPsychProfile.notes}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Stats card */}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
@@ -907,21 +1192,6 @@ export default function ConsultationWorkspacePage() {
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Language selector */}
-        <select
-          value={languageMode}
-          onChange={(e) => {
-            const mode = e.target.value as 'auto' | 'ro' | 'en'
-            setLanguageMode(mode)
-            transcriptionProvider?.setLanguage(mode)
-          }}
-          className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm"
-        >
-          <option value="auto">Auto (RO/EN)</option>
-          <option value="ro">Română</option>
-          <option value="en">English</option>
-        </select>
-
         {/* Structure button */}
         <button
           onClick={handleStructure}
@@ -1037,6 +1307,33 @@ export default function ConsultationWorkspacePage() {
             messages={messages}
             currentDraft={isRecording ? draftText : undefined}
             isProcessing={isStructuring || isAnalyzing}
+            onUpdateMessage={async (messageId, updatedData) => {
+              // Update message in state
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === messageId
+                    ? { ...m, outputData: updatedData }
+                    : m
+                )
+              )
+              // Save to backend
+              if (appointmentId && updatedData) {
+                try {
+                  await fetch(`${apiBase}/api/appointments/${appointmentId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      role: 'assistant',
+                      content: JSON.stringify(updatedData),
+                      outputType: updatedData.mode,
+                      outputData: updatedData,
+                    }),
+                  })
+                } catch (error) {
+                  console.error('Error saving updated message:', error)
+                }
+              }
+            }}
           />
         }
         composer={

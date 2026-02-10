@@ -4,34 +4,265 @@
  */
 
 import { StructureResponse, AnalyzeResponse } from '../../types/consultation'
-import { FileText, AlertCircle, Clock, AlertTriangle, BookOpen, ExternalLink, CheckCircle2 } from 'lucide-react'
+import { FileText, AlertCircle, Clock, AlertTriangle, BookOpen, ExternalLink, CheckCircle2, Copy, Check, Edit2, Save } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 interface AiPanelResponseProps {
   response: StructureResponse | AnalyzeResponse
+  messageId?: string
+  onUpdate?: (updatedResponse: StructureResponse | AnalyzeResponse) => void
 }
 
-export default function AiPanelResponse({ response }: AiPanelResponseProps) {
-  if (response.mode === 'structure') {
-    return <StructureView response={response} />
-  } else {
-    return <AnalyzeView response={response} />
+export default function AiPanelResponse({ response, messageId, onUpdate }: AiPanelResponseProps) {
+  const [copied, setCopied] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedResponse, setEditedResponse] = useState<StructureResponse | AnalyzeResponse>(response)
+  
+  // Debug: Log when component renders
+  useEffect(() => {
+    console.log('🔵 AiPanelResponse rendered:', { 
+      messageId, 
+      mode: response.mode, 
+      hasTitle: !!response.title,
+      hasOnUpdate: !!onUpdate
+    })
+  }, [messageId, response, onUpdate])
+
+  const getTextToCopy = (): string => {
+    let text = `${response.title || 'ZenLink Response'}\n\n`
+    if (response.summary) text += `${response.summary}\n\n`
+    
+    if (response.mode === 'structure') {
+      const struct = response as StructureResponse
+      struct.sections?.forEach((section) => {
+        text += `${section.heading}\n`
+        section.bullets?.forEach((bullet) => {
+          text += `  • ${bullet}\n`
+        })
+        text += '\n'
+      })
+      if (struct.timeline?.length) {
+        text += `Cronologie:\n`
+        struct.timeline.forEach((item) => {
+          text += `  ${item.when}: ${item.what}\n`
+        })
+        text += '\n'
+      }
+      if (struct.missingInfo?.length) {
+        text += `Informații de clarificat:\n`
+        struct.missingInfo.forEach((info) => {
+          text += `  • ${info}\n`
+        })
+      }
+    } else {
+      const analyze = response as any
+      if (analyze.aspectsToConsider?.length) {
+        text += `Aspecte de luat în considerare:\n`
+        analyze.aspectsToConsider.forEach((item: string) => {
+          text += `  • ${item}\n`
+        })
+        text += '\n'
+      }
+      if (analyze.usefulClarificationQuestions?.length) {
+        text += `Întrebări utile:\n`
+        analyze.usefulClarificationQuestions.forEach((item: string) => {
+          text += `  • ${item}\n`
+        })
+        text += '\n'
+      }
+      if (analyze.possibleGeneralExplanations?.length) {
+        text += `Posibile explicații:\n`
+        analyze.possibleGeneralExplanations.forEach((item: string) => {
+          text += `  • ${item}\n`
+        })
+        text += '\n'
+      }
+      if (analyze.observedRiskFactors?.length) {
+        text += `Factori de risc observați:\n`
+        analyze.observedRiskFactors.forEach((item: string) => {
+          text += `  • ${item}\n`
+        })
+        text += '\n'
+      }
+    }
+    return text.trim()
   }
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(getTextToCopy())
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  const handleSave = () => {
+    if (onUpdate) {
+      onUpdate(editedResponse)
+    }
+    setIsEditing(false)
+  }
+
+  const handleCancel = () => {
+    setEditedResponse(response)
+    setIsEditing(false)
+  }
+
+  return (
+    <div className="relative group">
+      <div className="absolute top-2 right-2 flex gap-1.5 opacity-100 z-10">
+        {!isEditing ? (
+          <>
+            <button
+              onClick={() => setIsEditing(true)}
+              className="p-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 transition-all shadow-sm"
+              title="Editează"
+            >
+              <Edit2 className="w-4 h-4 text-purple-300" />
+            </button>
+            <button
+              onClick={handleCopy}
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30 transition-all shadow-sm"
+              title="Copiază"
+            >
+              {copied ? (
+                <Check className="w-4 h-4 text-green-400" />
+              ) : (
+                <Copy className="w-4 h-4 text-white/70" />
+              )}
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={handleSave}
+              className="p-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 transition-all shadow-sm"
+              title="Salvează"
+            >
+              <Save className="w-4 h-4 text-green-400" />
+            </button>
+            <button
+              onClick={handleCancel}
+              className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 transition-all shadow-sm"
+              title="Anulează"
+            >
+              <span className="text-red-400 text-sm font-semibold">✕</span>
+            </button>
+          </>
+        )}
+      </div>
+      {response.mode === 'structure' ? (
+        <StructureView 
+          response={isEditing ? editedResponse as StructureResponse : response as StructureResponse} 
+          isEditing={isEditing}
+          onUpdate={(updated) => setEditedResponse(updated)}
+        />
+      ) : (
+        <AnalyzeView 
+          response={isEditing ? editedResponse as AnalyzeResponse : response as AnalyzeResponse} 
+          isEditing={isEditing}
+          onUpdate={(updated) => setEditedResponse(updated)}
+        />
+      )}
+    </div>
+  )
 }
 
-function StructureView({ response }: { response: StructureResponse }) {
+function StructureView({ 
+  response, 
+  isEditing = false, 
+  onUpdate 
+}: { 
+  response: StructureResponse
+  isEditing?: boolean
+  onUpdate?: (updated: StructureResponse) => void
+}) {
   // Ensure sections array exists
   const sections = response.sections || []
+  
+  const updateSection = (sectionIndex: number, field: 'heading' | 'bullets', value: string | string[]) => {
+    if (!onUpdate) return
+    const updated = { ...response }
+    updated.sections = [...(updated.sections || [])]
+    updated.sections[sectionIndex] = {
+      ...updated.sections[sectionIndex],
+      [field]: value
+    }
+    onUpdate(updated)
+  }
+  
+  const updateBullet = (sectionIndex: number, bulletIndex: number, value: string) => {
+    if (!onUpdate) return
+    const updated = { ...response }
+    updated.sections = [...(updated.sections || [])]
+    const bullets = [...(updated.sections[sectionIndex].bullets || [])]
+    bullets[bulletIndex] = value
+    updated.sections[sectionIndex] = {
+      ...updated.sections[sectionIndex],
+      bullets
+    }
+    onUpdate(updated)
+  }
+  
+  const addBullet = (sectionIndex: number) => {
+    if (!onUpdate) return
+    const updated = { ...response }
+    updated.sections = [...(updated.sections || [])]
+    const bullets = [...(updated.sections[sectionIndex].bullets || [])]
+    bullets.push('')
+    updated.sections[sectionIndex] = {
+      ...updated.sections[sectionIndex],
+      bullets
+    }
+    onUpdate(updated)
+  }
+  
+  const removeBullet = (sectionIndex: number, bulletIndex: number) => {
+    if (!onUpdate) return
+    const updated = { ...response }
+    updated.sections = [...(updated.sections || [])]
+    const bullets = [...(updated.sections[sectionIndex].bullets || [])]
+    bullets.splice(bulletIndex, 1)
+    updated.sections[sectionIndex] = {
+      ...updated.sections[sectionIndex],
+      bullets
+    }
+    onUpdate(updated)
+  }
   
   return (
     <div className="space-y-6">
       {/* Title and Summary */}
       <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-5">
-        <h2 className="text-xl font-semibold text-white mb-3 flex items-center gap-2">
-          <FileText className="w-5 h-5 text-purple-300" />
-          {response.title || 'Structură consultație'}
-        </h2>
-        {response.summary && (
-          <p className="text-sm text-white/80 leading-relaxed">{response.summary}</p>
+        {isEditing ? (
+          <>
+            <input
+              type="text"
+              value={response.title || ''}
+              onChange={(e) => onUpdate && onUpdate({ ...response, title: e.target.value })}
+              className="text-xl font-semibold text-white mb-3 w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500/50"
+              placeholder="Titlu"
+            />
+            <textarea
+              value={response.summary || ''}
+              onChange={(e) => onUpdate && onUpdate({ ...response, summary: e.target.value })}
+              className="text-sm text-white/80 leading-relaxed w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500/50 resize-none"
+              placeholder="Rezumat"
+              rows={3}
+            />
+          </>
+        ) : (
+          <>
+            <h2 className="text-xl font-semibold text-white mb-3 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-purple-300" />
+              {response.title || 'Structură consultație'}
+            </h2>
+            {response.summary && (
+              <p className="text-sm text-white/80 leading-relaxed">{response.summary}</p>
+            )}
+          </>
         )}
       </div>
 
@@ -41,21 +272,61 @@ function StructureView({ response }: { response: StructureResponse }) {
           const bullets = section.bullets || []
           return (
             <div key={idx} className="rounded-xl border border-white/10 bg-white/5 p-5">
-              <h3 className="text-base font-semibold text-white mb-3 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-purple-400" />
-                {section.heading || `Secțiune ${idx + 1}`}
-              </h3>
-              {bullets.length > 0 ? (
-                <ul className="space-y-2">
-                  {bullets.map((bullet, bulletIdx) => (
-                    <li key={bulletIdx} className="text-sm text-white/80 flex items-start gap-2">
-                      <span className="text-purple-400 mt-1">•</span>
-                      <span className="flex-1">{bullet}</span>
-                    </li>
-                  ))}
-                </ul>
+              {isEditing ? (
+                <>
+                  <input
+                    type="text"
+                    value={section.heading || ''}
+                    onChange={(e) => updateSection(idx, 'heading', e.target.value)}
+                    className="text-base font-semibold text-white mb-3 w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500/50"
+                    placeholder="Titlu secțiune"
+                  />
+                  <div className="space-y-2">
+                    {bullets.map((bullet, bulletIdx) => (
+                      <div key={bulletIdx} className="flex items-start gap-2">
+                        <span className="text-purple-400 mt-1.5">•</span>
+                        <input
+                          type="text"
+                          value={bullet}
+                          onChange={(e) => updateBullet(idx, bulletIdx, e.target.value)}
+                          className="flex-1 text-sm text-white/80 bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 focus:outline-none focus:border-purple-500/50"
+                          placeholder="Bullet point"
+                        />
+                        <button
+                          onClick={() => removeBullet(idx, bulletIdx)}
+                          className="text-red-400 hover:text-red-300 text-xs px-2 py-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => addBullet(idx)}
+                      className="text-sm text-purple-300 hover:text-purple-200 mt-2 flex items-center gap-1"
+                    >
+                      + Adaugă bullet
+                    </button>
+                  </div>
+                </>
               ) : (
-                <p className="text-sm text-white/60 italic">Fără detalii disponibile</p>
+                <>
+                  <h3 className="text-base font-semibold text-white mb-3 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-400" />
+                    {section.heading || `Secțiune ${idx + 1}`}
+                  </h3>
+                  {bullets.length > 0 ? (
+                    <ul className="space-y-2">
+                      {bullets.map((bullet, bulletIdx) => (
+                        <li key={bulletIdx} className="text-sm text-white/80 flex items-start gap-2">
+                          <span className="text-purple-400 mt-1">•</span>
+                          <span className="flex-1">{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-white/60 italic">Fără detalii disponibile</p>
+                  )}
+                </>
               )}
               {section.tags && section.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
@@ -126,7 +397,15 @@ function StructureView({ response }: { response: StructureResponse }) {
   )
 }
 
-function AnalyzeView({ response }: { response: AnalyzeResponse }) {
+function AnalyzeView({ 
+  response, 
+  isEditing = false, 
+  onUpdate 
+}: { 
+  response: AnalyzeResponse
+  isEditing?: boolean
+  onUpdate?: (updated: AnalyzeResponse) => void
+}) {
   // Check if new format fields exist (ZenLink Insights format)
   const hasNewFormat = 
     (response as any).aspectsToConsider || 
@@ -134,17 +413,63 @@ function AnalyzeView({ response }: { response: AnalyzeResponse }) {
     (response as any).possibleGeneralExplanations ||
     (response as any).observedRiskFactors ||
     (response as any).informativeReferences
+  
+  const updateArrayField = (field: string, index: number, value: string) => {
+    if (!onUpdate) return
+    const updated = { ...response } as any
+    const array = [...(updated[field] || [])]
+    array[index] = value
+    updated[field] = array
+    onUpdate(updated)
+  }
+  
+  const addArrayItem = (field: string) => {
+    if (!onUpdate) return
+    const updated = { ...response } as any
+    updated[field] = [...(updated[field] || []), '']
+    onUpdate(updated)
+  }
+  
+  const removeArrayItem = (field: string, index: number) => {
+    if (!onUpdate) return
+    const updated = { ...response } as any
+    const array = [...(updated[field] || [])]
+    array.splice(index, 1)
+    updated[field] = array
+    onUpdate(updated)
+  }
 
   return (
     <div className="space-y-6">
       {/* Title and Summary */}
       <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-5">
-        <h2 className="text-xl font-semibold text-white mb-3 flex items-center gap-2">
-          <FileText className="w-5 h-5 text-purple-300" />
-          {response.title || '🧠 ZenLink Insights'}
-        </h2>
-        {response.summary && (
-          <p className="text-sm text-white/80 leading-relaxed">{response.summary}</p>
+        {isEditing ? (
+          <>
+            <input
+              type="text"
+              value={response.title || ''}
+              onChange={(e) => onUpdate && onUpdate({ ...response, title: e.target.value })}
+              className="text-xl font-semibold text-white mb-3 w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500/50"
+              placeholder="Titlu"
+            />
+            <textarea
+              value={response.summary || ''}
+              onChange={(e) => onUpdate && onUpdate({ ...response, summary: e.target.value })}
+              className="text-sm text-white/80 leading-relaxed w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500/50 resize-none"
+              placeholder="Rezumat"
+              rows={3}
+            />
+          </>
+        ) : (
+          <>
+            <h2 className="text-xl font-semibold text-white mb-3 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-purple-300" />
+              {response.title || '🧠 ZenLink Insights'}
+            </h2>
+            {response.summary && (
+              <p className="text-sm text-white/80 leading-relaxed">{response.summary}</p>
+            )}
+          </>
         )}
       </div>
 
@@ -176,14 +501,43 @@ function AnalyzeView({ response }: { response: AnalyzeResponse }) {
                 <AlertCircle className="w-4 h-4 text-purple-300" />
                 Întrebări utile pentru clarificare
               </h3>
-              <ul className="space-y-2">
-                {(response as any).usefulClarificationQuestions.map((question: string, idx: number) => (
-                  <li key={idx} className="text-sm text-white/80 flex items-start gap-2">
-                    <span className="text-purple-400 mt-1">•</span>
-                    <span>{question}</span>
-                  </li>
-                ))}
-              </ul>
+              {isEditing ? (
+                <div className="space-y-2">
+                  {(response as any).usefulClarificationQuestions.map((question: string, idx: number) => (
+                    <div key={idx} className="flex items-start gap-2">
+                      <span className="text-purple-400 mt-1.5">•</span>
+                      <input
+                        type="text"
+                        value={question}
+                        onChange={(e) => updateArrayField('usefulClarificationQuestions', idx, e.target.value)}
+                        className="flex-1 text-sm text-white/80 bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 focus:outline-none focus:border-purple-500/50"
+                        placeholder="Întrebare de clarificare"
+                      />
+                      <button
+                        onClick={() => removeArrayItem('usefulClarificationQuestions', idx)}
+                        className="text-red-400 hover:text-red-300 text-xs px-2 py-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => addArrayItem('usefulClarificationQuestions')}
+                    className="text-sm text-purple-300 hover:text-purple-200 mt-2 flex items-center gap-1"
+                  >
+                    + Adaugă întrebare
+                  </button>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {(response as any).usefulClarificationQuestions.map((question: string, idx: number) => (
+                    <li key={idx} className="text-sm text-white/80 flex items-start gap-2">
+                      <span className="text-purple-400 mt-1">•</span>
+                      <span>{question}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
 
@@ -212,14 +566,43 @@ function AnalyzeView({ response }: { response: AnalyzeResponse }) {
                 <AlertTriangle className="w-4 h-4 text-yellow-400" />
                 Factori de risc observați
               </h3>
-              <ul className="space-y-2">
-                {(response as any).observedRiskFactors.map((factor: string, idx: number) => (
-                  <li key={idx} className="text-sm text-white/80 flex items-start gap-2">
-                    <span className="text-yellow-400 mt-1">•</span>
-                    <span>{factor}</span>
-                  </li>
-                ))}
-              </ul>
+              {isEditing ? (
+                <div className="space-y-2">
+                  {(response as any).observedRiskFactors.map((factor: string, idx: number) => (
+                    <div key={idx} className="flex items-start gap-2">
+                      <span className="text-yellow-400 mt-1.5">•</span>
+                      <input
+                        type="text"
+                        value={factor}
+                        onChange={(e) => updateArrayField('observedRiskFactors', idx, e.target.value)}
+                        className="flex-1 text-sm text-white/80 bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 focus:outline-none focus:border-purple-500/50"
+                        placeholder="Factor de risc"
+                      />
+                      <button
+                        onClick={() => removeArrayItem('observedRiskFactors', idx)}
+                        className="text-red-400 hover:text-red-300 text-xs px-2 py-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => addArrayItem('observedRiskFactors')}
+                    className="text-sm text-purple-300 hover:text-purple-200 mt-2 flex items-center gap-1"
+                  >
+                    + Adaugă factor de risc
+                  </button>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {(response as any).observedRiskFactors.map((factor: string, idx: number) => (
+                    <li key={idx} className="text-sm text-white/80 flex items-start gap-2">
+                      <span className="text-yellow-400 mt-1">•</span>
+                      <span>{factor}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
 

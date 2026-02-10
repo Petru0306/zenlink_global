@@ -7,21 +7,77 @@ import { renderAssistantOutput } from '../../lib/renderAssistantOutput'
 import AssistantCardStructure from './AssistantCardStructure'
 import AssistantCardAnalyze from './AssistantCardAnalyze'
 import AiPanelResponse from './AiPanelResponse'
-import { Loader2 } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { Loader2, Copy, Check } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 interface ConversationPanelProps {
   messages: Message[]
   currentDraft?: string
   isProcessing?: boolean
+  onUpdateMessage?: (messageId: string, updatedData: any) => void
 }
 
-export default function ConversationPanel({ messages, currentDraft, isProcessing }: ConversationPanelProps) {
+export default function ConversationPanel({ messages, currentDraft, isProcessing, onUpdateMessage }: ConversationPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, currentDraft, isProcessing])
+
+  const handleCopy = async (text: string, messageId: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedId(messageId)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  const getTextToCopy = (msg: Message): string => {
+    if (msg.outputData && (msg.outputData.mode === 'structure' || msg.outputData.mode === 'analyze')) {
+      // For structured responses, create a readable text version
+      const data = msg.outputData
+      let text = `${data.title || 'ZenLink Response'}\n\n`
+      if (data.summary) text += `${data.summary}\n\n`
+      
+      if (data.mode === 'structure' && 'sections' in data) {
+        data.sections?.forEach((section: any) => {
+          text += `${section.heading}\n`
+          section.bullets?.forEach((bullet: string) => {
+            text += `  • ${bullet}\n`
+          })
+          text += '\n'
+        })
+      } else if (data.mode === 'analyze') {
+        const analyzeData = data as any
+        if (analyzeData.aspectsToConsider?.length) {
+          text += `Aspecte de luat în considerare:\n`
+          analyzeData.aspectsToConsider.forEach((item: string) => {
+            text += `  • ${item}\n`
+          })
+          text += '\n'
+        }
+        if (analyzeData.usefulClarificationQuestions?.length) {
+          text += `Întrebări utile:\n`
+          analyzeData.usefulClarificationQuestions.forEach((item: string) => {
+            text += `  • ${item}\n`
+          })
+          text += '\n'
+        }
+        if (analyzeData.possibleGeneralExplanations?.length) {
+          text += `Posibile explicații:\n`
+          analyzeData.possibleGeneralExplanations.forEach((item: string) => {
+            text += `  • ${item}\n`
+          })
+          text += '\n'
+        }
+      }
+      return text.trim()
+    }
+    return msg.content || ''
+  }
 
   return (
     <div className="flex-1 overflow-y-auto min-h-0">
@@ -54,11 +110,28 @@ export default function ConversationPanel({ messages, currentDraft, isProcessing
           
           // If we have outputData directly, use it; otherwise parse from content
           let rendered
-          if (msg.outputData && msg.outputType) {
+          let parsedOutputData = msg.outputData
+          
+          // Try to parse from content if outputData is missing but we have outputType
+          if (!parsedOutputData && msg.outputType && msg.content) {
+            try {
+              const trimmed = msg.content.trim()
+              if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                const parsed = JSON.parse(trimmed)
+                if (parsed.mode === 'structure' || parsed.mode === 'analyze') {
+                  parsedOutputData = parsed
+                }
+              }
+            } catch (e) {
+              // Not JSON, continue with normal rendering
+            }
+          }
+          
+          if (parsedOutputData && (parsedOutputData.mode === 'structure' || parsedOutputData.mode === 'analyze')) {
             rendered = {
               type: 'json' as const,
               content: '',
-              data: msg.outputData,
+              data: parsedOutputData,
             }
           } else {
             rendered = renderAssistantOutput(msg.content, msg.outputType, msg.outputData)
@@ -70,21 +143,48 @@ export default function ConversationPanel({ messages, currentDraft, isProcessing
               className={`flex ${msg.role === 'doctor' ? 'justify-end' : 'justify-start'} flex-col`}
             >
               <div
-                className={`max-w-[85%] rounded-2xl p-5 ${
+                className={`max-w-[85%] rounded-2xl p-5 relative group ${
                   msg.role === 'doctor'
                     ? 'bg-purple-500/20 border border-purple-500/30'
                     : 'bg-white/5 border border-white/10'
                 }`}
               >
+                {/* Copy button - for both doctor and assistant messages with content */}
+                {(msg.content || msg.outputData) && (
+                  <button
+                    onClick={() => handleCopy(getTextToCopy(msg), msg.id)}
+                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30"
+                    title="Copiază"
+                  >
+                    {copiedId === msg.id ? (
+                      <Check className="w-3.5 h-3.5 text-green-400" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 text-white/60" />
+                    )}
+                  </button>
+                )}
                 {isAssistant && msg.isTyping && !msg.outputData ? (
                   // Show loading state
                   <div className="flex items-center gap-3">
                     <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
                     <p className="text-white/50 text-sm">Se procesează...</p>
                   </div>
-                ) : isAssistant && msg.outputData && (msg.outputData.mode === 'structure' || msg.outputData.mode === 'analyze') ? (
+                ) : isAssistant && parsedOutputData && (parsedOutputData.mode === 'structure' || parsedOutputData.mode === 'analyze') ? (
                   // Render new structured response format
-                  <AiPanelResponse response={msg.outputData} />
+                  (() => {
+                    console.log('🟢 Rendering AiPanelResponse for message:', msg.id, 'with mode:', parsedOutputData.mode)
+                    return (
+                      <AiPanelResponse 
+                        response={parsedOutputData} 
+                        messageId={msg.id}
+                        onUpdate={(updated) => {
+                          if (onUpdateMessage) {
+                            onUpdateMessage(msg.id, updated)
+                          }
+                        }}
+                      />
+                    )
+                  })()
                 ) : isAssistant && rendered.type === 'json' && rendered.data ? (
                   // Fallback to legacy format
                   msg.outputType === 'analyze' && rendered.data && 'structure' in rendered.data ? (
@@ -146,6 +246,13 @@ export default function ConversationPanel({ messages, currentDraft, isProcessing
                       dangerouslySetInnerHTML={{ __html: rendered.content || '' }}
                     />
                   )
+                )}
+                
+                {/* Debug: Show if we have outputData */}
+                {isAssistant && msg.outputData && (
+                  <div className="text-xs text-purple-300/50 mt-2">
+                    Mode: {msg.outputData.mode || 'unknown'}
+                  </div>
                 )}
                 <p className="text-xs text-white/30 mt-3">
                   {msg.timestamp.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}

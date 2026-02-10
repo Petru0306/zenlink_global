@@ -19,7 +19,7 @@ interface AuthContextType {
   user: User | null;
   setUser: (user: User | null) => void;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   signup: (firstName: string, lastName: string, email: string, password: string, phone?: string, role?: UserRole, referralCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
@@ -143,6 +143,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (userData.refreshToken) {
         localStorage.setItem('refreshToken', userData.refreshToken);
       }
+      return userData;
     } catch (error) {
       // If backend is not available, use mock authentication for development (login only)
       console.warn('Backend not available, using mock authentication:', error);
@@ -164,7 +165,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           };
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
-          return;
+          return userData;
         }
       }
       
