@@ -55,8 +55,8 @@ export function ChatLayout({
   );
 
   return (
-    <div className="flex flex-col h-full w-full">
-      <div className="flex flex-1 min-h-0 overflow-hidden bg-[hsl(240,10%,6%)]">
+    <div className="flex flex-col h-full w-full overflow-hidden" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="flex flex-1 min-h-0 overflow-hidden" style={{ minHeight: 0, flex: '1 1 auto', overflow: 'hidden' }}>
         {/* Mobile: sidebar as overlay / drawer */}
         <div className="md:hidden fixed inset-0 z-40 flex">
           {sidebarOpen && (
@@ -66,21 +66,21 @@ export function ChatLayout({
                 onClick={() => setSidebarOpen(false)}
                 aria-hidden
               />
-              <div className="relative z-50 w-72 max-w-[85vw] h-full bg-[hsl(240,10%,6%)] border-r border-white/10 shadow-xl p-4">
+              <div className="relative z-50 w-72 max-w-[85vw] h-full bg-[#0a0e1a]/95 backdrop-blur-sm border-r border-white/10 shadow-xl p-4">
                 {sidebarContent}
               </div>
             </>
           )}
         </div>
 
-        {/* Desktop: sidebar inline */}
-        <div className="hidden md:flex md:w-80 shrink-0 flex-col h-full border-r border-white/10 bg-[hsl(240,10%,6%)]/60 p-5">
+        {/* Desktop: sidebar inline - Fixed, always visible */}
+        <div className="hidden md:flex md:w-80 shrink-0 flex-col h-full border-r border-white/10 bg-[#0a0e1a]/60 backdrop-blur-sm p-5" style={{ flexShrink: 0 }}>
           {sidebarContent}
         </div>
 
-        {/* Main chat area - full width */}
-        <div className="flex-1 flex flex-col min-w-0 w-full">
-          <div className="md:hidden flex items-center gap-2 mb-2">
+        {/* Main chat area - full width, scrollable internally */}
+        <div className="flex-1 flex flex-col min-w-0 w-full min-h-0 overflow-hidden" style={{ minHeight: 0, flex: '1 1 auto' }}>
+          <div className="md:hidden shrink-0 flex items-center gap-2 p-2 border-b border-white/10 bg-[#0a0e1a]/60 backdrop-blur-sm">
             <button
               type="button"
               onClick={() => setSidebarOpen((o) => !o)}
@@ -91,7 +91,7 @@ export function ChatLayout({
             </button>
             <span className="text-white/70 text-sm">Conversații</span>
           </div>
-          <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden" style={{ minHeight: 0, flex: '1 1 auto', overflow: 'hidden' }}>
             <ChatWindow
               title={activeConversation?.title ?? 'New chat'}
               messages={activeConversation?.messages ?? []}
