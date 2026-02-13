@@ -621,14 +621,59 @@ public class ConsultationService {
         if (patientContext.containsKey("reason")) {
             sb.append("Reason for visit: ").append(patientContext.get("reason")).append("\n");
         }
-        if (patientContext.containsKey("allergies")) {
-            sb.append("Allergies: ").append(patientContext.get("allergies")).append("\n");
-        }
-        if (patientContext.containsKey("conditions")) {
-            sb.append("Known conditions: ").append(patientContext.get("conditions")).append("\n");
-        }
-        if (patientContext.containsKey("medications")) {
-            sb.append("Current medications: ").append(patientContext.get("medications")).append("\n");
+        
+        // Check if medicalProfile exists (new format with all medical data)
+        @SuppressWarnings("unchecked")
+        Map<String, Object> medicalProfile = (Map<String, Object>) patientContext.get("medicalProfile");
+        if (medicalProfile != null && !medicalProfile.isEmpty()) {
+            sb.append("\nMEDICAL PROFILE:\n");
+            if (medicalProfile.containsKey("bloodType") && medicalProfile.get("bloodType") != null) {
+                sb.append("- Blood type: ").append(medicalProfile.get("bloodType")).append("\n");
+            }
+            if (medicalProfile.containsKey("allergies") && medicalProfile.get("allergies") != null) {
+                sb.append("- Allergies: ").append(medicalProfile.get("allergies")).append("\n");
+            }
+            if (medicalProfile.containsKey("chronicConditions") && medicalProfile.get("chronicConditions") != null) {
+                sb.append("- Chronic conditions: ").append(medicalProfile.get("chronicConditions")).append("\n");
+            }
+            if (medicalProfile.containsKey("medications") && medicalProfile.get("medications") != null) {
+                sb.append("- Current medications: ").append(medicalProfile.get("medications")).append("\n");
+            }
+            if (medicalProfile.containsKey("weightKg") && medicalProfile.get("weightKg") != null) {
+                sb.append("- Weight: ").append(medicalProfile.get("weightKg")).append(" kg");
+                if (medicalProfile.containsKey("weightDate") && medicalProfile.get("weightDate") != null) {
+                    sb.append(" (from ").append(medicalProfile.get("weightDate")).append(")");
+                }
+                sb.append("\n");
+            }
+            if (medicalProfile.containsKey("heightCm") && medicalProfile.get("heightCm") != null) {
+                sb.append("- Height: ").append(medicalProfile.get("heightCm")).append(" cm\n");
+            }
+            if (medicalProfile.containsKey("bloodPressure") && medicalProfile.get("bloodPressure") != null) {
+                sb.append("- Blood pressure: ").append(medicalProfile.get("bloodPressure"));
+                if (medicalProfile.containsKey("bpDate") && medicalProfile.get("bpDate") != null) {
+                    sb.append(" (from ").append(medicalProfile.get("bpDate")).append(")");
+                }
+                sb.append("\n");
+            }
+            if (medicalProfile.containsKey("glucose") && medicalProfile.get("glucose") != null) {
+                sb.append("- Glucose: ").append(medicalProfile.get("glucose"));
+                if (medicalProfile.containsKey("glucoseDate") && medicalProfile.get("glucoseDate") != null) {
+                    sb.append(" (from ").append(medicalProfile.get("glucoseDate")).append(")");
+                }
+                sb.append("\n");
+            }
+        } else {
+            // Fallback to legacy fields for backward compatibility
+            if (patientContext.containsKey("allergies")) {
+                sb.append("Allergies: ").append(patientContext.get("allergies")).append("\n");
+            }
+            if (patientContext.containsKey("conditions")) {
+                sb.append("Known conditions: ").append(patientContext.get("conditions")).append("\n");
+            }
+            if (patientContext.containsKey("medications")) {
+                sb.append("Current medications: ").append(patientContext.get("medications")).append("\n");
+            }
         }
         
         return sb.toString();

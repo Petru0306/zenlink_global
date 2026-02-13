@@ -3,7 +3,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { Mic, Pause, Send, Loader2, List, Sparkles } from 'lucide-react'
+import { Mic, Pause, Send, Loader2, List, Sparkles, FileText } from 'lucide-react'
 
 interface ComposerProps {
   draftText: string
@@ -14,9 +14,14 @@ interface ComposerProps {
   onSendNote?: () => void
   onStructure: () => void
   onAnalyze: () => void
+  onFinalize?: () => void
   isStructuring: boolean
   isAnalyzing: boolean
+  isFinalizing?: boolean
   disabled?: boolean
+  appointmentId?: string
+  segments?: any[]
+  messages?: any[]
 }
 
 export default function Composer({
@@ -28,9 +33,14 @@ export default function Composer({
   onSendNote,
   onStructure,
   onAnalyze,
+  onFinalize,
   isStructuring,
   isAnalyzing,
+  isFinalizing = false,
   disabled = false,
+  appointmentId,
+  segments = [],
+  messages = [],
 }: ComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -68,8 +78,16 @@ export default function Composer({
         position: 'relative'
       }}
     >
-      <div className="max-w-4xl mx-auto px-6 py-4 min-h-[100px] w-full">
+      <div className="max-w-7xl mx-auto px-6 py-4 min-h-[100px] w-full">
         <div className="flex items-end gap-3">
+          {/* Consultation info - left of mic */}
+          <div className="shrink-0">
+            <p className="text-xs text-white/40 font-medium uppercase tracking-wider mb-1">
+              Consultație #{appointmentId}
+            </p>
+            <h1 className="text-lg font-semibold text-white">Consultation Workspace</h1>
+          </div>
+          
           {/* Mic button */}
           <button
             onClick={isRecording ? onStopRecording : onStartRecording}
@@ -90,8 +108,8 @@ export default function Composer({
             )}
           </button>
 
-          {/* Textarea */}
-          <div className="flex-1 rounded-xl bg-white/5 border border-white/10 focus-within:border-purple-500/50 transition-colors">
+          {/* Textarea - wider */}
+          <div className="flex-[2.5] rounded-xl bg-white/5 border border-white/10 focus-within:border-purple-500/50 transition-colors">
             <textarea
               ref={textareaRef}
               value={draftText}
@@ -147,6 +165,33 @@ export default function Composer({
                 </>
               )}
             </button>
+
+            {/* Finalize button - next to Analyze */}
+            {onFinalize && (
+              <button
+                onClick={onFinalize}
+                disabled={
+                  (segments.length === 0 && messages.length === 0 && !draftText.trim()) ||
+                  isStructuring ||
+                  isAnalyzing ||
+                  isFinalizing ||
+                  disabled
+                }
+                className="px-4 py-3 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-xl flex items-center gap-2 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isFinalizing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="hidden sm:inline">Finalizând...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4" />
+                    <span className="hidden sm:inline">Finalize</span>
+                  </>
+                )}
+              </button>
+            )}
 
             {/* Optional: Send note button */}
             {onSendNote && (

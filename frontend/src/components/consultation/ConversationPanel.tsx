@@ -140,13 +140,13 @@ export default function ConversationPanel({ messages, currentDraft, isProcessing
           return (
             <div
               key={msg.id}
-              className={`flex ${msg.role === 'doctor' ? 'justify-end' : 'justify-start'} flex-col`}
+              className={`flex ${msg.role === 'doctor' ? 'justify-end' : 'justify-start'} w-full`}
             >
               <div
-                className={`max-w-[85%] rounded-2xl p-5 relative group ${
+                className={`${msg.role === 'doctor' ? 'max-w-[65%]' : 'max-w-[90%]'} rounded-2xl p-4 relative group ${
                   msg.role === 'doctor'
-                    ? 'bg-purple-500/20 border border-purple-500/30'
-                    : 'bg-white/5 border border-white/10'
+                    ? 'bg-purple-600/30 border border-purple-500/40'
+                    : 'bg-white/10 border border-white/20'
                 }`}
               >
                 {/* Copy button - for both doctor and assistant messages with content */}
@@ -264,8 +264,8 @@ export default function ConversationPanel({ messages, currentDraft, isProcessing
 
         {/* Live draft bubble */}
         {currentDraft && (
-          <div className="flex justify-end">
-            <div className="max-w-[85%] rounded-2xl p-5 bg-purple-500/10 border border-purple-500/20 border-dashed">
+          <div className="flex justify-end w-full">
+            <div className="max-w-[65%] rounded-2xl p-4 bg-purple-600/20 border border-purple-500/30 border-dashed">
               <p className="text-white/70 italic">{currentDraft}</p>
               <div className="flex items-center gap-2 mt-3">
                 <div className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
@@ -277,8 +277,8 @@ export default function ConversationPanel({ messages, currentDraft, isProcessing
 
         {/* Processing indicator */}
         {isProcessing && (
-          <div className="flex justify-start">
-            <div className="rounded-2xl p-5 bg-white/5 border border-white/10">
+          <div className="flex justify-start w-full">
+            <div className="max-w-[90%] rounded-2xl p-4 bg-white/10 border border-white/20">
               <div className="flex items-center gap-3">
                 <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
                 <p className="text-white/50 text-sm">ZenLink analizează...</p>

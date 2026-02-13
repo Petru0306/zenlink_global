@@ -7,11 +7,16 @@ import com.zenlink.zenlink.dto.AiConversationCreateRequest;
 import com.zenlink.zenlink.dto.AiConversationSummary;
 import com.zenlink.zenlink.dto.AiMessage;
 import com.zenlink.zenlink.model.AiConversation;
+import com.zenlink.zenlink.model.User;
 import com.zenlink.zenlink.model.UserRole;
 import com.zenlink.zenlink.service.AiConversationService;
 import com.zenlink.zenlink.service.OpenAiChatService;
 import com.zenlink.zenlink.service.PatientFileRagIndexService;
 import com.zenlink.zenlink.service.PatientFileRagQueryService;
+import com.zenlink.zenlink.service.MedicalProfileService;
+import com.zenlink.zenlink.service.PsychProfileService;
+import com.zenlink.zenlink.dto.MedicalProfileResponse;
+import com.zenlink.zenlink.dto.PsychProfileResponse;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.slf4j.Logger;
 
 import java.nio.charset.StandardCharsets;
@@ -54,19 +60,25 @@ public class AiController {
     private final PatientFileRagIndexService ragIndexService;
     private final PatientFileRagQueryService ragQueryService;
     private final com.zenlink.zenlink.repository.PatientFileRepository patientFileRepository;
+    private final MedicalProfileService medicalProfileService;
+    private final PsychProfileService psychProfileService;
 
     public AiController(
             OpenAiChatService openAiChatService,
             AiConversationService aiConversationService,
             @Autowired(required = false) PatientFileRagIndexService ragIndexService,
             @Autowired(required = false) PatientFileRagQueryService ragQueryService,
-            com.zenlink.zenlink.repository.PatientFileRepository patientFileRepository
+            com.zenlink.zenlink.repository.PatientFileRepository patientFileRepository,
+            @Autowired(required = false) MedicalProfileService medicalProfileService,
+            @Autowired(required = false) PsychProfileService psychProfileService
     ) {
         this.openAiChatService = openAiChatService;
         this.aiConversationService = aiConversationService;
         this.ragIndexService = ragIndexService;
         this.ragQueryService = ragQueryService;
         this.patientFileRepository = patientFileRepository;
+        this.medicalProfileService = medicalProfileService;
+        this.psychProfileService = psychProfileService;
     }
 
     @GetMapping(value = "/conversations", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -158,8 +170,10 @@ public class AiController {
      * Returns text/plain streaming response.
      */
     @PostMapping(value = "/chat/stream-simple", produces = MediaType.TEXT_PLAIN_VALUE)
-    public ResponseEntity<StreamingResponseBody> chatStreamSimple(@RequestBody AiChatRequest request,
-                                                                 org.springframework.web.context.request.WebRequest webRequest) {
+    public ResponseEntity<StreamingResponseBody> chatStreamSimple(
+            @RequestBody AiChatRequest request,
+            @AuthenticationPrincipal User user,
+            org.springframework.web.context.request.WebRequest webRequest) {
         if (request == null || request.getMessages() == null || request.getMessages().isEmpty()) {
             return ResponseEntity.badRequest().body(out -> {
                 out.write("Messages are required".getBytes(StandardCharsets.UTF_8));
@@ -197,9 +211,12 @@ public class AiController {
                     messages = messages.subList(messages.size() - 20, messages.size());
                 }
 
+                // Build patient context from medical profile and psych profile
+                String patientContext = buildPatientContext(user);
+
                 // Stream the response directly (pass triage state if provided)
                 String triageState = request.getTriageState();
-                openAiChatService.streamChat(messages, null, triageState, outputStream);
+                openAiChatService.streamChat(messages, patientContext, triageState, outputStream);
                 
                 long duration = System.currentTimeMillis() - requestId;
                 log.info("AI chat stream-simple request {} completed in {} ms", requestId, duration);
@@ -462,6 +479,105 @@ public class AiController {
             ip = request.getRemoteUser(); // Fallback
         }
         return ip != null ? ip : "unknown";
+    }
+
+    /**
+     * Build patient context string from medical profile and psych profile for AI.
+     */
+    private String buildPatientContext(User user) {
+        if (user == null || user.getRole() != UserRole.PATIENT) {
+            return "";
+        }
+
+        StringBuilder context = new StringBuilder();
+        context.append("CONTEXTUL PACIENTULUI:\n\n");
+
+        // Load medical profile
+        try {
+            if (medicalProfileService != null) {
+                MedicalProfileResponse medicalProfile = medicalProfileService.getProfile(user);
+                if (medicalProfile != null && medicalProfile.getId() != null) {
+                    context.append("PROFIL MEDICAL:\n");
+                    if (medicalProfile.getBloodType() != null && !medicalProfile.getBloodType().trim().isEmpty()) {
+                        context.append("- Grup sanguin: ").append(medicalProfile.getBloodType()).append("\n");
+                    }
+                    if (medicalProfile.getAllergies() != null && !medicalProfile.getAllergies().trim().isEmpty()) {
+                        context.append("- Alergii: ").append(medicalProfile.getAllergies()).append("\n");
+                    }
+                    if (medicalProfile.getChronicConditions() != null && !medicalProfile.getChronicConditions().trim().isEmpty()) {
+                        context.append("- Afecțiuni cronice: ").append(medicalProfile.getChronicConditions()).append("\n");
+                    }
+                    if (medicalProfile.getMedications() != null && !medicalProfile.getMedications().trim().isEmpty()) {
+                        context.append("- Medicamente: ").append(medicalProfile.getMedications()).append("\n");
+                    }
+                    if (medicalProfile.getWeightKg() != null && !medicalProfile.getWeightKg().trim().isEmpty()) {
+                        context.append("- Greutate: ").append(medicalProfile.getWeightKg()).append(" kg");
+                        if (medicalProfile.getWeightDate() != null && !medicalProfile.getWeightDate().trim().isEmpty()) {
+                            context.append(" (din ").append(medicalProfile.getWeightDate()).append(")");
+                        }
+                        context.append("\n");
+                    }
+                    if (medicalProfile.getHeightCm() != null && !medicalProfile.getHeightCm().trim().isEmpty()) {
+                        context.append("- Înălțime: ").append(medicalProfile.getHeightCm()).append(" cm\n");
+                    }
+                    if (medicalProfile.getBloodPressure() != null && !medicalProfile.getBloodPressure().trim().isEmpty()) {
+                        context.append("- Tensiune arterială: ").append(medicalProfile.getBloodPressure());
+                        if (medicalProfile.getBpDate() != null && !medicalProfile.getBpDate().trim().isEmpty()) {
+                            context.append(" (din ").append(medicalProfile.getBpDate()).append(")");
+                        }
+                        context.append("\n");
+                    }
+                    if (medicalProfile.getGlucose() != null && !medicalProfile.getGlucose().trim().isEmpty()) {
+                        context.append("- Glicemie: ").append(medicalProfile.getGlucose());
+                        if (medicalProfile.getGlucoseDate() != null && !medicalProfile.getGlucoseDate().trim().isEmpty()) {
+                            context.append(" (din ").append(medicalProfile.getGlucoseDate()).append(")");
+                        }
+                        context.append("\n");
+                    }
+                    context.append("\n");
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not load medical profile for user {}: {}", user.getId(), e.getMessage());
+        }
+
+        // Load psych profile
+        try {
+            if (psychProfileService != null) {
+                PsychProfileResponse psychProfile = psychProfileService.getProfile(user);
+                if (psychProfile != null && psychProfile.isCompleted()) {
+                    context.append("PROFIL PSIHOLOGIC:\n");
+                    if (psychProfile.getTemperament() != null) {
+                        context.append("- Temperament: ").append(psychProfile.getTemperament()).append("\n");
+                    }
+                    if (psychProfile.getAnxietyLevel() != null) {
+                        context.append("- Nivel de anxietate: ").append(psychProfile.getAnxietyLevel())
+                                .append(" (scor: ").append(psychProfile.getAnxietyScore()).append(")\n");
+                    }
+                    if (psychProfile.getControlNeed() != null) {
+                        context.append("- Nevoie de control: ").append(psychProfile.getControlNeed())
+                                .append(" (scor: ").append(psychProfile.getControlScore()).append(")\n");
+                    }
+                    if (psychProfile.getCommunicationStyle() != null) {
+                        context.append("- Stil de comunicare: ").append(psychProfile.getCommunicationStyle()).append("\n");
+                    }
+                    if (psychProfile.getProcedurePreference() != null) {
+                        context.append("- Preferință proceduri: ").append(psychProfile.getProcedurePreference()).append("\n");
+                    }
+                    if (psychProfile.getNotes() != null && !psychProfile.getNotes().trim().isEmpty()) {
+                        context.append("- Note: ").append(psychProfile.getNotes()).append("\n");
+                    }
+                    if (psychProfile.getResultsSheet() != null && !psychProfile.getResultsSheet().trim().isEmpty()) {
+                        context.append("\nDetalii complete profil psihologic:\n").append(psychProfile.getResultsSheet()).append("\n");
+                    }
+                    context.append("\n");
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not load psych profile for user {}: {}", user.getId(), e.getMessage());
+        }
+
+        return context.toString();
     }
 }
 

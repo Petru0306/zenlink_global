@@ -43,6 +43,7 @@ import {
 } from '../../components/ui/select';
 const API_BASE = 'http://localhost:8080';
 import { AiChat } from '../../components/AiChat';
+import { medicalProfileService } from '../../services/medicalProfileService';
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -133,7 +134,7 @@ export default function Dashboard() {
     if (!previewFile) setPreviewAiOpen(false);
   }, [previewFile]);
 
-  // Load user-bound medical data from localStorage
+  // Load user-bound medical data from backend
   useEffect(() => {
     if (!user) return;
 
@@ -145,15 +146,38 @@ export default function Dashboard() {
       age: user.age ?? '',
     });
 
-    const stored = localStorage.getItem(`patientMedicalData-${user.id}`);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setMedicalForm((prev) => ({ ...prev, ...parsed }));
-      } catch (e) {
-        console.error('Failed to parse stored medical data', e);
-      }
-    }
+    // Load medical data from backend
+    medicalProfileService.getMyProfile()
+      .then((profile) => {
+        setMedicalForm({
+          bloodType: profile.bloodType || '',
+          allergies: profile.allergies || '',
+          chronicConditions: profile.chronicConditions || '',
+          medications: profile.medications || '',
+          insuranceNumber: profile.insuranceNumber || '',
+          weightKg: profile.weightKg || '',
+          weightChange: profile.weightChange || '',
+          weightDate: profile.weightDate || '',
+          heightCm: profile.heightCm || '',
+          glucose: profile.glucose || '',
+          glucoseDate: profile.glucoseDate || '',
+          bloodPressure: profile.bloodPressure || '',
+          bpDate: profile.bpDate || '',
+        });
+      })
+      .catch((err) => {
+        console.error('Failed to load medical profile from backend:', err);
+        // Fallback to localStorage if backend fails
+        const stored = localStorage.getItem(`patientMedicalData-${user.id}`);
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            setMedicalForm((prev) => ({ ...prev, ...parsed }));
+          } catch (e) {
+            console.error('Failed to parse stored medical data', e);
+          }
+        }
+      });
 
     fetchPatientFiles().catch((err) => {
       console.error('Failed to load files from backend:', err);
@@ -423,14 +447,42 @@ export default function Dashboard() {
     }
   };
 
-  const handleMedicalSave = () => {
-    if (!user?.id) return;
+  const handleMedicalSave = async () => {
+    if (!user?.id) {
+      alert('Trebuie să fii autentificat pentru a salva datele medicale.');
+      return;
+    }
+    setSavingMedical(true);
     try {
+      console.log('Saving medical profile for user:', user.id);
+      console.log('Medical form data:', medicalForm);
+      
+      const response = await medicalProfileService.upsertProfile({
+        bloodType: medicalForm.bloodType || undefined,
+        allergies: medicalForm.allergies || undefined,
+        chronicConditions: medicalForm.chronicConditions || undefined,
+        medications: medicalForm.medications || undefined,
+        insuranceNumber: medicalForm.insuranceNumber || undefined,
+        weightKg: medicalForm.weightKg || undefined,
+        weightChange: medicalForm.weightChange || undefined,
+        weightDate: medicalForm.weightDate || undefined,
+        heightCm: medicalForm.heightCm || undefined,
+        glucose: medicalForm.glucose || undefined,
+        glucoseDate: medicalForm.glucoseDate || undefined,
+        bloodPressure: medicalForm.bloodPressure || undefined,
+        bpDate: medicalForm.bpDate || undefined,
+      });
+      
+      console.log('Medical profile saved successfully:', response);
+      
+      // Also save to localStorage as backup
       localStorage.setItem(`patientMedicalData-${user.id}`, JSON.stringify(medicalForm));
       setMedicalEditing(false);
+      alert('Datele medicale au fost salvate cu succes!');
     } catch (err) {
-      console.error('Failed to save medical data', err);
-      alert('Nu am putut salva datele medicale.');
+      console.error('Failed to save medical data:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Eroare necunoscută';
+      alert(`Nu am putut salva datele medicale: ${errorMessage}\n\nVerifică consola pentru detalii.`);
     } finally {
       setSavingMedical(false);
     }

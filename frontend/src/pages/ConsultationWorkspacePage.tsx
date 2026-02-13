@@ -13,6 +13,8 @@ import Composer from '../components/consultation/Composer'
 import { generatePDF, formatSheetAsHTML } from '../lib/pdf/exportClaritySheet'
 import { renderAssistantOutput } from '../lib/renderAssistantOutput'
 import { psychProfileService, type PsychProfileResponse } from '../services/psychProfileService'
+import { medicalProfileService, type MedicalProfileResponse } from '../services/medicalProfileService'
+import { useAuth } from '../context/AuthContext'
 import type {
   SessionContext,
   Segment,
@@ -27,6 +29,7 @@ import type {
 export default function ConsultationWorkspacePage() {
   const { appointmentId = '' } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const apiBase = 'http://localhost:8080'
 
   // Disable body/html scroll when component mounts
@@ -79,11 +82,7 @@ export default function ConsultationWorkspacePage() {
   // Patient context
   const [patientContext, setPatientContext] = useState<PatientContext | null>(null)
   const [patientPsychProfile, setPatientPsychProfile] = useState<PsychProfileResponse | null>(null)
-  const [patientMedicalData, setPatientMedicalData] = useState<{
-    allergies?: string
-    conditions?: string
-    medications?: string
-  } | null>(null)
+  const [patientMedicalData, setPatientMedicalData] = useState<MedicalProfileResponse | null>(null)
 
   // Update segments ref
   useEffect(() => {
@@ -187,14 +186,107 @@ export default function ConsultationWorkspacePage() {
               console.log('Could not load psych profile:', err)
             })
 
-          // Load medical data (allergies, conditions, medications)
-          // TODO: Add endpoint for patient medical data
-          // For now, we'll set empty values
-          setPatientMedicalData({
-            allergies: undefined,
-            conditions: undefined,
-            medications: undefined,
+          // Load medical profile from backend
+          // Handle both string and number IDs from backend
+          const patientId = typeof data.patient.id === 'string' ? Number(data.patient.id) : data.patient.id
+          console.log('🔍 Attempting to load medical profile for patient ID:', patientId, '(type:', typeof patientId, ')')
+          console.log('🔍 Current user:', user ? { id: user.id, email: user.email, role: user.role } : 'null')
+          console.log('🔍 Patient data from context:', {
+            id: data.patient.id,
+            idType: typeof data.patient.id,
+            displayName: data.patient.displayName,
+            age: data.patient.age
           })
+          console.log('🔍 Converted patientId:', patientId, 'isNaN?', isNaN(patientId))
+          
+          // Check if current user is doctor or the patient themselves
+          const isDoctor = user?.role?.toUpperCase() === 'DOCTOR'
+          const isPatient = user?.id && Number(user.id) === patientId
+          console.log('🔍 Access check - isDoctor:', isDoctor, 'isPatient:', isPatient, 'userId:', user?.id, 'patientId:', patientId)
+          
+          if (isNaN(patientId) || patientId <= 0) {
+            console.error('❌ Invalid patient ID:', patientId)
+            setPatientMedicalData({
+              id: null,
+              userId: null,
+              bloodType: null,
+              allergies: null,
+              chronicConditions: null,
+              medications: null,
+              insuranceNumber: null,
+              weightKg: null,
+              weightChange: null,
+              weightDate: null,
+              heightCm: null,
+              glucose: null,
+              glucoseDate: null,
+              bloodPressure: null,
+              bpDate: null,
+              updatedAt: null
+            })
+            return
+          }
+          
+          if (!isDoctor && !isPatient) {
+            console.warn('⚠️ User is not doctor and not the patient - may not have access to medical profile')
+          }
+          
+          medicalProfileService.getPatientProfile(patientId)
+            .then((profile: MedicalProfileResponse) => {
+              console.log('✅ Loaded medical profile:', profile)
+              console.log('✅ Profile userId:', profile.userId, 'vs requested patientId:', patientId)
+              console.log('✅ Profile has data:', {
+                id: profile.id,
+                userId: profile.userId,
+                bloodType: profile.bloodType,
+                allergies: profile.allergies,
+                chronicConditions: profile.chronicConditions,
+                medications: profile.medications,
+                weightKg: profile.weightKg,
+                heightCm: profile.heightCm,
+                bloodPressure: profile.bloodPressure,
+                glucose: profile.glucose,
+                insuranceNumber: profile.insuranceNumber
+              })
+              console.log('✅ Profile data check - hasAnyData:', !!(
+                profile.bloodType || 
+                profile.allergies || 
+                profile.chronicConditions || 
+                profile.medications || 
+                profile.weightKg || 
+                profile.heightCm || 
+                profile.bloodPressure || 
+                profile.glucose || 
+                profile.insuranceNumber
+              ))
+              // Always set profile, even if empty
+              setPatientMedicalData(profile)
+            })
+            .catch((err) => {
+              console.error('❌ Could not load medical profile:', err)
+              console.error('❌ Error details:', err.message, err.stack)
+              console.error('❌ Patient ID that failed:', patientId)
+              // Set empty profile on error so card can show "no data" message
+              // This allows the card to render even if there's an authentication error
+              setPatientMedicalData({
+                id: null,
+                userId: patientId,
+                bloodType: null,
+                allergies: null,
+                chronicConditions: null,
+                medications: null,
+                insuranceNumber: null,
+                weightKg: null,
+                weightChange: null,
+                weightDate: null,
+                heightCm: null,
+                glucose: null,
+                glucoseDate: null,
+                bloodPressure: null,
+                bpDate: null,
+                updatedAt: null
+              })
+            })
         }
 
         // Restore saved messages
@@ -468,8 +560,23 @@ export default function ConsultationWorkspacePage() {
       // Build extended patient context with medical data and psych profile
       const extendedPatientContext = {
         ...patientContext,
+        // Include all medical profile data
+        medicalProfile: patientMedicalData ? {
+          bloodType: patientMedicalData.bloodType,
+          allergies: patientMedicalData.allergies,
+          chronicConditions: patientMedicalData.chronicConditions,
+          medications: patientMedicalData.medications,
+          weightKg: patientMedicalData.weightKg,
+          weightDate: patientMedicalData.weightDate,
+          heightCm: patientMedicalData.heightCm,
+          bloodPressure: patientMedicalData.bloodPressure,
+          bpDate: patientMedicalData.bpDate,
+          glucose: patientMedicalData.glucose,
+          glucoseDate: patientMedicalData.glucoseDate,
+        } : undefined,
+        // Legacy fields for backward compatibility
         allergies: patientMedicalData?.allergies,
-        conditions: patientMedicalData?.conditions,
+        conditions: patientMedicalData?.chronicConditions,
         medications: patientMedicalData?.medications,
         psychProfile: patientPsychProfile && patientPsychProfile.completed ? {
           temperament: patientPsychProfile.temperament,
@@ -752,8 +859,23 @@ export default function ConsultationWorkspacePage() {
       // Build extended patient context with medical data and psych profile
       const extendedPatientContext = {
         ...patientContext,
+        // Include all medical profile data
+        medicalProfile: patientMedicalData ? {
+          bloodType: patientMedicalData.bloodType,
+          allergies: patientMedicalData.allergies,
+          chronicConditions: patientMedicalData.chronicConditions,
+          medications: patientMedicalData.medications,
+          weightKg: patientMedicalData.weightKg,
+          weightDate: patientMedicalData.weightDate,
+          heightCm: patientMedicalData.heightCm,
+          bloodPressure: patientMedicalData.bloodPressure,
+          bpDate: patientMedicalData.bpDate,
+          glucose: patientMedicalData.glucose,
+          glucoseDate: patientMedicalData.glucoseDate,
+        } : undefined,
+        // Legacy fields for backward compatibility
         allergies: patientMedicalData?.allergies,
-        conditions: patientMedicalData?.conditions,
+        conditions: patientMedicalData?.chronicConditions,
         medications: patientMedicalData?.medications,
         psychProfile: patientPsychProfile && patientPsychProfile.completed ? {
           temperament: patientPsychProfile.temperament,
@@ -1063,28 +1185,66 @@ export default function ConsultationWorkspacePage() {
             <span className="text-white/40">Motiv</span>
             <span className="text-white/80">{sessionContext.patient.reason}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-white/40">ID</span>
-            <span className="font-mono text-xs text-white/60">{sessionContext.internalPatientKey}</span>
-          </div>
         </div>
       </div>
 
-      {/* Medical Data */}
-      {(patientMedicalData?.allergies || patientMedicalData?.conditions || patientMedicalData?.medications) && (
+      {/* Medical Profile */}
+      {(() => {
+        if (!patientMedicalData) {
+          return null
+        }
+        
+        // Check if any field has actual data (not null, not undefined, not empty string)
+        const hasAnyData = !!(
+          (patientMedicalData.bloodType && String(patientMedicalData.bloodType).trim() !== '') || 
+          (patientMedicalData.allergies && String(patientMedicalData.allergies).trim() !== '') || 
+          (patientMedicalData.chronicConditions && String(patientMedicalData.chronicConditions).trim() !== '') || 
+          (patientMedicalData.medications && String(patientMedicalData.medications).trim() !== '') || 
+          (patientMedicalData.weightKg && String(patientMedicalData.weightKg).trim() !== '') || 
+          (patientMedicalData.heightCm && String(patientMedicalData.heightCm).trim() !== '') || 
+          (patientMedicalData.bloodPressure && String(patientMedicalData.bloodPressure).trim() !== '') || 
+          (patientMedicalData.glucose && String(patientMedicalData.glucose).trim() !== '')
+        )
+        
+        console.log('🔍 Rendering sidebar - patientMedicalData:', patientMedicalData)
+        console.log('🔍 patientMedicalData type check:', {
+          isNull: patientMedicalData === null,
+          isUndefined: patientMedicalData === undefined,
+          hasId: patientMedicalData?.id !== null && patientMedicalData?.id !== undefined,
+          hasUserId: patientMedicalData?.userId !== null && patientMedicalData?.userId !== undefined,
+          hasAnyData: hasAnyData,
+          bloodType: patientMedicalData?.bloodType,
+          allergies: patientMedicalData?.allergies,
+          chronicConditions: patientMedicalData?.chronicConditions,
+          medications: patientMedicalData?.medications,
+          weightKg: patientMedicalData?.weightKg,
+          heightCm: patientMedicalData?.heightCm,
+          bloodPressure: patientMedicalData?.bloodPressure,
+          glucose: patientMedicalData?.glucose,
+          insuranceNumber: patientMedicalData?.insuranceNumber
+        })
+        
+        return (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <h4 className="text-xs font-medium text-white/40 uppercase tracking-wider mb-3">Date Medicale</h4>
+          <h4 className="text-xs font-medium text-white/40 uppercase tracking-wider mb-3">Profil Medical</h4>
+          {hasAnyData ? (
           <div className="space-y-3 text-sm">
+            {patientMedicalData.bloodType && (
+              <div className="flex justify-between">
+                <span className="text-white/50">Grup sanguin</span>
+                <span className="text-white/80 font-medium">{patientMedicalData.bloodType}</span>
+              </div>
+            )}
             {patientMedicalData.allergies && (
               <div>
                 <span className="text-white/50 block mb-1">Alergii:</span>
                 <span className="text-white/80">{patientMedicalData.allergies}</span>
               </div>
             )}
-            {patientMedicalData.conditions && (
+            {patientMedicalData.chronicConditions && (
               <div>
-                <span className="text-white/50 block mb-1">Afecțiuni:</span>
-                <span className="text-white/80">{patientMedicalData.conditions}</span>
+                <span className="text-white/50 block mb-1">Afecțiuni cronice:</span>
+                <span className="text-white/80">{patientMedicalData.chronicConditions}</span>
               </div>
             )}
             {patientMedicalData.medications && (
@@ -1093,9 +1253,58 @@ export default function ConsultationWorkspacePage() {
                 <span className="text-white/80">{patientMedicalData.medications}</span>
               </div>
             )}
+            {(patientMedicalData.weightKg || patientMedicalData.heightCm) && (
+              <div className="pt-2 border-t border-white/10">
+                <div className="flex justify-between mb-2">
+                  {patientMedicalData.weightKg && (
+                    <div>
+                      <span className="text-white/50 text-xs block">Greutate</span>
+                      <span className="text-white/80 font-medium">{patientMedicalData.weightKg} kg</span>
+                      {patientMedicalData.weightDate && (
+                        <span className="text-white/40 text-xs block">{patientMedicalData.weightDate}</span>
+                      )}
+                    </div>
+                  )}
+                  {patientMedicalData.heightCm && (
+                    <div>
+                      <span className="text-white/50 text-xs block">Înălțime</span>
+                      <span className="text-white/80 font-medium">{patientMedicalData.heightCm} cm</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {(patientMedicalData.bloodPressure || patientMedicalData.glucose) && (
+              <div className="pt-2 border-t border-white/10">
+                <div className="flex justify-between">
+                  {patientMedicalData.bloodPressure && (
+                    <div>
+                      <span className="text-white/50 text-xs block">Tensiune</span>
+                      <span className="text-white/80 font-medium">{patientMedicalData.bloodPressure}</span>
+                      {patientMedicalData.bpDate && (
+                        <span className="text-white/40 text-xs block">{patientMedicalData.bpDate}</span>
+                      )}
+                    </div>
+                  )}
+                  {patientMedicalData.glucose && (
+                    <div>
+                      <span className="text-white/50 text-xs block">Glicemie</span>
+                      <span className="text-white/80 font-medium">{patientMedicalData.glucose}</span>
+                      {patientMedicalData.glucoseDate && (
+                        <span className="text-white/40 text-xs block">{patientMedicalData.glucoseDate}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
+          ) : (
+            <p className="text-sm text-white/40 italic">Nu există date medicale salvate.</p>
+          )}
         </div>
-      )}
+        )
+      })()}
 
       {/* Psych Profile */}
       {patientPsychProfile && patientPsychProfile.completed && (
@@ -1159,102 +1368,7 @@ export default function ConsultationWorkspacePage() {
           </div>
         </div>
       )}
-
-      {/* Stats card */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-        <h4 className="text-xs font-medium text-white/40 uppercase tracking-wider mb-3">Statistici</h4>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-white/50">Segmente</span>
-            <span className="text-white font-semibold">{segments.length}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-white/50">Mesaje</span>
-            <span className="text-white font-semibold">{messages.length}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-white/50">Transcript</span>
-            <span className="text-white font-semibold">{fullTranscript.length} caractere</span>
-          </div>
-        </div>
-      </div>
     </div>
-  )
-
-  // Render top bar
-  const topBar = (
-    <>
-      <div>
-        <p className="text-xs text-white/40 font-medium uppercase tracking-wider mb-1">
-          Consultație #{appointmentId}
-        </p>
-        <h1 className="text-2xl font-semibold text-white">Consultation Workspace</h1>
-      </div>
-
-      <div className="flex items-center gap-3">
-        {/* Structure button */}
-        <button
-          onClick={handleStructure}
-          disabled={isStructuring || isAnalyzing || isFinalizing}
-          className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg flex items-center gap-2 text-sm font-medium transition-all disabled:opacity-50"
-        >
-          {isStructuring ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Structurând...
-            </>
-          ) : (
-            <>
-              <List className="w-4 h-4" />
-              Structure
-            </>
-          )}
-        </button>
-
-        {/* Analyze button */}
-        <button
-          onClick={handleAnalyze}
-          disabled={isStructuring || isAnalyzing || isFinalizing}
-          className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg flex items-center gap-2 text-sm font-medium transition-all disabled:opacity-50"
-        >
-          {isAnalyzing ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Analizând...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4" />
-              ZenLink Analyze
-            </>
-          )}
-        </button>
-
-        {/* Finalize button */}
-        <button
-          onClick={handleFinalize}
-          disabled={
-            (segments.length === 0 && messages.length === 0 && !draftText.trim()) ||
-            isStructuring ||
-            isAnalyzing ||
-            isFinalizing
-          }
-          className="px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-lg flex items-center gap-2 text-sm font-medium transition-all disabled:opacity-50"
-        >
-          {isFinalizing ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Finalizând...
-            </>
-          ) : (
-            <>
-              <FileText className="w-4 h-4" />
-              Finalize
-            </>
-          )}
-        </button>
-      </div>
-    </>
   )
 
   return (
@@ -1300,7 +1414,6 @@ export default function ConsultationWorkspacePage() {
       )}
 
       <ConsultationLayout
-        topBar={topBar}
         sidebar={sidebar}
         conversation={
           <ConversationPanel
@@ -1345,9 +1458,14 @@ export default function ConsultationWorkspacePage() {
             onStopRecording={handleStopRecording}
             onStructure={handleStructure}
             onAnalyze={handleAnalyze}
+            onFinalize={handleFinalize}
             isStructuring={isStructuring}
             isAnalyzing={isAnalyzing}
+            isFinalizing={isFinalizing}
             disabled={isFinalizing}
+            appointmentId={appointmentId}
+            segments={segments}
+            messages={messages}
           />
         }
       />
