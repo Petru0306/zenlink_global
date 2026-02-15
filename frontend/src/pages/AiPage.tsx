@@ -24,7 +24,10 @@ export default function AiPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(() => {
+    const stored = loadConversations();
+    return stored.length > 0 ? stored[0].id : null;
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -88,7 +91,7 @@ export default function AiPage() {
       if (!navbar) {
         navbar = document.querySelector('nav') as HTMLElement;
       }
-      
+
       if (navbar) {
         const height = navbar.offsetHeight || navbar.getBoundingClientRect().height;
         const mobileNav = document.querySelector('div[class*="md:hidden"]') as HTMLElement;
@@ -106,7 +109,7 @@ export default function AiPage() {
 
     measureNavbar();
     window.addEventListener('resize', measureNavbar);
-    
+
     const timeout1 = setTimeout(measureNavbar, 100);
     const timeout2 = setTimeout(measureNavbar, 300);
     const timeout3 = setTimeout(measureNavbar, 500);
@@ -271,33 +274,54 @@ export default function AiPage() {
 
   // Initial message from Home page: create conversation, add message, trigger AI (o singură dată)
   useEffect(() => {
-    const state = location.state as { 
+    const state = location.state as {
       initialMessage?: string;
       previewQuestion?: string;
+      previewStatement?: string;
       previewAnswer?: string;
+      timestamp?: number;
     } | null;
-    
-    const initialMessage = state?.initialMessage?.trim();
-    if (!initialMessage || initialMessageHandledRef.current) return;
-    initialMessageHandledRef.current = true;
 
-    // Clear state so refresh doesn't re-trigger
-    navigate(location.pathname, { replace: true, state: {} });
+    const initialMessage = state?.initialMessage?.trim();
+    // If no message, nothing to do
+    if (!initialMessage) return;
+
+    // Use timestamp from state or fallback to message hash/content for deduplication
+    // (If user manually navigates with state but no timestamp, we try to use content as ID, though flaky)
+    const msgId = state?.timestamp ? `msg_${state.timestamp}` : `msg_content_${initialMessage.substring(0, 20)}`;
+
+    // Check session storage to prevent duplicate processing on refresh/remount
+    const processedKey = `zenlink_processed_${msgId}`;
+    if (sessionStorage.getItem(processedKey)) {
+      console.log('Message already processed, skipping:', msgId);
+      return;
+    }
+
+    // Mark as processed immediately
+    sessionStorage.setItem(processedKey, 'true');
+
+    // Remove replaceState to avoid history manipulation race conditions.
+    // window.history.replaceState({}, document.title); 
 
     const newConv = createConversation();
-    
+
     // If coming from preview widget, format message nicely with context for next question
     let formattedMessage = initialMessage;
     if (state?.previewQuestion && state?.previewAnswer) {
       // Format for display: show question and answer clearly
-      formattedMessage = `**Întrebare:** ${state.previewQuestion}\n\n**Răspuns:** ${state.previewAnswer}\n\n---\n\n*Te rog să generezi următoarea întrebare relevantă pentru a continua interviul medical, bazându-te pe răspunsul meu.*`;
+      const displayQuestion = state.previewStatement || state.previewQuestion;
+      // Format: "Statement: Answer" (e.g. "Simt sensibilitate dentară: Rar, doar ocazional")
+      // And hide the system instruction in an HTML comment so AI sees it but user doesn't.
+      formattedMessage = `**${displayQuestion}:** ${state.previewAnswer}\n\n<!-- Te rog să generezi următoarea întrebare relevantă pentru a continua interviul medical, bazându-te pe răspunsul meu. -->`;
     }
-    
+
     const withUser = addMessage(newConv, 'user', formattedMessage);
-    setConversations((prev) => appendConversation(prev, withUser));
+    // Persist immediately!
+    const updatedList = appendConversation(conversations, withUser);
+    setConversations(updatedList);
     setActiveId(withUser.id);
     setIsTyping(true);
-    
+
     // Determine triage state for initial message
     const nextTriageState = determineNextTriageState(
       withUser.triage,
@@ -305,31 +329,32 @@ export default function AiPage() {
       withUser.messages.length
     );
     const updatedTriage = updateTriageContext(withUser.triage, nextTriageState);
-    
+
     // Create empty assistant message for streaming
     const withEmptyAssistant = addMessage({ ...withUser, triage: updatedTriage }, 'assistant', '');
-    setConversations((prev) =>
-      prev.map((c) => (c.id === withEmptyAssistant.id ? withEmptyAssistant : c))
-    );
-    
+
+    // Update state AND persist again immediately
+    setConversations((prev) => {
+      // We use prev here to be safe, but we also save to ensure persistence
+      const next = prev.map((c) => (c.id === withEmptyAssistant.id ? withEmptyAssistant : c));
+      saveConversations(next);
+      return next;
+    });
+
     let accumulatedText = '';
+    // const currentConv = { ...withEmptyAssistant, triage: updatedTriage };
     const currentConv = { ...withEmptyAssistant, triage: updatedTriage };
-    
+
     sendMessageStreaming(withUser.id, withUser.messages, (chunk: string) => {
       accumulatedText += chunk;
-      setConversations((prev) => {
-        const convToUpdate = prev.find((c) => c.id === currentConv.id);
-        if (!convToUpdate) return prev;
-        const updated = updateLastAssistantMessage(convToUpdate, accumulatedText);
-        return prev.map((c) => (c.id === updated.id ? updated : c));
-      });
+      // Don't update UI during streaming - wait for complete response to show pulse animation
     }, nextTriageState)
       .then((fullReply) => {
         const isConclusion = isConclusionMessage(fullReply) || nextTriageState === 'conclusion';
-        const finalTriage = isConclusion 
+        const finalTriage = isConclusion
           ? { ...updatedTriage, state: 'conclusion' as const }
           : updatedTriage;
-        
+
         setConversations((prev) => {
           const convToUpdate = prev.find((c) => c.id === currentConv.id);
           if (!convToUpdate) return prev;
@@ -341,6 +366,8 @@ export default function AiPage() {
               triageState: finalTriage.state,
             }
           );
+          // Save final state
+          saveConversations(prev.map((c) => (c.id === final.id ? final : c)));
           return prev.map((c) => (c.id === final.id ? final : c));
         });
       })
@@ -349,6 +376,7 @@ export default function AiPage() {
           const convToUpdate = prev.find((c) => c.id === currentConv.id);
           if (!convToUpdate) return prev;
           const withError = updateLastAssistantMessage(convToUpdate, 'Eroare la răspuns. Încearcă din nou.');
+          saveConversations(prev.map((c) => (c.id === withError.id ? withError : c)));
           return prev.map((c) => (c.id === withError.id ? withError : c));
         });
       })
@@ -378,18 +406,18 @@ export default function AiPage() {
   const handleSendMessage = useCallback((conv: Conversation, userText: string) => {
     setIsTyping(true);
     console.log('Sending AI message:', { conversationId: conv.id, messageCount: conv.messages.length });
-    
+
     // Determine triage state
     const nextTriageState = determineNextTriageState(
       conv.triage,
       userText,
       conv.messages.length
     );
-    
+
     // Update triage context
     const updatedTriage = updateTriageContext(conv.triage, nextTriageState);
     const updatedConv = { ...conv, triage: updatedTriage };
-    
+
     // Create loading assistant message (prevents flash of unformatted text)
     const loadingMessage = addMessage(updatedConv, 'assistant', '');
     loadingMessage.messages[loadingMessage.messages.length - 1].meta = {
@@ -398,10 +426,10 @@ export default function AiPage() {
     setConversations((prev) =>
       prev.map((c) => (c.id === loadingMessage.id ? { ...loadingMessage, triage: updatedTriage } : c))
     );
-    
+
     let accumulatedText = '';
     const currentConv = { ...loadingMessage, triage: updatedTriage };
-    
+
     sendMessageStreaming(conv.id, conv.messages, (chunk: string) => {
       // Accumulate text but don't render until complete (prevents flash)
       accumulatedText += chunk;
@@ -409,20 +437,20 @@ export default function AiPage() {
     }, nextTriageState)
       .then((fullReply) => {
         console.log('AI streaming completed, total length:', fullReply.length);
-        
+
         // Parse JSON FIRST before rendering
         const isStructured = isStructuredResponse(fullReply);
         const parsedTurn = isStructured ? parseAiTurn(fullReply) : null;
-        
+
         // Check if this is a conclusion message
-        const isConclusion = parsedTurn?.mode === 'conclusion' || 
-                            parsedTurn?.mode === 'urgent' ||
-                            isConclusionMessage(fullReply) || 
-                            nextTriageState === 'conclusion';
-        const finalTriage = isConclusion 
+        const isConclusion = parsedTurn?.mode === 'conclusion' ||
+          parsedTurn?.mode === 'urgent' ||
+          isConclusionMessage(fullReply) ||
+          nextTriageState === 'conclusion';
+        const finalTriage = isConclusion
           ? { ...updatedTriage, state: 'conclusion' as const }
           : updatedTriage;
-        
+
         // Final update with complete message - status: 'ready', parsed turn cached
         setConversations((prev) => {
           const convToUpdate = prev.find((c) => c.id === currentConv.id);

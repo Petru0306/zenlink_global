@@ -34,7 +34,7 @@ export default function Navbar() {
         setNavbarHeight(navbarRef.current.offsetHeight);
       }
     });
-    
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', () => {
@@ -69,28 +69,24 @@ export default function Navbar() {
   return (
     <>
       {/* Full navbar - background bar disappears when scrolled or on consultation page */}
-      <nav 
+      <nav
         ref={navbarRef}
-        className={`sticky top-0 z-50 transition-all duration-300 ${
-          isScrolled || onConsultation
-            ? 'backdrop-blur-none bg-transparent border-b-0 shadow-none' 
+        className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled || onConsultation
+            ? 'backdrop-blur-none bg-transparent border-b-0 shadow-none'
             : 'backdrop-blur-xl bg-black/40 border-b border-white/10 shadow-2xl'
-        }`}
+          }`}
       >
         <div
-          className={`py-4 flex items-center w-full gap-4 transition-all duration-300 ${
-            isScrolled ? 'opacity-0' : 'opacity-100'
-          } ${
-            onDashboard ? 'pl-[300px] pr-6' : 'max-w-7xl mx-auto px-6'
-          }`}
+          className={`py-4 flex items-center w-full gap-4 transition-all duration-300 ${isScrolled ? 'opacity-0' : 'opacity-100'
+            } ${onDashboard ? 'pl-[300px] pr-6' : 'max-w-7xl mx-auto px-6'
+            }`}
         >
           {/* Logo and Site Name - fades out when scrolled */}
           {!onDashboard && (
-            <Link 
-              to="/" 
-              className={`flex items-center gap-3 hover:scale-105 transition-all duration-300 group shrink-0 ${
-                isScrolled ? 'opacity-0 pointer-events-none' : 'opacity-100'
-              }`}
+            <Link
+              to="/"
+              className={`flex items-center gap-3 hover:scale-105 transition-all duration-300 group shrink-0 ${isScrolled ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                }`}
             >
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/30 via-purple-600/30 to-purple-700/30 border-2 border-purple-400/50 flex items-center justify-center shadow-lg shadow-purple-500/50 group-hover:scale-110 transition-all duration-300">
                 <Brain className="w-5 h-5 text-white" />
@@ -100,19 +96,17 @@ export default function Navbar() {
           )}
 
           {/* Navigation Links - fades out when scrolled */}
-          <div className={`hidden md:flex flex-1 items-center justify-center min-w-0 transition-all duration-300 ${
-            isScrolled ? 'opacity-0 pointer-events-none' : 'opacity-100'
-          }`}>
+          <div className={`hidden md:flex flex-1 items-center justify-center min-w-0 transition-all duration-300 ${isScrolled ? 'opacity-0 pointer-events-none' : 'opacity-100'
+            }`}>
             <div className="flex items-center gap-2 backdrop-blur-xl bg-white/5 rounded-2xl p-2 border border-white/10">
               {navLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`px-4 py-2 rounded-xl transition-all duration-300 font-medium whitespace-nowrap ${
-                    isActive(link.path)
+                  className={`px-4 py-2 rounded-xl transition-all duration-300 font-medium whitespace-nowrap ${isActive(link.path)
                       ? 'text-white bg-gradient-to-r from-purple-500/20 to-purple-600/20 border border-purple-500/30 shadow-lg shadow-purple-500/20'
                       : 'text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
+                    }`}
                 >
                   {link.name}
                 </Link>
@@ -121,9 +115,8 @@ export default function Navbar() {
           </div>
 
           {/* Auth Section - fades out when scrolled */}
-          <div className={`flex items-center gap-4 shrink-0 transition-all duration-300 ${
-            isScrolled ? 'opacity-0 pointer-events-none' : 'opacity-100'
-          } ${onDashboard ? 'ml-auto' : ''}`}>
+          <div className={`flex items-center gap-4 shrink-0 transition-all duration-300 ${isScrolled ? 'opacity-0 pointer-events-none' : 'opacity-100'
+            } ${onDashboard ? 'ml-auto' : ''}`}>
             {isAuthenticated ? (
               <>
                 {/* User Info */}
@@ -141,7 +134,7 @@ export default function Navbar() {
                     <span className="text-purple-200/70 text-xs">{user?.email}</span>
                   </div>
                 </button>
-                
+
                 {/* Logout Button */}
                 <Button
                   onClick={handleLogout}
@@ -155,18 +148,18 @@ export default function Navbar() {
             ) : (
               <>
                 {/* Login Button */}
-                <Link to="/auth">
-                  <Button 
-                    variant="outline" 
+                <Link to="/auth" state={{ isSignUp: false }}>
+                  <Button
+                    variant="outline"
                     className="backdrop-blur-xl bg-white/5 border-white/10 text-white/80 hover:text-white hover:border-purple-500/30 hover:bg-purple-500/10 transition-all duration-300 hover:scale-105 hidden sm:flex"
                   >
                     Log In
                   </Button>
                 </Link>
-                
+
                 {/* Sign Up Button */}
-                <Link to="/auth">
-                  <Button 
+                <Link to="/auth" state={{ isSignUp: true }}>
+                  <Button
                     className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 hover:scale-105"
                   >
                     Sign up
@@ -179,23 +172,21 @@ export default function Navbar() {
       </nav>
 
       {/* Mobile Navigation - background bar disappears when scrolled or on consultation page */}
-      <div className={`md:hidden transition-all duration-300 ${
-        isScrolled
-          ? 'opacity-0 pointer-events-none border-t-0 backdrop-blur-none bg-transparent' 
+      <div className={`md:hidden transition-all duration-300 ${isScrolled
+          ? 'opacity-0 pointer-events-none border-t-0 backdrop-blur-none bg-transparent'
           : onConsultation
-          ? 'border-t-0 backdrop-blur-none bg-transparent'
-          : 'opacity-100 border-t border-white/10 backdrop-blur-xl bg-black/40'
-      }`}>
+            ? 'border-t-0 backdrop-blur-none bg-transparent'
+            : 'opacity-100 border-t border-white/10 backdrop-blur-xl bg-black/40'
+        }`}>
         <div className="px-6 py-4 flex flex-wrap gap-3">
           {navLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
-              className={`px-4 py-2 rounded-xl text-sm transition-all duration-300 font-medium ${
-                isActive(link.path)
+              className={`px-4 py-2 rounded-xl text-sm transition-all duration-300 font-medium ${isActive(link.path)
                   ? 'text-white bg-gradient-to-r from-purple-500/20 to-purple-600/20 border border-purple-500/30'
                   : 'text-white/60 hover:text-white hover:bg-white/5'
-              }`}
+                }`}
             >
               {link.name}
             </Link>
@@ -204,23 +195,21 @@ export default function Navbar() {
       </div>
 
       {/* Mobile Navigation - centered pill when scrolled */}
-      <nav 
-        className={`md:hidden sticky top-0 z-50 flex justify-center pt-4 transition-all duration-300 ${
-          isScrolled && !onConsultation
-            ? 'opacity-100 delay-300' 
+      <nav
+        className={`md:hidden sticky top-0 z-50 flex justify-center pt-4 transition-all duration-300 ${isScrolled && !onConsultation
+            ? 'opacity-100 delay-300'
             : 'opacity-0 pointer-events-none delay-0'
-        }`}
+          }`}
       >
         <div className="flex items-center backdrop-blur-xl bg-white/5 rounded-2xl p-2 border border-white/10">
           {navLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
-              className={`px-4 py-2 rounded-xl text-sm transition-all duration-300 font-medium ${
-                isActive(link.path)
+              className={`px-4 py-2 rounded-xl text-sm transition-all duration-300 font-medium ${isActive(link.path)
                   ? 'text-white bg-gradient-to-r from-purple-500/20 to-purple-600/20 border border-purple-500/30 shadow-lg shadow-purple-500/20'
                   : 'text-white/60 hover:text-white hover:bg-white/5'
-              }`}
+                }`}
             >
               {link.name}
             </Link>

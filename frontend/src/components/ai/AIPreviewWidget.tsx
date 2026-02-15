@@ -7,6 +7,7 @@ const MAX_MESSAGES = 4; // After this, redirect to full AI page
 // Preview question with answer options
 const PREVIEW_QUESTION = {
   question: "Cât de des experimentezi sensibilitate dentară?",
+  statement: "Simt sensibilitate dentară",
   options: [
     { id: 'a', text: "Rar, doar ocazional", value: "rare" },
     { id: 'b', text: "De câteva ori pe săptămână", value: "weekly" },
@@ -25,39 +26,40 @@ export function AIPreviewWidget({ onContinueToFull }: Props) {
   const [showFeedback, setShowFeedback] = useState(false);
 
   const handleOptionSelect = useCallback((optionId: string) => {
-    if (selectedOption) return; // Prevent multiple selections
     setSelectedOption(optionId);
-    setTimeout(() => {
-      setShowFeedback(true);
-    }, 300);
-  }, [selectedOption]);
+    setShowFeedback(true);
+  }, []);
 
   const handleContinueToFull = useCallback(() => {
     if (!selectedOption) return;
-    
+
     const selectedOptionData = PREVIEW_QUESTION.options.find(opt => opt.id === selectedOption);
     if (!selectedOptionData) return;
 
     // Format message with question and answer
     const initialMessage = `${PREVIEW_QUESTION.question}\n\nRăspuns: ${selectedOptionData.text}`;
-    
+
     if (onContinueToFull) {
       // If custom handler, pass the message
-      navigate('/ai', { 
-        state: { 
+      navigate('/ai', {
+        state: {
           initialMessage,
           previewQuestion: PREVIEW_QUESTION.question,
-          previewAnswer: selectedOptionData.text
-        } 
+          previewStatement: PREVIEW_QUESTION.statement,
+          previewAnswer: selectedOptionData.text,
+          timestamp: Date.now()
+        }
       });
       onContinueToFull();
     } else {
-      navigate('/ai', { 
-        state: { 
+      navigate('/ai', {
+        state: {
           initialMessage,
           previewQuestion: PREVIEW_QUESTION.question,
-          previewAnswer: selectedOptionData.text
-        } 
+          previewStatement: PREVIEW_QUESTION.statement,
+          previewAnswer: selectedOptionData.text,
+          timestamp: Date.now()
+        }
       });
     }
   }, [navigate, onContinueToFull, selectedOption]);
@@ -87,28 +89,25 @@ export function AIPreviewWidget({ onContinueToFull }: Props) {
         <div className="flex-1 flex flex-col justify-center space-y-3 mb-6">
           {PREVIEW_QUESTION.options.map((option) => {
             const isSelected = selectedOption === option.id;
-            const isDisabled = selectedOption !== null && !isSelected;
-            
+
             return (
               <button
                 key={option.id}
                 onClick={() => handleOptionSelect(option.id)}
-                disabled={isDisabled}
                 className={`
                   relative w-full text-left px-5 py-4 rounded-xl border transition-all duration-300
-                  ${isSelected 
-                    ? 'bg-gradient-to-r from-purple-600/30 to-purple-500/30 border-purple-500/50 shadow-lg shadow-purple-500/20 scale-[1.02]' 
-                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-purple-500/30 hover:scale-[1.01]'
+                  ${isSelected
+                    ? 'bg-gradient-to-r from-purple-600/30 to-purple-500/30 border-purple-500/50 shadow-lg shadow-purple-500/20 scale-[1.02]'
+                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-purple-500/30 hover:scale-[1.01] cursor-pointer'
                   }
-                  ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 `}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className={`
                       w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0
-                      ${isSelected 
-                        ? 'border-purple-400 bg-purple-500/20' 
+                      ${isSelected
+                        ? 'border-purple-400 bg-purple-500/20'
                         : 'border-white/30 bg-white/5'
                       }
                     `}>

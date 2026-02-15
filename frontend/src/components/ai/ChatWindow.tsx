@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import type { Message } from '../../lib/aiStorage';
+import { stripMarkdown } from '../../lib/markdownUtils';
 
 type Props = {
   title: string;
@@ -42,7 +43,7 @@ export function ChatWindow({
     <div className="flex flex-col h-full w-full bg-transparent overflow-hidden">
       {/* Header */}
       <div className="flex items-center px-6 py-4 border-b border-white/10 bg-white/[0.02] shrink-0">
-        <h2 className="text-xl font-semibold text-white truncate">{title || 'New chat'}</h2>
+        <h2 className="text-xl font-semibold text-white truncate">{stripMarkdown(title) || 'New chat'}</h2>
       </div>
 
       {/* Message list - full width, more padding */}

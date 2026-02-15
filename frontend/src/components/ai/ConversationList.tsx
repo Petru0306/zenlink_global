@@ -1,5 +1,6 @@
 import { Search, Trash2 } from 'lucide-react';
 import type { Conversation } from '../../lib/aiStorage';
+import { stripMarkdown } from '../../lib/markdownUtils';
 
 type Props = {
   conversations: Conversation[];
@@ -35,9 +36,9 @@ export function ConversationList({
 }: Props) {
   const filtered = searchQuery.trim()
     ? conversations.filter(
-        (c) =>
-          c.title.toLowerCase().includes(searchQuery.toLowerCase().trim())
-      )
+      (c) =>
+        c.title.toLowerCase().includes(searchQuery.toLowerCase().trim())
+    )
     : conversations;
 
   return (
@@ -89,7 +90,7 @@ export function ConversationList({
                   : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/[0.08] text-white/80 hover:text-white',
               ].join(' ')}
             >
-              <span className="flex-1 truncate">{c.title || 'New chat'}</span>
+              <span className="flex-1 truncate">{stripMarkdown(c.title) || 'Conversație nouă'}</span>
               <span className="text-white/40 text-xs shrink-0">{formatDate(c.updatedAt)}</span>
               <button
                 type="button"

@@ -5,8 +5,10 @@ import { useAuth, type UserRole } from '../../context/AuthContext';
 import zenlinkLogo from '../../images/zenlink-logo.png';
 
 export default function AuthPage() {
+  const location = useLocation();
+
   // Animation state
-  const [isSignUp, setIsSignUp] = useState(true);
+  const [isSignUp, setIsSignUp] = useState(location.state?.isSignUp ?? true);
   const [isAnimating, setIsAnimating] = useState(false);
   const [contentVisible, setContentVisible] = useState(true);
 
@@ -32,7 +34,7 @@ export default function AuthPage() {
 
   const { login, signup, refreshPsychProfile, user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
+  // location moved to top
   const from = (location.state as any)?.from?.pathname || '/dashboard';
 
   // Clear messages when switching modes
@@ -49,14 +51,21 @@ export default function AuthPage() {
     }
   }, [isSignUp]);
 
+  // Handle location state changes (e.g. from Navbar)
+  useEffect(() => {
+    if (location.state?.isSignUp !== undefined) {
+      setIsSignUp(location.state.isSignUp);
+    }
+  }, [location.state]);
+
   const toggleAuthMode = () => {
     if (isAnimating) return;
-    
+
     setIsAnimating(true);
     setContentVisible(false);
     setError('');
     setSuccess('');
-    
+
     // Switch form at midpoint of animation
     setTimeout(() => {
       setIsSignUp(!isSignUp);
@@ -113,16 +122,16 @@ export default function AuthPage() {
     setIsLoading(true);
     try {
       await signup(
-        signUpFirstName, 
-        signUpLastName, 
-        signUpEmail, 
-        signUpPassword, 
-        signUpPhone || undefined, 
+        signUpFirstName,
+        signUpLastName,
+        signUpEmail,
+        signUpPassword,
+        signUpPhone || undefined,
         accountType,
         accountType === 'DOCTOR' || accountType === 'CLINIC' ? referralCode : undefined
       );
       setSuccess('Account created successfully! Redirecting...');
-      
+
       // Only redirect to psych profile for PATIENT accounts
       if (accountType === 'PATIENT') {
         await refreshPsychProfile();
@@ -157,7 +166,7 @@ export default function AuthPage() {
     try {
       const loggedInUser = await login(signInEmail, signInPassword);
       setSuccess('Login successful! Redirecting...');
-      
+
       // Only check psych profile for PATIENT accounts
       if (loggedInUser?.role === 'PATIENT') {
         const profile = await refreshPsychProfile();
@@ -204,7 +213,7 @@ export default function AuthPage() {
       </div>
 
       {/* Main Card Container - wider for Sign Up */}
-      <div 
+      <div
         className="relative w-full h-[680px]"
         style={{
           maxWidth: isSignUp ? '1150px' : '1050px',
@@ -213,7 +222,7 @@ export default function AuthPage() {
       >
         {/* Cards Wrapper */}
         <div className="relative w-full h-full flex items-center">
-          
+
           {/* Image Card - Slides between left and right */}
           <div
             className="absolute h-full auth-image-card-dark flex items-center justify-center p-6 rounded-[2rem] z-10 auth-card-glow"
@@ -237,7 +246,7 @@ export default function AuthPage() {
           >
             {/* Subtle inner glow */}
             <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-purple-500/10 to-transparent pointer-events-none" />
-            
+
             {/* Form Content with fade animation */}
             <div
               className="relative z-10"
@@ -275,11 +284,10 @@ export default function AuthPage() {
                         <button
                           type="button"
                           onClick={() => setAccountType('PATIENT')}
-                          className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 flex-1 rounded-lg border transition-all duration-200 ${
-                            accountType === 'PATIENT'
-                              ? 'border-purple-400 bg-purple-500/20 shadow-sm shadow-purple-500/20'
-                              : 'border-purple-300/20 bg-white/5 hover:border-purple-300/40 hover:bg-white/10'
-                          }`}
+                          className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 flex-1 rounded-lg border transition-all duration-200 ${accountType === 'PATIENT'
+                            ? 'border-purple-400 bg-purple-500/20 shadow-sm shadow-purple-500/20'
+                            : 'border-purple-300/20 bg-white/5 hover:border-purple-300/40 hover:bg-white/10'
+                            }`}
                         >
                           <Heart className={`w-3.5 h-3.5 ${accountType === 'PATIENT' ? 'text-purple-300' : 'text-purple-300/60'}`} />
                           <span className={`text-[11px] font-medium ${accountType === 'PATIENT' ? 'text-purple-200' : 'text-purple-200/70'}`}>
@@ -289,11 +297,10 @@ export default function AuthPage() {
                         <button
                           type="button"
                           onClick={() => setAccountType('DOCTOR')}
-                          className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 flex-1 rounded-lg border transition-all duration-200 ${
-                            accountType === 'DOCTOR'
-                              ? 'border-purple-400 bg-purple-500/20 shadow-sm shadow-purple-500/20'
-                              : 'border-purple-300/20 bg-white/5 hover:border-purple-300/40 hover:bg-white/10'
-                          }`}
+                          className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 flex-1 rounded-lg border transition-all duration-200 ${accountType === 'DOCTOR'
+                            ? 'border-purple-400 bg-purple-500/20 shadow-sm shadow-purple-500/20'
+                            : 'border-purple-300/20 bg-white/5 hover:border-purple-300/40 hover:bg-white/10'
+                            }`}
                         >
                           <Stethoscope className={`w-3.5 h-3.5 ${accountType === 'DOCTOR' ? 'text-purple-300' : 'text-purple-300/60'}`} />
                           <span className={`text-[11px] font-medium ${accountType === 'DOCTOR' ? 'text-purple-200' : 'text-purple-200/70'}`}>
@@ -303,11 +310,10 @@ export default function AuthPage() {
                         <button
                           type="button"
                           onClick={() => setAccountType('CLINIC')}
-                          className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 flex-1 rounded-lg border transition-all duration-200 ${
-                            accountType === 'CLINIC'
-                              ? 'border-purple-400 bg-purple-500/20 shadow-sm shadow-purple-500/20'
-                              : 'border-purple-300/20 bg-white/5 hover:border-purple-300/40 hover:bg-white/10'
-                          }`}
+                          className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 flex-1 rounded-lg border transition-all duration-200 ${accountType === 'CLINIC'
+                            ? 'border-purple-400 bg-purple-500/20 shadow-sm shadow-purple-500/20'
+                            : 'border-purple-300/20 bg-white/5 hover:border-purple-300/40 hover:bg-white/10'
+                            }`}
                         >
                           <Building2 className={`w-3.5 h-3.5 ${accountType === 'CLINIC' ? 'text-purple-300' : 'text-purple-300/60'}`} />
                           <span className={`text-[11px] font-medium ${accountType === 'CLINIC' ? 'text-purple-200' : 'text-purple-200/70'}`}>
@@ -444,7 +450,7 @@ export default function AuthPage() {
                         disabled={isAnimating}
                         className="text-purple-300 hover:text-white font-semibold transition-colors underline-offset-2 hover:underline disabled:opacity-50"
                       >
-                        Sign In
+                        Log In
                       </button>
                     </p>
                   </form>
@@ -481,7 +487,7 @@ export default function AuthPage() {
                         placeholder="Email"
                         className="auth-input"
                       />
-                        <Mail className="auth-input-icon-right" />
+                      <Mail className="auth-input-icon-right" />
                     </div>
 
                     {/* Password */}
@@ -559,14 +565,14 @@ function LogoDisplay() {
           } as React.CSSProperties}
         />
       ))}
-      
+
       {/* Subtle glow at bottom */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-purple-500/20 blur-[60px] rounded-full" />
-      
+
       {/* Logo image */}
-      <img 
-        src={zenlinkLogo} 
-        alt="ZenLink" 
+      <img
+        src={zenlinkLogo}
+        alt="ZenLink"
         className="relative z-10 w-[85%] h-[85%] object-contain drop-shadow-[0_0_30px_rgba(139,92,246,0.3)]"
       />
     </div>

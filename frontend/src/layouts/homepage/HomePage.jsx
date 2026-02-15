@@ -57,16 +57,16 @@ export function HomePage() {
     if (window.location.hash) {
       window.history.replaceState(null, '', window.location.pathname);
     }
-    
+
     // Force scroll to top immediately and after delays to ensure it sticks
     const scrollToTop = () => {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
     };
-    
+
     scrollToTop();
-    
+
     // Use requestAnimationFrame to ensure DOM is ready
     requestAnimationFrame(() => {
       scrollToTop();
@@ -76,7 +76,7 @@ export function HomePage() {
       setTimeout(scrollToTop, 100);
       setTimeout(scrollToTop, 200);
     });
-    
+
     // Prevent any unwanted scroll for a short period after mount
     let preventScrollUntil = Date.now() + 500; // Prevent for 500ms after mount
     const preventScroll = () => {
@@ -84,9 +84,9 @@ export function HomePage() {
         scrollToTop();
       }
     };
-    
+
     window.addEventListener('scroll', preventScroll, { passive: true });
-    
+
     return () => {
       window.removeEventListener('scroll', preventScroll);
     };
@@ -373,8 +373,8 @@ export function HomePage() {
                 ZenLink
               </h1>
               <p className="text-[clamp(1rem,2vw,1.125rem)] text-[hsl(220,12%,85%)] leading-relaxed max-w-xl">
-                Bucură-te de conexiune perfectă între pacienți și medici cu interfață modernă și tehnologie de vârf. 
-                ZenLink aduce în fața ta un sistem complet de gestionare a sănătății, 
+                Bucură-te de conexiune perfectă între pacienți și medici cu interfață modernă și tehnologie de vârf.
+                ZenLink aduce în fața ta un sistem complet de gestionare a sănătății,
                 oferind experiențe premium și funcționalități inovatoare.
               </p>
               {/* AI Start chat bar - fix sub paragraful din hero */}
@@ -389,7 +389,7 @@ export function HomePage() {
                         e.preventDefault();
                         const text = aiBarInput.trim();
                         if (text) {
-                          navigate("/ai", { state: { initialMessage: text } });
+                          navigate("/ai", { state: { initialMessage: text, timestamp: Date.now() } });
                           setAiBarInput("");
                         }
                       }
@@ -402,7 +402,7 @@ export function HomePage() {
                     onClick={() => {
                       const text = aiBarInput.trim();
                       if (text) {
-                        navigate("/ai", { state: { initialMessage: text } });
+                        navigate("/ai", { state: { initialMessage: text, timestamp: Date.now() } });
                         setAiBarInput("");
                       }
                     }}
@@ -433,22 +433,22 @@ export function HomePage() {
                 <div className="relative w-[20rem] h-[20rem] lg:w-[24rem] lg:h-[24rem] rounded-full bg-[hsl(240,10%,6%)] shadow-2xl flex items-center justify-center overflow-hidden">
                   {/* Animated gradient ring */}
                   <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400 via-purple-500 to-purple-400 opacity-30 animate-spin-slow"
-                    style={{ 
+                    style={{
                       background: 'conic-gradient(from 0deg, rgb(192, 132, 252), rgb(168, 85, 247), rgb(192, 132, 252))',
                     }}
                   ></div>
-                  
+
                   {/* Inner dark circle */}
                   <div className="absolute inset-[2px] rounded-full bg-[hsl(240,10%,6%)] z-10"></div>
-                  
+
                   {/* Logo container with animated glow - circular */}
                   <div className="relative z-20 flex items-center justify-center w-full h-full">
                     <div className="relative w-full h-full flex items-center justify-center">
                       {/* Try to load logo image - circular container */}
                       <div className="w-[85%] h-[85%] rounded-full overflow-hidden flex items-center justify-center">
-                        <img 
-                          src="/tooth-logo.png.png" 
-                          alt="ZenLink Logo" 
+                        <img
+                          src="/tooth-logo.png.png"
+                          alt="ZenLink Logo"
                           className="w-full h-full object-cover animate-float-logo drop-shadow-2xl z-10 relative"
                           style={{ filter: 'drop-shadow(0 0 20px rgb(168, 85, 247))' }}
                           onError={(e) => {
@@ -456,17 +456,17 @@ export function HomePage() {
                           }}
                         />
                       </div>
-                      
+
                       {/* Fallback: Animated Tooth/Brain icon with circuit patterns */}
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <Brain className="w-32 h-32 lg:w-40 lg:h-40 text-purple-400 animate-float-logo" 
-                          style={{ 
+                        <Brain className="w-32 h-32 lg:w-40 lg:h-40 text-purple-400 animate-float-logo"
+                          style={{
                             filter: 'drop-shadow(0 0 20px rgb(168, 85, 247))',
                             strokeWidth: '1.5'
                           }}
                         />
                       </div>
-                      
+
                       {/* Animated circuit-like glow effect - matches tooth description */}
                       <div className="absolute inset-0 opacity-30 pointer-events-none">
                         <svg className="w-full h-full" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet">
@@ -477,14 +477,14 @@ export function HomePage() {
                               <stop offset="100%" stopColor="rgb(192, 132, 252)" stopOpacity="1" />
                             </linearGradient>
                             <filter id="glow">
-                              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
                               <feMerge>
-                                <feMergeNode in="coloredBlur"/>
-                                <feMergeNode in="SourceGraphic"/>
+                                <feMergeNode in="coloredBlur" />
+                                <feMergeNode in="SourceGraphic" />
                               </feMerge>
                             </filter>
                           </defs>
-                          
+
                           {/* Circuit nodes - glowing points */}
                           <circle cx="100" cy="50" r="4" fill="rgb(192, 132, 252)" filter="url(#glow)">
                             <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" />
@@ -502,7 +502,7 @@ export function HomePage() {
                             <animate attributeName="opacity" values="0.3;1;0.3" dur="2.2s" repeatCount="indefinite" />
                             <animate attributeName="r" values="3;5;3" dur="2.2s" repeatCount="indefinite" />
                           </circle>
-                          
+
                           {/* Circuit lines connecting nodes */}
                           <line x1="100" y1="50" x2="150" y2="100" stroke="url(#glowGradient)" strokeWidth="2" opacity="0.6" />
                           <line x1="150" y1="100" x2="100" y2="150" stroke="url(#glowGradient)" strokeWidth="2" opacity="0.6" />
@@ -644,7 +644,7 @@ export function HomePage() {
 
             {/* Right Column - Interactive AI Preview */}
             <div className="order-1 lg:order-2 h-[500px] md:h-[600px] lg:h-[700px]">
-              <AIPreviewWidget onContinueToFull={() => navigate('/ai')} />
+              <AIPreviewWidget />
             </div>
           </div>
         </div>
@@ -701,7 +701,7 @@ export function HomePage() {
               </p>
             </div>
           </div>
-          
+
           <div className="relative w-full max-w-[140%] -mx-[20%] h-[450px] md:h-[550px] lg:h-[650px] rounded-3xl overflow-hidden shadow-2xl shadow-purple-500/20">
             <video
               autoPlay
@@ -729,7 +729,7 @@ export function HomePage() {
               <div className="absolute top-1/4 left-1/4 w-24 h-24 rounded-full bg-purple-400/20 blur-xl animate-pulse"></div>
               <div className="absolute bottom-1/4 right-1/4 w-32 h-32 rounded-full bg-indigo-400/20 blur-xl animate-pulse" style={{ animationDelay: '1s' }}></div>
             </div>
-            
+
             {/* Central AI icon with animated glow */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="relative">
@@ -739,7 +739,7 @@ export function HomePage() {
                 </div>
               </div>
             </div>
-            
+
             {/* Floating conversation bubbles */}
             <div className="absolute top-8 right-8 w-16 h-16 rounded-xl bg-white/5 border border-purple-500/30 backdrop-blur-sm flex items-center justify-center transform rotate-12 group-hover:rotate-6 transition-transform duration-500">
               <MessageSquare className="w-8 h-8 text-purple-300/60" />
@@ -747,11 +747,11 @@ export function HomePage() {
             <div className="absolute bottom-8 left-8 w-12 h-12 rounded-lg bg-white/5 border border-indigo-500/30 backdrop-blur-sm flex items-center justify-center transform -rotate-12 group-hover:-rotate-6 transition-transform duration-500">
               <Sparkle className="w-6 h-6 text-indigo-300/60" />
             </div>
-            
+
             {/* Interactive glow on hover */}
             <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-purple-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           </div>
-          
+
           <div className="order-1 md:order-2">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 mb-6 shadow-xl shadow-indigo-500/20">
               <Bot className="w-8 h-8 text-indigo-400" />
@@ -803,7 +803,7 @@ export function HomePage() {
         </div>
       </section>
 
-{/* CTA Section */}
+      {/* CTA Section */}
       <section className="relative py-32 px-6">
         <div className="max-w-[75rem] mx-auto text-center">
           <h2 className="text-[clamp(2.15rem,5vw,3.15rem)] font-bold mb-6 text-[hsl(220,12%,98%)]">
@@ -813,17 +813,17 @@ export function HomePage() {
             Alătură-te miilor de furnizori de servicii medicale care folosesc ZenLink în fiecare zi.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               onClick={() => navigate('/about')}
               className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white text-lg px-8 py-6 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 font-bold"
             >
               Începe Trial-ul Gratuit
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
+            <Button
+              size="lg"
+              variant="outline"
               onClick={() => navigate('/about')}
               className="border-white/20 hover:bg-white/10 text-white text-lg px-8 py-6"
             >
@@ -874,7 +874,7 @@ export function HomePage() {
               </ul>
             </div>
           </div>
-          
+
           <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-purple-400"></div>
