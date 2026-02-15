@@ -1,32 +1,101 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { VisionSidebar } from './components/VisionSidebar';
+import ClinicProfileEditor from '../../components/clinic/ClinicProfileEditor';
+import { clinicDoctorService, type ClinicDoctor } from '../../services/clinicDoctorService';
+import { Input } from '../../components/ui/input';
+import { Button } from '../../components/ui/button';
 import { 
-  Building2, Users, UserCheck, CreditCard, Bot, 
-  Mail, Phone, Edit, Calendar, Stethoscope
+  Building2, Users, UserCheck, CreditCard, 
+  Mail, Phone, Edit, Calendar, Stethoscope, Search, X, Plus, Trash2, User
 } from 'lucide-react';
-import { AiChat } from '../../components/AiChat';
+import { useNavigate } from 'react-router-dom';
 
 export default function ClinicDashboard() {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedPatientId, setSelectedPatientId] = useState<string>('');
 
   // Real data - fetched from backend
-  const [doctors, setDoctors] = useState<any[]>([]);
+  const [doctors, setDoctors] = useState<ClinicDoctor[]>([]);
   const [clinicPatients, setClinicPatients] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<ClinicDoctor[]>([]);
+  const [showAddDoctor, setShowAddDoctor] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch doctors from backend
-    // Future: replace with GET /clinics/{id}/invites or /clinics/{id}/doctors
-    setDoctors([]);
-    setClinicPatients([]);
-  }, []);
+    if (user?.id && activeSection === 'doctors') {
+      loadClinicDoctors();
+    }
+  }, [user?.id, activeSection]);
+
+  const loadClinicDoctors = async () => {
+    if (!user?.id) return;
+    try {
+      const clinicDoctors = await clinicDoctorService.getClinicDoctors(user.id);
+      setDoctors(clinicDoctors);
+    } catch (error) {
+      console.error('Error loading clinic doctors:', error);
+      setDoctors([]);
+    }
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const results = await clinicDoctorService.searchDoctors(query);
+      // Filter out doctors already in clinic
+      const existingDoctorIds = new Set(doctors.map(d => d.id));
+      const filteredResults = results.filter(d => !existingDoctorIds.has(d.id));
+      setSearchResults(filteredResults);
+    } catch (error) {
+      console.error('Error searching doctors:', error);
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleAddDoctor = async (doctorId: number) => {
+    if (!user?.id) return;
+    try {
+      await clinicDoctorService.addDoctor(user.id, doctorId);
+      await loadClinicDoctors();
+      setSearchQuery('');
+      setSearchResults([]);
+      setShowAddDoctor(false);
+      // Note: Doctor's profile will be updated automatically by backend
+      // The doctor will see the clinic in their profile after refresh
+    } catch (error) {
+      console.error('Error adding doctor:', error);
+      alert(error instanceof Error ? error.message : 'Failed to add doctor');
+    }
+  };
+
+  const handleRemoveDoctor = async (doctorId: number) => {
+    if (!user?.id) return;
+    if (!confirm('Are you sure you want to remove this doctor from your clinic?')) return;
+    
+    try {
+      await clinicDoctorService.removeDoctor(user.id, doctorId);
+      await loadClinicDoctors();
+    } catch (error) {
+      console.error('Error removing doctor:', error);
+      alert(error instanceof Error ? error.message : 'Failed to remove doctor');
+    }
+  };
 
   useEffect(() => {
     if (!user?.id) return;
-    if (activeSection !== 'ai') return;
+    if (activeSection !== 'patients') return;
 
     fetch(`http://localhost:8080/api/clinics/${user.id}/patients`)
       .then((r) => r.json())
@@ -50,88 +119,19 @@ export default function ClinicDashboard() {
     { id: 'doctors', label: 'Doctors', icon: UserCheck },
     { id: 'patients', label: 'Patients', icon: Users },
     { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
-    { id: 'ai', label: 'AI Assistant', icon: Bot },
   ];
 
   const renderContent = () => {
     switch (activeSection) {
       case 'overview':
         return (
-          <div className="space-y-8">
-            <div>
-              <h1 className="text-white text-3xl font-semibold mb-2">Clinic Overview</h1>
-              <p className="text-white/40">Welcome to your clinic management portal</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30">
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
-                <div className="relative z-10 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
-                    <UserCheck className="w-6 h-6 text-purple-300" />
-                  </div>
-                  <div>
-                    <p className="text-purple-200/70 text-sm font-medium uppercase tracking-wide">Total Doctors</p>
-                    <p className="text-white text-2xl font-bold">{doctors.length}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30">
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
-                <div className="relative z-10 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30 flex items-center justify-center shadow-lg shadow-green-500/20">
-                    <Users className="w-6 h-6 text-green-300" />
-                  </div>
-                  <div>
-                    <p className="text-purple-200/70 text-sm font-medium uppercase tracking-wide">Total Patients</p>
-                    <p className="text-white text-2xl font-bold">{clinicPatients.length}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30">
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
-                <div className="relative z-10 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
-                    <Calendar className="w-6 h-6 text-purple-300" />
-                  </div>
-                  <div>
-                    <p className="text-purple-200/70 text-sm font-medium uppercase tracking-wide">Appointments Today</p>
-                    <p className="text-white text-2xl font-bold">12</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30">
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-white text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Clinic Information</h2>
-                  <button className="px-4 py-2 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-xl flex items-center gap-2 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 font-semibold">
-                    <Edit className="w-4 h-4" />
-                    Edit
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-white/40 text-sm mb-2 block">Clinic Name</label>
-                    <p className="text-white text-lg">{user?.firstName} {user?.lastName} Clinic</p>
-                  </div>
-                  <div>
-                    <label className="text-white/40 text-sm mb-2 block">Email</label>
-                    <p className="text-white text-lg">{user?.email || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-white/40 text-sm mb-2 block">Phone</label>
-                    <p className="text-white text-lg">{user?.phone || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <ClinicProfileEditor 
+            userId={user?.id || 0} 
+            onSave={() => {
+              // Refresh data if needed
+              console.log('Clinic profile saved');
+            }} 
+          />
         );
 
       case 'doctors':
@@ -142,53 +142,179 @@ export default function ClinicDashboard() {
               <p className="text-white/40">Manage your clinic's medical staff</p>
             </div>
 
+            {/* Add Doctor Section */}
             <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30">
               <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-white text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Doctor List</h2>
-                  <button className="px-4 py-2 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-xl shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 font-semibold">
-                    Add Doctor
-                  </button>
+                  <h2 className="text-white text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Add Doctor</h2>
+                  {!showAddDoctor && (
+                    <Button
+                      onClick={() => setShowAddDoctor(true)}
+                      className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 font-semibold"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Doctor
+                    </Button>
+                  )}
                 </div>
 
-              <div className="space-y-4">
-                {doctors.length === 0 ? (
-                  <div className="text-white/60 text-center py-8">
-                    No doctors registered yet. Doctors will appear here once they create accounts.
-                  </div>
-                ) : (
-                  doctors.map((doctor) => (
-                    <div key={doctor.id} className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30">
-                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
-                      <div className="relative z-10 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
-                            <Stethoscope className="w-6 h-6 text-purple-300" />
-                          </div>
-                          <div>
-                            <h3 className="text-white font-bold">{doctor.name}</h3>
-                            <p className="text-purple-300 text-sm font-medium">{doctor.specialization}</p>
-                            <div className="flex items-center gap-4 mt-2">
-                              <span className="text-purple-200/70 text-sm flex items-center gap-1 font-medium">
-                                <Mail className="w-4 h-4 text-purple-300" />
-                                {doctor.email}
-                              </span>
-                              <span className="text-purple-200/70 text-sm flex items-center gap-1 font-medium">
-                                <Phone className="w-4 h-4 text-purple-300" />
-                                {doctor.phone}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <button className="px-4 py-2 backdrop-blur-xl bg-white/5 border border-white/10 hover:border-purple-500/30 hover:bg-purple-500/10 text-white rounded-xl text-sm font-semibold transition-all duration-300">
-                          View Profile
-                        </button>
-                      </div>
+                {showAddDoctor && (
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-300" />
+                      <Input
+                        type="text"
+                        placeholder="Search doctors by name..."
+                        value={searchQuery}
+                        onChange={(e) => handleSearch(e.target.value)}
+                        className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-purple-500/50"
+                      />
                     </div>
-                  ))
+
+                    {searching && (
+                      <div className="text-white/60 text-center py-4">Searching...</div>
+                    )}
+
+                    {searchResults.length > 0 && (
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {searchResults.map((doctor) => (
+                          <div
+                            key={doctor.id}
+                            className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all"
+                          >
+                            <div className="flex items-center gap-3">
+                              {doctor.profileImageUrl ? (
+                                <img
+                                  src={doctor.profileImageUrl}
+                                  alt={`${doctor.firstName} ${doctor.lastName}`}
+                                  className="w-10 h-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center">
+                                  <User className="w-5 h-5 text-purple-300" />
+                                </div>
+                              )}
+                              <div>
+                                <p className="text-white font-semibold">
+                                  {doctor.firstName} {doctor.lastName}
+                                </p>
+                                {doctor.specializations && (
+                                  <p className="text-purple-200/70 text-sm">
+                                    {doctor.specializations.split(',')[0]}
+                                  </p>
+                                )}
+                                <p className="text-purple-200/50 text-xs">{doctor.email}</p>
+                              </div>
+                            </div>
+                            <Button
+                              onClick={() => handleAddDoctor(doctor.id)}
+                              size="sm"
+                              className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white"
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              Add
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
+                      <div className="text-white/60 text-center py-4">No doctors found</div>
+                    )}
+
+                    <Button
+                      onClick={() => {
+                        setShowAddDoctor(false);
+                        setSearchQuery('');
+                        setSearchResults([]);
+                      }}
+                      variant="outline"
+                      className="w-full bg-white/5 border-white/10 text-white/80 hover:text-white hover:border-purple-500/30"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 )}
               </div>
+            </div>
+
+            {/* Doctor List */}
+            <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+              <div className="relative z-10">
+                <h2 className="text-white text-2xl font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
+                  Doctor List ({doctors.length})
+                </h2>
+
+                <div className="space-y-4">
+                  {doctors.length === 0 ? (
+                    <div className="text-white/60 text-center py-8">
+                      No doctors registered yet. Use the search above to add doctors to your clinic.
+                    </div>
+                  ) : (
+                    doctors.map((doctor) => (
+                      <div key={doctor.id} className="relative group/item backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30">
+                        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover/item:opacity-100 transition-opacity duration-500 blur-xl" />
+                        <div className="relative z-10 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            {doctor.profileImageUrl ? (
+                              <img
+                                src={doctor.profileImageUrl}
+                                alt={`${doctor.firstName} ${doctor.lastName}`}
+                                className="w-12 h-12 rounded-full object-cover border-2 border-purple-500/30"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                                <Stethoscope className="w-6 h-6 text-purple-300" />
+                              </div>
+                            )}
+                            <div>
+                              <h3 className="text-white font-bold">
+                                {doctor.firstName} {doctor.lastName}
+                              </h3>
+                              {doctor.specializations && (
+                                <p className="text-purple-300 text-sm font-medium">
+                                  {doctor.specializations.split(',')[0]}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-4 mt-2">
+                                <span className="text-purple-200/70 text-sm flex items-center gap-1 font-medium">
+                                  <Mail className="w-4 h-4 text-purple-300" />
+                                  {doctor.email}
+                                </span>
+                                {doctor.phone && (
+                                  <span className="text-purple-200/70 text-sm flex items-center gap-1 font-medium">
+                                    <Phone className="w-4 h-4 text-purple-300" />
+                                    {doctor.phone}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              onClick={() => navigate(`/doctor/${doctor.id}`)}
+                              variant="outline"
+                              className="bg-white/5 border-white/10 text-white/80 hover:text-white hover:border-purple-500/30"
+                            >
+                              View Profile
+                            </Button>
+                            <Button
+                              onClick={() => handleRemoveDoctor(doctor.id)}
+                              variant="outline"
+                              size="icon"
+                              className="bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -301,67 +427,6 @@ export default function ClinicDashboard() {
                     Manage Billing
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'ai':
-        return (
-          <div className="space-y-8">
-            <div>
-              <h1 className="text-white text-3xl font-semibold mb-2">AI Assistant</h1>
-              <p className="text-white/40">Get help with clinic management and medical questions</p>
-            </div>
-
-            <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30">
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 border border-purple-400/50 flex items-center justify-center shadow-2xl shadow-purple-500/50">
-                    <Bot className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-white text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">ZenLink AI Assistant</h2>
-                    <p className="text-purple-200/70 text-sm font-medium">Your intelligent clinic assistant</p>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-purple-200/70 text-sm mb-2 font-medium uppercase tracking-wide">Selectează pacientul</label>
-                  <select
-                    value={selectedPatientId}
-                    onChange={(e) => setSelectedPatientId(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm backdrop-blur-sm focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
-                  >
-                    <option value="">— alege pacient —</option>
-                    {clinicPatients.map((p: any) => (
-                      <option key={String(p.id)} value={String(p.id)}>
-                        {p.name || `Patient ${p.id}`}
-                      </option>
-                    ))}
-                  </select>
-                  {clinicPatients.length === 0 && (
-                    <p className="text-purple-200/50 text-xs mt-2 font-medium">
-                      Nu există pacienți disponibili. Un clinic vede pacienții doar dacă are doctori asociați (și acei doctori au programări).
-                    </p>
-                  )}
-                </div>
-
-                {selectedPatientId ? (
-                  <AiChat
-                    userId={String(user?.id || '')}
-                    userRole={(user?.role || 'CLINIC') as any}
-                    scopeType="PATIENT"
-                    scopeId={selectedPatientId}
-                    title="ZenLink AI Assistant"
-                    subtitle="Întrebări despre pacientul selectat (cu citări din fișierele pacientului)."
-                  />
-                ) : (
-                  <div className="text-purple-200/70 text-sm backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-4 font-medium">
-                    Selectează un pacient ca să poți folosi AI cu fișierele lui.
-                  </div>
-                )}
               </div>
             </div>
           </div>

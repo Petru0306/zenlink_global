@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import type { Clinic } from '../types/clinic';
+import { clinicProfileService, type ClinicProfileResponse } from '../services/clinicProfileService';
 
 interface User {
   id: number;
@@ -32,32 +33,56 @@ export default function ClinicsPage() {
 
   useEffect(() => {
     // Fetch real clinics from backend
-    fetch('http://localhost:8080/api/users/clinics')
-      .then(res => res.json())
-      .then((users: User[]) => {
-        // Transform User to Clinic format
-        const transformedClinics: Clinic[] = users.map(user => ({
-          id: user.id,
-          name: `${user.firstName} ${user.lastName} Clinic`,
-          image: '',
-          location: 'Location not set',
-          distance: '',
-          rating: 0,
-          reviews: 0,
-          specialties: [],
-          verified: false,
-          patients: 0,
-          openHours: 'Hours not set',
-          featured: false,
-          description: 'Clinic information pending',
-          phone: user.phone || 'Phone not set',
-          email: user.email,
-          website: '',
-          address: 'Address not set',
-          doctors: [],
-        }));
-        setClinics(transformedClinics);
-        setLoading(false);
+    console.log('Fetching clinics from backend...');
+    Promise.all([
+      fetch('http://localhost:8080/api/users/clinics').then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      }),
+    ])
+      .then(([users]: [User[]]) => {
+        console.log('Received clinics:', users);
+
+        // Fetch profiles for all clinics
+        const profilePromises = users.map(user =>
+          clinicProfileService.getClinicProfile(user.id)
+            .then(profile => profile)
+            .catch(() => null)
+        );
+
+        return Promise.all(profilePromises).then(profiles => {
+          // Transform User to Clinic format with profile data
+          const transformedClinics: Clinic[] = users.map((user, index) => {
+            const profile = profiles[index];
+            const specialties = profile?.specialties 
+              ? profile.specialties.split(',').map(s => s.trim()).filter(Boolean)
+              : [];
+
+            return {
+              id: user.id,
+              name: profile?.name || `${user.firstName} ${user.lastName} Clinic`,
+              image: profile?.bannerImageUrl || profile?.profileImageUrl || '',
+              location: profile?.address || 'Location not set',
+              distance: '',
+              rating: 0,
+              reviews: 0,
+              specialties: specialties,
+              verified: false,
+              patients: 0,
+              openHours: profile?.openHours || 'Hours not set',
+              featured: false,
+              description: profile?.description || profile?.about || profile?.tagline || 'Clinic information pending',
+              phone: profile?.phone || user.phone || 'Phone not set',
+              email: profile?.email || user.email,
+              website: profile?.website || '',
+              address: profile?.address || 'Address not set',
+              doctors: [],
+            };
+          });
+          console.log('Transformed clinics:', transformedClinics);
+          setClinics(transformedClinics);
+          setLoading(false);
+        });
       })
       .catch(err => {
         console.error('Error fetching clinics:', err);

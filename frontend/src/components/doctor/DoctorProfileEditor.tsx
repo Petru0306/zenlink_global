@@ -840,27 +840,22 @@ export default function DoctorProfileEditor({ userId, onSave }: DoctorProfileEdi
               <label className="text-white/60 text-xs mb-1.5 block font-medium flex items-center gap-2">
                 <Building2 className="w-3.5 h-3.5 text-purple-400" />
                 Clinici
+                <span className="text-purple-200/50 text-xs ml-2">(actualizat automat)</span>
               </label>
-              {isEditing ? (
-                <Textarea
-                  placeholder="Unde activezi? Listează clinicile (una pe linie)"
-                  value={formData.clinics}
-                  onChange={(e) => setFormData({ ...formData, clinics: e.target.value })}
-                  style={{ backgroundColor: formData.clinics ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)' }}
-                  className={`text-sm transition-all duration-300 text-white border ${
-                    !formData.clinics
-                      ? 'border-white/10 placeholder:text-white/30 hover:border-purple-500/30 focus:border-purple-500/50'
-                      : 'border-purple-500/30'
-                  }`}
-                  rows={3}
-                />
-              ) : (
+              <div className={`relative p-4 rounded-xl border transition-all duration-300 ${
+                profile?.clinics 
+                  ? 'bg-white/5 border-white/10' 
+                  : 'bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20 border-dashed'
+              }`}>
                 <p className={`text-base transition-colors whitespace-pre-wrap ${
                   profile?.clinics ? 'text-white font-medium' : 'text-white/40 italic'
                 }`}>
-                  {profile?.clinics || 'Unde activezi? Listează clinicile'}
+                  {profile?.clinics || 'Clinicile vor apărea aici după ce ești adăugat la o clinică'}
                 </p>
-              )}
+              </div>
+              <p className="text-purple-200/50 text-xs mt-2">
+                Clinicile sunt actualizate automat când ești adăugat sau șters dintr-o clinică.
+              </p>
             </div>
           </div>
           </div>

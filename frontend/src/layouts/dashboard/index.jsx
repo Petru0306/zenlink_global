@@ -44,6 +44,8 @@ import {
 const API_BASE = 'http://localhost:8080';
 import { AiChat } from '../../components/AiChat';
 import { medicalProfileService } from '../../services/medicalProfileService';
+import { PatientConsultationsList } from '../../components/consultations/PatientConsultationsList';
+import { ConsultationDetail } from '../../components/consultations/ConsultationDetail';
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -62,6 +64,7 @@ export default function Dashboard() {
   const [previewAiOpen, setPreviewAiOpen] = useState(false);
   const [renamingId, setRenamingId] = useState(null);
   const [renamingValue, setRenamingValue] = useState('');
+  const [selectedConsultation, setSelectedConsultation] = useState(null);
 
   const [profileForm, setProfileForm] = useState({
     firstName: '',
@@ -1863,6 +1866,32 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+          </div>
+        );
+
+      case 'consultations':
+        return (
+          <div className="space-y-8">
+            <div>
+              <h1 className="text-white text-3xl font-semibold mb-2">Consultații</h1>
+              <p className="text-white/40">Jurnal digital al tuturor consultațiilor finalizate</p>
+            </div>
+
+            {!user?.id ? (
+              <div className="flex items-center justify-center py-20">
+                <p className="text-sm text-white/50">Se încarcă...</p>
+              </div>
+            ) : selectedConsultation ? (
+              <ConsultationDetail
+                consultation={selectedConsultation}
+                onBack={() => setSelectedConsultation(null)}
+              />
+            ) : (
+              <PatientConsultationsList
+                patientId={user.id}
+                onSelectConsultation={setSelectedConsultation}
+              />
+            )}
           </div>
         );
 

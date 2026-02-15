@@ -3,6 +3,8 @@ package com.zenlink.zenlink.repository;
 import com.zenlink.zenlink.model.User;
 import com.zenlink.zenlink.model.UserRole;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,5 +16,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
     long countByRole(UserRole role);
     List<User> findByRole(UserRole role);
+    
+    @Query("SELECT u FROM User u WHERE u.role = :role AND " +
+           "(LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :search, '%')))")
+    List<User> findByRoleAndNameContaining(@Param("role") UserRole role, @Param("search") String search);
 }
 
