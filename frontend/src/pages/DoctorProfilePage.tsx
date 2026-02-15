@@ -134,6 +134,8 @@ export default function DoctorProfilePage() {
       // Load doctor profile
       doctorProfileService.getDoctorProfile(doctorId)
         .then((profileData) => {
+          console.log('Loaded doctor profile:', profileData);
+          console.log('Clinics field:', profileData.clinics);
           setProfile(profileData);
         })
         .catch(err => {

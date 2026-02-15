@@ -1087,6 +1087,13 @@ public class ConsultationService {
     }
 
     /**
+     * Get all finalized consultations for a patient
+     */
+    public List<FinalizedConsultation> getFinalizedConsultationsForPatient(Long patientId) {
+        return finalizedConsultationRepository.findByPatientIdOrderByConsultationDateDesc(patientId);
+    }
+
+    /**
      * Get finalized consultation by appointment ID
      */
     public Optional<FinalizedConsultation> getFinalizedConsultation(Long appointmentId) {

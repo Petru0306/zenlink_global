@@ -15,6 +15,7 @@ export function VisionSidebar({ isOpen, onClose, activeSection, onSectionChange,
     { id: 'medical', label: 'Profil Medical', icon: Stethoscope },
     { id: 'files', label: 'Fișiere', icon: FileText },
     { id: 'appointments', label: 'Programări', icon: Calendar },
+    { id: 'consultations', label: 'Consultații', icon: Stethoscope },
     { id: 'history', label: 'Istoric', icon: History },
     { id: 'subscription', label: 'Abonament', icon: CreditCard },
 

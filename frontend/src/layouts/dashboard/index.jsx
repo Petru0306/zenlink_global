@@ -44,6 +44,8 @@ import {
 const API_BASE = 'http://localhost:8080';
 import { AiChat } from '../../components/AiChat';
 import { medicalProfileService } from '../../services/medicalProfileService';
+import { PatientConsultationsList } from '../../components/consultations/PatientConsultationsList';
+import { ConsultationDetail } from '../../components/consultations/ConsultationDetail';
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -62,6 +64,7 @@ export default function Dashboard() {
   const [previewAiOpen, setPreviewAiOpen] = useState(false);
   const [renamingId, setRenamingId] = useState(null);
   const [renamingValue, setRenamingValue] = useState('');
+  const [selectedConsultation, setSelectedConsultation] = useState(null);
 
   const [profileForm, setProfileForm] = useState({
     firstName: '',
@@ -1865,7 +1868,42 @@ export default function Dashboard() {
           </div>
         );
 
+      case 'consultations':
+        return (
+          <div className="space-y-8">
+            <div>
+              <h1 className="text-white text-3xl font-semibold mb-2">Consultații</h1>
+              <p className="text-white/40">Jurnal digital al tuturor consultațiilor finalizate</p>
+            </div>
 
+            {!user?.id ? (
+              <div className="flex items-center justify-center py-20">
+                <p className="text-sm text-white/50">Se încarcă...</p>
+              </div>
+            ) : selectedConsultation ? (
+              <ConsultationDetail
+                consultation={selectedConsultation}
+                onBack={() => setSelectedConsultation(null)}
+              />
+            ) : (
+              <PatientConsultationsList
+                patientId={user.id}
+                onSelectConsultation={setSelectedConsultation}
+              />
+            )}
+          </div>
+        );
+
+      case 'ai':
+        return (
+          <div className="relative space-y-8 animate-fade-in-up">
+            {/* Animated Background Elements */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+              <div className="absolute top-1/2 right-1/4 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
+            </div>
+          </div>
+        );
 
       default:
         return null;

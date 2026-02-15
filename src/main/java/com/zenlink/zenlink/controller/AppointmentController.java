@@ -271,6 +271,22 @@ public class AppointmentController {
     }
 
     /**
+     * Get finalized consultations for a patient
+     */
+    @GetMapping("/patient/{patientId}/finalized")
+    public ResponseEntity<?> getFinalizedConsultationsForPatient(@PathVariable Long patientId) {
+        try {
+            List<com.zenlink.zenlink.model.FinalizedConsultation> consultations = 
+                    consultationService.getFinalizedConsultationsForPatient(patientId);
+            return ResponseEntity.ok(consultations);
+        } catch (Exception e) {
+            log.error("Error getting finalized consultations for patient", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ArrayList<>());
+        }
+    }
+
+    /**
      * Get finalized consultation details by appointment ID
      */
     @GetMapping("/{appointmentId}/finalized")
