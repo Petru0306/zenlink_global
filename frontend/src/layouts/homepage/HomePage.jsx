@@ -521,23 +521,7 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* Social Media Icons - Right Edge */}
-        <div className="fixed top-1/2 right-6 lg:right-8 -translate-y-1/2 hidden lg:flex flex-col items-center gap-6 z-10 animate-fade-in-right">
-          <div className="w-[1.5px] h-32 bg-[hsl(220,12%,65%)] opacity-50"></div>
-          <a href="#" className="text-[hsl(220,12%,98%)] hover:text-purple-400 transition-colors duration-300 hover:scale-125 transform">
-            <Facebook className="w-5 h-5" />
-          </a>
-          <a href="#" className="text-[hsl(220,12%,98%)] hover:text-purple-400 transition-colors duration-300 hover:scale-125 transform">
-            <Instagram className="w-5 h-5" />
-          </a>
-          <a href="#" className="text-[hsl(220,12%,98%)] hover:text-purple-400 transition-colors duration-300 hover:scale-125 transform">
-            <Twitter className="w-5 h-5" />
-          </a>
-          <a href="#" className="text-[hsl(220,12%,98%)] hover:text-purple-400 transition-colors duration-300 hover:scale-125 transform">
-            <Youtube className="w-5 h-5" />
-          </a>
-          <div className="w-[1.5px] h-32 bg-[hsl(220,12%,65%)] opacity-50"></div>
-        </div>
+
       </section>
 
       {/* ZenLink Values Slider Band */}
@@ -880,7 +864,24 @@ export function HomePage() {
               <div className="w-2 h-2 rounded-full bg-purple-400"></div>
               <span className="text-[hsl(220,12%,98%)]">ZenLink</span>
             </div>
+
             <p className="text-[hsl(220,12%,65%)] text-sm">© 2025 ZenLink. All rights reserved.</p>
+
+            {/* Social Icons moved to footer */}
+            <div className="flex items-center gap-6">
+              <a href="#" className="text-[hsl(220,12%,65%)] hover:text-purple-400 transition-colors duration-300 hover:scale-110 transform">
+                <Facebook className="w-5 h-5" />
+              </a>
+              <a href="#" className="text-[hsl(220,12%,65%)] hover:text-purple-400 transition-colors duration-300 hover:scale-110 transform">
+                <Instagram className="w-5 h-5" />
+              </a>
+              <a href="#" className="text-[hsl(220,12%,65%)] hover:text-purple-400 transition-colors duration-300 hover:scale-110 transform">
+                <Twitter className="w-5 h-5" />
+              </a>
+              <a href="#" className="text-[hsl(220,12%,65%)] hover:text-purple-400 transition-colors duration-300 hover:scale-110 transform">
+                <Youtube className="w-5 h-5" />
+              </a>
+            </div>
           </div>
         </div>
       </footer>

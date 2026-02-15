@@ -39,21 +39,21 @@ export default function DoctorsPage() {
     ])
       .then(([users]: [User[]]) => {
         console.log('Received doctors:', users);
-        
+
         // Fetch profiles for all doctors
-        const profilePromises = users.map(user => 
+        const profilePromises = users.map(user =>
           fetch(`http://localhost:8080/api/doctor-profiles/doctor/${user.id}`)
             .then(res => res.ok ? res.json() : null)
             .catch(() => null)
         );
-        
+
         return Promise.all(profilePromises).then(profiles => {
           // Transform User to Doctor format with profile data
           const transformedDoctors: Doctor[] = users.map((user, index) => {
             const profile = profiles[index];
             const clinics = profile?.clinics ? profile.clinics.split('\n').filter(c => c.trim()) : [];
             const firstClinic = clinics.length > 0 ? clinics[0] : null;
-            
+
             return {
               id: user.id,
               name: `Dr. ${user.firstName} ${user.lastName}`,
@@ -95,7 +95,7 @@ export default function DoctorsPage() {
       const matchesSearch = !searchTerm || doctor.name.toLowerCase().includes(searchTerm);
       const matchesLocation = !locationFilter || doctor.location.toLowerCase().includes(locationFilter);
       const matchesSpecialization = !specializationFilter || doctor.specialization.toLowerCase().includes(specializationFilter);
-      
+
       return matchesSearch && matchesLocation && matchesSpecialization;
     });
   }, [doctors, searchTerm, locationFilter, specializationFilter]);
@@ -133,7 +133,7 @@ export default function DoctorsPage() {
         <div className="absolute top-[40%] right-[30%] w-[400px] h-[400px] rounded-full bg-gradient-to-br from-purple-400/20 to-transparent blur-[90px]" />
       </div>
 
-      <div className="p-8 space-y-6 relative z-10">
+      <div className="p-8 pt-32 space-y-6 relative z-10">
         {/* Header */}
         <div className="animate-fade-in-up">
           <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent tracking-tight">

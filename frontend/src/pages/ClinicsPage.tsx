@@ -74,20 +74,20 @@ export default function ClinicsPage() {
 
   const filteredClinics = useMemo(() => {
     return clinics.filter((clinic) => {
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         clinic.name.toLowerCase().includes(searchTerm) ||
         clinic.location.toLowerCase().includes(searchTerm) ||
         clinic.specialties.some(s => s.toLowerCase().includes(searchTerm));
-      
-      const matchesSpecialty = !specialtyFilter || 
+
+      const matchesSpecialty = !specialtyFilter ||
         clinic.specialties.some(s => s.toLowerCase().includes(specialtyFilter));
-      
-      const matchesLocation = !locationFilter || 
+
+      const matchesLocation = !locationFilter ||
         clinic.location.toLowerCase().includes(locationFilter);
-      
-      const matchesRating = !ratingFilter || 
+
+      const matchesRating = !ratingFilter ||
         clinic.rating >= parseFloat(ratingFilter);
-      
+
       return matchesSearch && matchesSpecialty && matchesLocation && matchesRating;
     });
   }, [clinics, searchTerm, specialtyFilter, locationFilter, ratingFilter]);
@@ -125,7 +125,7 @@ export default function ClinicsPage() {
         <div className="absolute top-[40%] right-[30%] w-[400px] h-[400px] rounded-full bg-gradient-to-br from-purple-400/20 to-transparent blur-[90px]" />
       </div>
 
-      <div className="p-8 space-y-6 relative z-10">
+      <div className="p-8 pt-32 space-y-6 relative z-10">
         {/* Header */}
         <div className="animate-fade-in-up">
           <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent tracking-tight">
@@ -184,11 +184,10 @@ export default function ClinicsPage() {
               </div>
             ) : (
               <div
-                className={`${
-                  viewType === 'grid'
-                    ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
-                    : 'space-y-4'
-                }`}
+                className={`${viewType === 'grid'
+                  ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+                  : 'space-y-4'
+                  }`}
               >
                 {sortedClinics.map((clinic, index) => (
                   <div
