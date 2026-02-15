@@ -144,6 +144,7 @@ export default function ConsultationWorkspacePage() {
   // Load consultation context
   useEffect(() => {
     if (!appointmentId) return
+    if (!user) return // Wait for user to be loaded
     setIsLoading(true)
     setError(null)
 
@@ -322,7 +323,7 @@ export default function ConsultationWorkspacePage() {
         setError(err.message || 'Eroare la încărcare.')
       })
       .finally(() => setIsLoading(false))
-  }, [appointmentId])
+  }, [appointmentId, user])
 
   // Start recording
   const handleStartRecording = useCallback(async () => {
@@ -1190,8 +1191,14 @@ export default function ConsultationWorkspacePage() {
 
       {/* Medical Profile */}
       {(() => {
+        // Always show the card, even if data is null (will show loading or no data message)
         if (!patientMedicalData) {
-          return null
+          return (
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+              <h4 className="text-xs font-medium text-white/40 uppercase tracking-wider mb-3">Profil Medical</h4>
+              <p className="text-sm text-white/40 italic">Se încarcă...</p>
+            </div>
+          )
         }
         
         // Check if any field has actual data (not null, not undefined, not empty string)

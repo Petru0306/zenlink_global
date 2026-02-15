@@ -254,8 +254,6 @@ export default function Dashboard() {
     }
     if ([y, m, d].some((v) => Number.isNaN(v))) return null;
     const dt = new Date(y, (m ?? 1) - 1, d);
-    // Adjust one day forward to compensate backend date shift
-    dt.setDate(dt.getDate() + 1);
     return dt;
   };
 
@@ -277,8 +275,6 @@ export default function Dashboard() {
     const [hh, mm] = timeStr.split(':').map(Number);
     if ([y, m, d, hh, mm].some((v) => Number.isNaN(v))) return NaN;
     const dt = new Date(y, (m ?? 1) - 1, d, hh, mm);
-    // Adjust one day forward to compensate backend date shift
-    dt.setDate(dt.getDate() + 1);
     return dt.getTime();
   };
 

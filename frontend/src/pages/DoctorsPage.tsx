@@ -31,38 +31,52 @@ export default function DoctorsPage() {
   useEffect(() => {
     // Fetch real doctors from backend
     console.log('Fetching doctors from backend...');
-    fetch('http://localhost:8080/api/users/doctors')
-      .then(res => {
-        console.log('Response status:', res.status);
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
+    Promise.all([
+      fetch('http://localhost:8080/api/users/doctors').then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         return res.json();
-      })
-      .then((users: User[]) => {
+      }),
+    ])
+      .then(([users]: [User[]]) => {
         console.log('Received doctors:', users);
-        // Transform User to Doctor format
-        const transformedDoctors: Doctor[] = users.map(user => ({
-          id: user.id,
-          name: `Dr. ${user.firstName} ${user.lastName}`,
-          specialization: 'General Medicine', // Default until profile is completed
-          rating: 0,
-          reviewsCount: 0,
-          views: 0,
-          location: 'Location not set',
-          fullAddress: user.phone || 'Address not set',
-          clinic: 'Clinic not set',
-          clinicId: 0,
-          imageUrl: undefined,
-          bio: 'Profile information pending',
-          education: [],
-          experience: '',
-          languages: [],
-          consultationFee: 0,
-        }));
-        console.log('Transformed doctors:', transformedDoctors);
-        setDoctors(transformedDoctors);
-        setLoading(false);
+        
+        // Fetch profiles for all doctors
+        const profilePromises = users.map(user => 
+          fetch(`http://localhost:8080/api/doctor-profiles/doctor/${user.id}`)
+            .then(res => res.ok ? res.json() : null)
+            .catch(() => null)
+        );
+        
+        return Promise.all(profilePromises).then(profiles => {
+          // Transform User to Doctor format with profile data
+          const transformedDoctors: Doctor[] = users.map((user, index) => {
+            const profile = profiles[index];
+            const clinics = profile?.clinics ? profile.clinics.split('\n').filter(c => c.trim()) : [];
+            const firstClinic = clinics.length > 0 ? clinics[0] : null;
+            
+            return {
+              id: user.id,
+              name: `Dr. ${user.firstName} ${user.lastName}`,
+              specialization: profile?.specializations || 'Medicina generală',
+              rating: 0,
+              reviewsCount: 0,
+              views: 0,
+              location: 'Location not set',
+              fullAddress: user.phone || 'Address not set',
+              clinic: firstClinic || 'Clinic not set',
+              clinicId: 0,
+              imageUrl: profile?.profileImageUrl || undefined,
+              bio: profile?.about || profile?.tagline || 'Profile information pending',
+              education: [],
+              experience: profile?.yearsOfExperience || '',
+              languages: profile?.languages ? profile.languages.split(',').map(l => l.trim()) : [],
+              consultationFee: 0,
+            };
+          });
+          console.log('Transformed doctors:', transformedDoctors);
+          setDoctors(transformedDoctors);
+          setLoading(false);
+        });
       })
       .catch(err => {
         console.error('Error fetching doctors:', err);
@@ -176,7 +190,7 @@ export default function DoctorsPage() {
                 <p className="text-white/60 text-lg">No doctors found. Be the first to register!</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {sortedDoctors.map((doctor, index) => (
                   <div
                     key={doctor.id}

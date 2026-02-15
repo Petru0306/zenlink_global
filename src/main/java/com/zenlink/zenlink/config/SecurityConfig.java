@@ -41,8 +41,10 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/health/**").permitAll()
+                .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded files
                 // Protected endpoints
                 .requestMatchers("/api/me/**").authenticated()
+                .requestMatchers("/api/upload/**").authenticated() // Upload requires authentication
                 // For now, allow all to maintain backward compatibility
                 // Uncomment below to enforce authentication:
                 // .requestMatchers("/api/admin/**").hasRole("CLINIC")

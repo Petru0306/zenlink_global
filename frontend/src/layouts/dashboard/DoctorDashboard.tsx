@@ -12,6 +12,7 @@ import { AiChat } from '../../components/AiChat';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { ConsultationsList } from '../../components/consultations/ConsultationsList';
 import { ConsultationDetail } from '../../components/consultations/ConsultationDetail';
+import DoctorProfileEditor from '../../components/doctor/DoctorProfileEditor';
 
 export default function DoctorDashboard() {
   const { user, setUser } = useAuth();
@@ -156,8 +157,6 @@ export default function DoctorDashboard() {
     const [hh, mm] = timeStr.split(':').map(Number);
     if ([y, m, d, hh, mm].some((v) => Number.isNaN(v))) return NaN;
     const dt = new Date(y, (m ?? 1) - 1, d, hh, mm);
-    // Adjust one day forward to compensate backend date shift
-    dt.setDate(dt.getDate() + 1);
     return dt.getTime();
   };
 
@@ -223,6 +222,21 @@ export default function DoctorDashboard() {
   const renderContent = () => {
     switch (activeSection) {
       case 'profile':
+        return (
+          <div className="space-y-6">
+            {user?.id && (
+              <DoctorProfileEditor 
+                userId={user.id}
+                onSave={() => {
+                  // Optionally refresh data or show success message
+                  console.log('Profile saved successfully');
+                }}
+              />
+            )}
+          </div>
+        );
+
+      case 'account':
         const handleSave = async () => {
           if (!user?.id) return;
           
@@ -262,8 +276,8 @@ export default function DoctorDashboard() {
         return (
           <div className="space-y-8">
             <div>
-              <h1 className="text-white text-3xl font-semibold mb-2">Personal Information</h1>
-              <p className="text-white/40">Manage your profile and account settings</p>
+              <h1 className="text-white text-3xl font-semibold mb-2">Date personale</h1>
+              <p className="text-white/40">Gestionează informațiile tale de cont</p>
             </div>
 
             <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30">
@@ -272,7 +286,7 @@ export default function DoctorDashboard() {
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <p className="text-purple-200/70 text-sm font-medium uppercase tracking-wide">Date personale</p>
-                    <h2 className="text-white text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Profil doctor</h2>
+                    <h2 className="text-white text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Cont utilizator</h2>
                   </div>
                   <button
                     onClick={() => {
@@ -1322,7 +1336,7 @@ export default function DoctorDashboard() {
       />
 
       {/* Main Content */}
-      <div className="lg:pl-[280px] min-h-screen relative z-10 pt-12 lg:pt-16">
+      <div className="lg:pl-[280px] min-h-screen relative z-10">
         <main className="p-8 lg:p-12 max-w-[1600px] mx-auto">
           {renderContent()}
         </main>

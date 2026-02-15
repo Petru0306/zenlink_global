@@ -652,7 +652,7 @@ export function HomePage() {
 
       {/* Feature Section 2 - Din conversație în claritate */}
       <section className="relative py-32 px-6 bg-[hsl(240,10%,6%)]/50">
-        <div className="max-w-[75rem] mx-auto grid md:grid-cols-2 gap-16 items-center">
+        <div className="max-w-[75rem] mx-auto grid md:grid-cols-2 gap-40 items-center">
           <div>
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-500/30 mb-6 shadow-xl shadow-purple-500/20">
               <FileText className="w-8 h-8 text-purple-400" />
@@ -702,32 +702,20 @@ export function HomePage() {
             </div>
           </div>
           
-          <div className="relative aspect-square rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 via-indigo-500/20 to-purple-600/20 backdrop-blur-sm shadow-2xl shadow-purple-500/20 group hover:shadow-purple-500/30 transition-all duration-500">
-            {/* Animated background pattern */}
-            <div className="absolute inset-0 opacity-20">
-              <div className="absolute inset-0" style={{
-                backgroundImage: `radial-gradient(circle at 2px 2px, rgba(168, 85, 247, 0.3) 1px, transparent 0)`,
-                backgroundSize: '40px 40px'
-              }}></div>
-            </div>
-            
-            {/* Floating document icons */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="relative">
-                <div className="absolute -top-8 -left-8 w-16 h-16 rounded-xl bg-white/5 border border-purple-500/30 backdrop-blur-sm flex items-center justify-center transform rotate-12 group-hover:rotate-6 transition-transform duration-500">
-                  <FileText className="w-8 h-8 text-purple-400/60" />
-                </div>
-                <div className="w-32 h-32 rounded-2xl bg-white/5 border border-purple-500/30 backdrop-blur-sm flex items-center justify-center shadow-xl">
-                  <FileText className="w-16 h-16 text-purple-400" />
-                </div>
-                <div className="absolute -bottom-8 -right-8 w-12 h-12 rounded-lg bg-white/5 border border-purple-500/30 backdrop-blur-sm flex items-center justify-center transform -rotate-12 group-hover:-rotate-6 transition-transform duration-500">
-                  <Sparkle className="w-6 h-6 text-purple-300/60" />
-                </div>
+          <div className="relative w-full max-w-[140%] -mx-[20%] h-[450px] md:h-[550px] lg:h-[650px] rounded-3xl overflow-hidden shadow-2xl shadow-purple-500/20">
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-full object-cover scale-110"
+            >
+              <source src="/videos/clarity-demo.mp4" type="video/mp4" />
+              {/* Fallback pentru browser-uri care nu suportă video */}
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-500/20 via-indigo-500/20 to-purple-600/20">
+                <FileText className="w-16 h-16 text-purple-400" />
               </div>
-            </div>
-            
-            {/* Glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            </video>
           </div>
         </div>
       </section>

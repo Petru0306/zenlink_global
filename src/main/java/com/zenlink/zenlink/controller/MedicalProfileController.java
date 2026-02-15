@@ -47,35 +47,56 @@ public class MedicalProfileController {
             @PathVariable Long patientId,
             @AuthenticationPrincipal User user) {
         try {
-            log.debug("Request to get patient medical profile - patientId: {}, user: {}", patientId, user != null ? user.getId() : "null");
+            log.info("🔍 Request to get patient medical profile - patientId: {}, user: {}", patientId, user != null ? user.getId() : "null");
             
             if (user == null) {
-                log.warn("Unauthenticated request to get patient medical profile for patient {}", patientId);
+                log.warn("❌ Unauthenticated request to get patient medical profile for patient {}", patientId);
                 return ResponseEntity.status(401).build();
             }
             
-            log.debug("Authenticated user {} (role: {}) requesting profile for patient {}", user.getId(), user.getRole(), patientId);
+            log.info("✅ Authenticated user {} (role: {}) requesting profile for patient {}", user.getId(), user.getRole(), patientId);
             
             // Allow patients to access their own profile, or doctors to access any patient profile
             // Also allow users who have an appointment with the patient (doctor or patient themselves)
             boolean isPatient = user.getId().equals(patientId);
             boolean isDoctor = user.getRole() == com.zenlink.zenlink.model.UserRole.DOCTOR;
-            boolean hasAppointment = appointmentRepository.findByPatientId(patientId).stream()
-                .anyMatch(apt -> apt.getDoctorId().equals(user.getId()) || apt.getPatientId().equals(user.getId()));
+            
+            log.info("🔍 Access check - isPatient: {}, isDoctor: {}", isPatient, isDoctor);
+            
+            // Check appointments
+            var appointments = appointmentRepository.findByPatientId(patientId);
+            log.info("🔍 Found {} appointments for patient {}", appointments.size(), patientId);
+            boolean hasAppointment = appointments.stream()
+                .anyMatch(apt -> {
+                    boolean matches = apt.getDoctorId().equals(user.getId()) || apt.getPatientId().equals(user.getId());
+                    if (matches) {
+                        log.info("✅ Found matching appointment: doctorId={}, patientId={}, appointmentId={}", 
+                            apt.getDoctorId(), apt.getPatientId(), apt.getId());
+                    }
+                    return matches;
+                });
+            
+            log.info("🔍 Access check - hasAppointment: {}", hasAppointment);
             
             if (isPatient || isDoctor || hasAppointment) {
+                log.info("✅ Access granted - fetching medical profile for patient {}", patientId);
                 MedicalProfileResponse response = medicalProfileService.getProfileByPatientId(patientId);
-                log.debug("Returning medical profile for patient {}: hasData={}", patientId, response.getId() != null);
+                log.info("✅ Returning medical profile for patient {}: hasData={}, hasId={}", 
+                    patientId, response.getId() != null, response.getId() != null);
+                if (response.getId() != null) {
+                    log.info("✅ Profile data - bloodType: {}, allergies: {}, weightKg: {}, heightCm: {}", 
+                        response.getBloodType(), response.getAllergies(), response.getWeightKg(), response.getHeightCm());
+                }
                 return ResponseEntity.ok(response);
             }
             
-            log.warn("User {} (role: {}) attempted to access medical profile for patient {} - no access", user.getId(), user.getRole(), patientId);
+            log.warn("❌ User {} (role: {}) attempted to access medical profile for patient {} - no access", user.getId(), user.getRole(), patientId);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid request to get patient medical profile: {}", e.getMessage());
+            log.warn("❌ Invalid request to get patient medical profile: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            log.error("Error getting patient medical profile for patient {}", patientId, e);
+            log.error("❌ Error getting patient medical profile for patient {}", patientId, e);
             return ResponseEntity.status(500).build();
         }
     }

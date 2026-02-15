@@ -51,10 +51,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
         Map<String, Object> response = new HashMap<>();
         response.put("timestamp", LocalDateTime.now().toString());
-        response.put("status", HttpStatus.BAD_REQUEST.value());
-        response.put("message", ex.getMessage());
+        response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        String errorMessage = ex.getMessage();
+        if (errorMessage == null || errorMessage.isEmpty()) {
+            errorMessage = ex.getClass().getSimpleName() + " occurred";
+        }
+        response.put("message", errorMessage);
+        response.put("error", errorMessage);
+        
+        System.err.println("=== GlobalExceptionHandler caught RuntimeException ===");
+        System.err.println("Exception type: " + ex.getClass().getName());
+        System.err.println("Exception message: " + errorMessage);
+        ex.printStackTrace();
+        
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
     @ExceptionHandler(Exception.class)
@@ -62,9 +73,19 @@ public class GlobalExceptionHandler {
         Map<String, Object> response = new HashMap<>();
         response.put("timestamp", LocalDateTime.now().toString());
         response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        response.put("message", "An unexpected error occurred");
+        
+        // Include the actual error message for debugging
+        String errorMessage = ex.getMessage();
+        if (errorMessage == null || errorMessage.isEmpty()) {
+            errorMessage = ex.getClass().getSimpleName() + " occurred";
+        }
+        response.put("message", errorMessage);
+        response.put("error", errorMessage);
         
         // Log the actual error for debugging
+        System.err.println("=== GlobalExceptionHandler caught exception ===");
+        System.err.println("Exception type: " + ex.getClass().getName());
+        System.err.println("Exception message: " + errorMessage);
         ex.printStackTrace();
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);

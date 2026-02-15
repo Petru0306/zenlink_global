@@ -58,7 +58,12 @@ export default function AppointmentBookingPage() {
 
   useEffect(() => {
     if (selectedDate && doctorId) {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      // Use local date instead of UTC to avoid timezone issues
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
       fetch(`http://localhost:8080/api/availability/doctor/${doctorId}/date/${dateStr}`)
         .then(res => res.json())
         .then((slots: AvailabilitySlot[]) => {
@@ -109,7 +114,13 @@ export default function AppointmentBookingPage() {
     if (!selectedDate || !selectedTime || !user || !doctorId) return;
     
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      // Use local date instead of UTC to avoid timezone issues
+      // Format: YYYY-MM-DD using local date components
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
       const [hours, minutes] = selectedTime.split(':');
       const timeStr = `${hours}:${minutes}:00`;
       
