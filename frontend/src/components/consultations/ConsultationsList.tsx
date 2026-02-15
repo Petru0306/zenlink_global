@@ -214,41 +214,41 @@ export function ConsultationsList({ doctorId, onSelectConsultation, filterPatien
           </p>
         </div>
       ) : (
-        filteredConsultations.map((consultation) => {
-          const patient = patients.get(consultation.patientId);
-          const patientName = patient 
-            ? `${patient.firstName} ${patient.lastName}`
-            : `Pacient #${consultation.patientId}`;
-          
-          const consultationTitle = patient
-            ? `Consultatie ${patient.firstName} ${patient.lastName} #${consultation.consultationNumber}`
-            : `Consultatie Pacient #${consultation.patientId} #${consultation.consultationNumber}`;
-
-        return (
-          <div
-            key={consultation.id}
-            onClick={() => onSelectConsultation(consultation)}
-            className="group relative backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-2xl p-6 border border-white/10 hover:border-purple-500/30 transition-all duration-300 cursor-pointer hover:scale-[1.01] hover:shadow-lg hover:shadow-purple-500/10"
-          >
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {filteredConsultations.map((consultation) => {
+            const patient = patients.get(consultation.patientId);
+            const patientName = patient 
+              ? `${patient.firstName} ${patient.lastName}`
+              : `Pacient #${consultation.patientId}`;
             
-            <div className="relative z-10 flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                    <Stethoscope className="w-5 h-5 text-purple-400" />
+            const consultationTitle = patient
+              ? `Consultatie ${patient.firstName} ${patient.lastName} #${consultation.consultationNumber}`
+              : `Consultatie Pacient #${consultation.patientId} #${consultation.consultationNumber}`;
+
+          return (
+            <div
+              key={consultation.id}
+              onClick={() => onSelectConsultation(consultation)}
+              className="group relative backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-2xl p-4 border border-white/10 hover:border-purple-500/30 transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:shadow-lg hover:shadow-purple-500/10 flex flex-col"
+            >
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+              
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 flex-shrink-0">
+                    <Stethoscope className="w-4 h-4 text-purple-400" />
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white group-hover:text-purple-200 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-white group-hover:text-purple-200 transition-colors line-clamp-2">
                       {consultationTitle}
                     </h3>
-                    <div className="flex items-center gap-4 text-xs text-white/50 mt-1">
+                    <div className="flex flex-col gap-1 text-xs text-white/50 mt-2">
                       <div className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>{formatDate(consultation.consultationDate)}</span>
+                        <Calendar className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{formatDate(consultation.consultationDate)}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
+                        <Clock className="w-3 h-3 flex-shrink-0" />
                         <span>{formatTime(consultation.consultationDate)}</span>
                       </div>
                     </div>
@@ -256,24 +256,25 @@ export function ConsultationsList({ doctorId, onSelectConsultation, filterPatien
                 </div>
 
                 {consultation.chiefComplaint && (
-                  <div className="mt-3">
-                    <p className="text-xs text-white/40 mb-1.5">Motiv principal:</p>
-                    <p className="text-sm text-white/70 leading-relaxed line-clamp-2">
+                  <div className="mt-2 flex-1">
+                    <p className="text-xs text-white/40 mb-1">Motiv principal:</p>
+                    <p className="text-xs text-white/70 leading-relaxed line-clamp-3">
                       {consultation.chiefComplaint}
                     </p>
                   </div>
                 )}
 
-                <div className="mt-4 flex items-center gap-2 text-xs text-purple-300/70">
-                  <FileText className="w-3 h-3" />
-                  <span>Vezi detalii consultație</span>
-                  <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2 text-xs text-purple-300/70">
+                  <FileText className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">Vezi detalii</span>
+                  <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform flex-shrink-0" />
                 </div>
               </div>
             </div>
-          </div>
-        );
-      }))}
+          );
+        })}
+        </div>
+      )}
     </div>
   );
 }

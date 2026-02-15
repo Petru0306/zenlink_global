@@ -2,13 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
-  Calendar as CalendarIcon, Clock, Users, Bot, User, 
+  Calendar as CalendarIcon, Clock, Users, User, 
   Stethoscope, Mail, Phone, Plus, X, Pencil, Edit2, CalendarDays, CheckCircle2
 } from 'lucide-react';
 import { Calendar } from '../../components/Calendar';
 import { VisionSidebar } from './components/VisionSidebar';
 import { Input } from '../../components/ui/input';
-import { AiChat } from '../../components/AiChat';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { ConsultationsList } from '../../components/consultations/ConsultationsList';
 import { ConsultationDetail } from '../../components/consultations/ConsultationDetail';
@@ -133,15 +132,6 @@ export default function DoctorDashboard() {
     // setPatients([]);
   }, [user]);
 
-  const aiPatients = useMemo(() => {
-    const map = new Map<string, string>();
-    appointments.forEach((a: any) => {
-      const pid = String(a?.raw?.patientId ?? a?.patientId ?? '');
-      const name = String(a?.patientName ?? '');
-      if (pid) map.set(pid, name || `Patient ${pid}`);
-    });
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [appointments]);
 
   const toLocalTimestamp = (dateStr: string, timeStr: string) => {
     if (!dateStr || !timeStr) return NaN;
@@ -165,6 +155,7 @@ export default function DoctorDashboard() {
     if (Number.isNaN(ts)) return false;
     const status = (apt.status || '').toLowerCase();
     if (status === 'cancelled') return false;
+    if (status === 'completed') return false; // Exclude completed appointments
     // consider future slots upcoming regardless of status
     return ts >= Date.now();
   });
@@ -216,7 +207,6 @@ export default function DoctorDashboard() {
     { id: 'schedule', label: 'Programări', icon: CalendarIcon },
     { id: 'patients', label: 'Pacienți', icon: Users },
     { id: 'consultations', label: 'Consultații', icon: Stethoscope },
-    { id: 'ai', label: 'Asistent AI', icon: Bot },
   ];
 
   const renderContent = () => {
@@ -1057,11 +1047,8 @@ export default function DoctorDashboard() {
               <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30">
                 <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
                 <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="mb-6">
                     <h2 className="text-white text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Upcoming Appointments</h2>
-                    <span className="text-xs font-semibold uppercase tracking-wide text-purple-200/70 border border-white/10 rounded-full px-3 py-1 backdrop-blur-sm bg-white/5">
-                      ZenLink Ready (Silent Mode)
-                    </span>
                   </div>
                   <div className="space-y-4">
                     {upcomingAppointments.length === 0 ? (
@@ -1219,67 +1206,6 @@ export default function DoctorDashboard() {
                     ))
                   )}
                 </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'ai':
-        return (
-          <div className="space-y-8">
-            <div>
-              <h1 className="text-white text-3xl font-semibold mb-2">AI Assistant</h1>
-              <p className="text-white/40">Get help with medical questions and patient care</p>
-            </div>
-
-            <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30">
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 border border-purple-400/50 flex items-center justify-center shadow-2xl shadow-purple-500/50">
-                    <Bot className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-white text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">ZenLink AI Assistant</h2>
-                    <p className="text-purple-200/70 text-sm font-medium">Your intelligent medical assistant</p>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-purple-200/70 text-sm mb-2 font-medium uppercase tracking-wide">Selectează pacientul</label>
-                  <select
-                    value={selectedPatientId}
-                    onChange={(e) => setSelectedPatientId(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm backdrop-blur-sm focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
-                  >
-                    <option value="">— alege pacient —</option>
-                    {aiPatients.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  {aiPatients.length === 0 && (
-                    <p className="text-purple-200/50 text-xs mt-2 font-medium">
-                      Nu există încă pacienți (ai nevoie de programări ca să apară aici).
-                    </p>
-                  )}
-                </div>
-
-                {selectedPatientId ? (
-                  <AiChat
-                    userId={String(user?.id || '')}
-                    userRole={(user?.role || 'DOCTOR') as any}
-                    scopeType="PATIENT"
-                    scopeId={selectedPatientId}
-                    title="ZenLink AI Assistant"
-                    subtitle="Întrebări despre pacientul selectat (cu citări din fișierele pacientului)."
-                  />
-                ) : (
-                  <div className="text-purple-200/70 text-sm backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-4 font-medium">
-                    Selectează un pacient ca să poți folosi AI cu fișierele lui.
-                  </div>
-                )}
               </div>
             </div>
           </div>
