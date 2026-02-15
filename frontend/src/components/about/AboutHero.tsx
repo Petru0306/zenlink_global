@@ -4,7 +4,7 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 
 export function AboutHero() {
   return (
-    <section className="relative min-h-[70vh] flex items-center px-6 py-20 pt-28 overflow-hidden">
+    <section className="relative min-h-[70vh] flex items-center px-6 py-20 pt-40 overflow-hidden">
       {/* Background orbs - same motif as Home */}
       <div className="fixed -top-[20%] -right-[10%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-purple-500/25 via-purple-600/15 to-transparent blur-[80px] pointer-events-none" />
       <div className="fixed -bottom-[10%] -left-[5%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-purple-400/20 via-purple-500/10 to-transparent blur-[70px] pointer-events-none" />

@@ -17,7 +17,7 @@ export function VisionSidebar({ isOpen, onClose, activeSection, onSectionChange,
     { id: 'appointments', label: 'Programări', icon: Calendar },
     { id: 'history', label: 'Istoric', icon: History },
     { id: 'subscription', label: 'Abonament', icon: CreditCard },
-    { id: 'ai', label: 'Asistent AI', icon: Sparkles },
+
   ];
 
   const items = menuItems ?? defaultMenu;
@@ -70,10 +70,9 @@ export function VisionSidebar({ isOpen, onClose, activeSection, onSectionChange,
                   className={`
                     relative group w-full flex items-center justify-between px-4 py-3 rounded-2xl
                     transition-all duration-300
-                    ${
-                      isActive
-                        ? 'bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-white border border-purple-500/30 shadow-lg shadow-purple-500/20 scale-105'
-                        : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent hover:border-purple-500/20'
+                    ${isActive
+                      ? 'bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-white border border-purple-500/30 shadow-lg shadow-purple-500/20 scale-105'
+                      : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent hover:border-purple-500/20'
                     }
                   `}
                   style={{ animationDelay: `${index * 0.05}s` }}
@@ -82,13 +81,12 @@ export function VisionSidebar({ isOpen, onClose, activeSection, onSectionChange,
                   {isActive && (
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
                   )}
-                  
+
                   <div className="relative z-10 flex items-center gap-3 min-w-0 flex-1">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
-                      isActive 
-                        ? 'bg-gradient-to-br from-purple-500/30 to-purple-600/30 border border-purple-400/50 shadow-lg shadow-purple-500/30' 
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${isActive
+                        ? 'bg-gradient-to-br from-purple-500/30 to-purple-600/30 border border-purple-400/50 shadow-lg shadow-purple-500/30'
                         : 'bg-white/5 border border-white/10 group-hover:border-purple-500/30 group-hover:bg-purple-500/10'
-                    }`}>
+                      }`}>
                       <Icon className={`w-5 h-5 ${isActive ? 'text-purple-200' : 'text-white/60 group-hover:text-purple-200'}`} />
                     </div>
                     <span className="text-sm font-medium leading-tight truncate">{item.label}</span>

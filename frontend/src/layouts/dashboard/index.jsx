@@ -197,7 +197,7 @@ export default function Dashboard() {
         if (typeof f?.dataUrl === 'string' && f.dataUrl.startsWith('blob:')) {
           try {
             URL.revokeObjectURL(f.dataUrl);
-          } catch {}
+          } catch { }
         }
       });
     };
@@ -207,7 +207,7 @@ export default function Dashboard() {
   // Cursor tracking effect
   useEffect(() => {
     if (activeSection !== 'profile') return;
-    
+
     const handleMouseMove = (e) => {
       setMousePosition({ x: e.clientX, y: e.clientY });
     };
@@ -452,7 +452,7 @@ export default function Dashboard() {
     try {
       console.log('Saving medical profile for user:', user.id);
       console.log('Medical form data:', medicalForm);
-      
+
       const response = await medicalProfileService.upsertProfile({
         bloodType: medicalForm.bloodType || undefined,
         allergies: medicalForm.allergies || undefined,
@@ -468,9 +468,9 @@ export default function Dashboard() {
         bloodPressure: medicalForm.bloodPressure || undefined,
         bpDate: medicalForm.bpDate || undefined,
       });
-      
+
       console.log('Medical profile saved successfully:', response);
-      
+
       // Also save to localStorage as backup
       localStorage.setItem(`patientMedicalData-${user.id}`, JSON.stringify(medicalForm));
       setMedicalEditing(false);
@@ -630,7 +630,7 @@ export default function Dashboard() {
     switch (activeSection) {
       case 'profile':
         return (
-          <div className="relative" id="patient-profile-container">
+          <div className="relative pt-8" id="patient-profile-container">
             {/* Animated Background Elements */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
               <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
@@ -639,9 +639,9 @@ export default function Dashboard() {
             </div>
 
             {/* Cursor Follower Effect */}
-            <div 
+            <div
               className="fixed w-96 h-96 rounded-full bg-purple-500/5 blur-3xl pointer-events-none z-0 transition-all duration-700 ease-out"
-              style={{ 
+              style={{
                 left: `${mousePosition.x}px`,
                 top: `${mousePosition.y}px`,
                 transform: 'translate(-50%, -50%)'
@@ -658,7 +658,7 @@ export default function Dashboard() {
 
             {/* Patient Header */}
             <div className="mb-8 relative z-10 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-              <PatientHeader 
+              <PatientHeader
                 firstName={patientProfile.firstName}
                 lastName={patientProfile.lastName}
                 email={patientProfile.email}
@@ -670,13 +670,13 @@ export default function Dashboard() {
 
             {/* Editable profile & medical data */}
             <div className="grid md:grid-cols-2 gap-8 mb-8 relative z-10">
-              <div 
+              <div
                 className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up"
                 style={{ animationDelay: '0.3s' }}
               >
                 {/* Glassmorphic glow effect */}
                 <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
-                
+
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-6">
                     <div>
@@ -763,13 +763,13 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div 
+              <div
                 className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up"
                 style={{ animationDelay: '0.4s' }}
               >
                 {/* Glassmorphic glow effect */}
                 <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
-                
+
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-6">
                     <div>
@@ -920,7 +920,7 @@ export default function Dashboard() {
 
             {/* Overview Stats */}
             <div className="mb-8 relative z-10 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
-              <PatientOverviewStats 
+              <PatientOverviewStats
                 totalAppointments={appointments.length}
                 totalDocuments={files.length}
                 activePrescriptions={ongoingTreatments.length}
@@ -934,7 +934,7 @@ export default function Dashboard() {
               {/* Left Column - Main Content */}
               <div className="xl:col-span-2 space-y-8">
                 {/* Health Metrics */}
-                <div 
+                <div
                   className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30 animate-fade-in-up"
                   style={{ animationDelay: '0.6s' }}
                 >
@@ -942,16 +942,16 @@ export default function Dashboard() {
                   <div className="relative z-10">
                     <h3 className="text-white text-2xl font-bold mb-8 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Metrici de sănătate</h3>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                    {renderMetric('Greutate', healthMetrics.weight, 'kg', healthMetrics.weightChange, healthMetrics.weightDate)}
-                    {renderMetric('Înălțime', healthMetrics.height, 'cm', '', '')}
-                    {renderMetric('Glicemie', healthMetrics.glucose, 'mg/dL', '', healthMetrics.glucoseDate)}
-                    {renderMetric('Presiune', healthMetrics.bloodPressure, 'mmHg', '', healthMetrics.bpDate)}
+                      {renderMetric('Greutate', healthMetrics.weight, 'kg', healthMetrics.weightChange, healthMetrics.weightDate)}
+                      {renderMetric('Înălțime', healthMetrics.height, 'cm', '', '')}
+                      {renderMetric('Glicemie', healthMetrics.glucose, 'mg/dL', '', healthMetrics.glucoseDate)}
+                      {renderMetric('Presiune', healthMetrics.bloodPressure, 'mmHg', '', healthMetrics.bpDate)}
                     </div>
                   </div>
                 </div>
 
                 {/* Appointment History */}
-                <div 
+                <div
                   className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30 animate-fade-in-up"
                   style={{ animationDelay: '0.7s' }}
                 >
@@ -998,7 +998,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Medical Documents */}
-                <div 
+                <div
                   className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.01] hover:border-purple-500/30 animate-fade-in-up"
                   style={{ animationDelay: '0.8s' }}
                 >
@@ -1072,7 +1072,7 @@ export default function Dashboard() {
               {/* Right Column - Sidebar */}
               <div className="xl:col-span-1 space-y-6">
                 {/* Quick Actions */}
-                <div 
+                <div
                   className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up"
                   style={{ animationDelay: '0.9s' }}
                 >
@@ -1097,7 +1097,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Medical History */}
-                <div 
+                <div
                   className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-6 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up"
                   style={{ animationDelay: '1s' }}
                 >
@@ -1150,7 +1150,7 @@ export default function Dashboard() {
               </h1>
               <p className="text-white/60 text-lg font-light tracking-wide">Informații medicale detaliate și istoric complet</p>
             </div>
-            
+
             <div className="grid md:grid-cols-2 gap-8 relative z-10">
               <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-8 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
                 <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
@@ -1489,22 +1489,21 @@ export default function Dashboard() {
                       </button>
                     </div>
                   </div>
-                  
+
                   {/* Content Area - Split Layout */}
                   <div className="flex-1 flex overflow-hidden relative bg-[#0a0a14]">
                     {/* Image Preview Area */}
-                    <div 
-                      className={`flex-1 flex items-center justify-center overflow-auto p-4 transition-all duration-300 ${
-                        previewAiOpen ? 'pr-0' : ''
-                      }`}
+                    <div
+                      className={`flex-1 flex items-center justify-center overflow-auto p-4 transition-all duration-300 ${previewAiOpen ? 'pr-0' : ''
+                        }`}
                     >
                       {previewFile.type?.startsWith('image/') ? (
                         previewFile.dataUrl ? (
-                          <img 
-                            src={previewFile.dataUrl} 
-                            alt={previewFile.name} 
+                          <img
+                            src={previewFile.dataUrl}
+                            alt={previewFile.name}
                             className="max-w-full max-h-full object-contain"
-                            style={{ 
+                            style={{
                               maxWidth: previewAiOpen ? 'calc(100% - 520px)' : '100%',
                               maxHeight: 'calc(98vh - 80px)',
                               width: 'auto',
@@ -1516,9 +1515,9 @@ export default function Dashboard() {
                         )
                       ) : previewFile.type?.includes('pdf') ? (
                         previewFile.dataUrl ? (
-                          <iframe 
-                            src={previewFile.dataUrl} 
-                            title={previewFile.name} 
+                          <iframe
+                            src={previewFile.dataUrl}
+                            title={previewFile.name}
                             className="w-full h-full"
                             style={{ height: 'calc(98vh - 80px)' }}
                           />
@@ -1615,7 +1614,7 @@ export default function Dashboard() {
                   <div>
                     <p className="text-purple-200/70 text-xs font-medium uppercase tracking-wide mb-1">Următoarea</p>
                     <p className="text-white text-lg font-bold">
-                      {appointmentsData.active.length > 0 
+                      {appointmentsData.active.length > 0
                         ? `${formatDate(appointmentsData.active[0].date)}, ${appointmentsData.active[0].time}`
                         : 'Niciuna'}
                     </p>
@@ -1866,54 +1865,7 @@ export default function Dashboard() {
           </div>
         );
 
-      case 'ai':
-        return (
-          <div className="relative space-y-8 animate-fade-in-up">
-            {/* Animated Background Elements */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
-              <div className="absolute top-1/2 right-1/4 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
-            </div>
 
-            <div className="mb-12 relative z-10">
-              <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent tracking-tight">
-                Asistent AI
-              </h1>
-              <p className="text-white/60 text-lg font-light tracking-wide">Asistent medical inteligent pentru răspunsuri rapide</p>
-            </div>
-
-            {subscription.hasAISubscription ? (
-              <div className="relative z-10">
-                <AiChat
-                  userId={String(user?.id || '')}
-                  userRole={user?.role || 'PATIENT'}
-                  scopeType="PATIENT"
-                  scopeId={String(user?.id || '')}
-                  title="Chat AI"
-                  subtitle="Pune întrebări despre sănătate (fără fișiere încă). Răspunsurile sunt în română."
-                  initialMessage="Bună! Sunt asistentul tău AI medical. Cu ce te pot ajuta?"
-                />
-              </div>
-            ) : (
-              <div className="relative group backdrop-blur-xl bg-gradient-to-br from-white/5 via-white/3 to-transparent rounded-3xl p-12 border border-white/10 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 text-center animate-fade-in-up">
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
-                <div className="relative z-10">
-                  <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-purple-500/20 via-purple-600/20 to-purple-700/20 border-2 border-purple-400/50 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-purple-500/50">
-                    <Bot className="w-12 h-12 text-white" />
-                  </div>
-                  <h3 className="text-white text-3xl font-bold mb-3 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">Ai nevoie de abonament AI</h3>
-                  <p className="text-purple-200/70 text-lg mb-8">Activează abonamentul de 50€ pentru a accesa Asistent AI</p>
-                  <button
-                    className="px-8 py-4 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-xl shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 font-bold text-lg hover:scale-105"
-                    onClick={() => setActiveSection('subscription')}
-                  >
-                    Mergi la abonament
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        );
 
       default:
         return null;
@@ -1926,17 +1878,17 @@ export default function Dashboard() {
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {/* Top right large orb */}
         <div className="absolute -top-[20%] -right-[10%] w-[800px] h-[800px] rounded-full bg-gradient-to-br from-[#1e3a8a]/30 via-[#1e40af]/20 to-transparent blur-[100px]" />
-        
+
         {/* Bottom left orb */}
         <div className="absolute -bottom-[15%] -left-[5%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-[#0e7490]/25 via-[#0891b2]/15 to-transparent blur-[80px]" />
-        
+
         {/* Center accent */}
         <div className="absolute top-[40%] right-[30%] w-[400px] h-[400px] rounded-full bg-gradient-to-br from-[#3b82f6]/20 to-transparent blur-[90px]" />
       </div>
 
       {/* Sidebar */}
-      <VisionSidebar 
-        isOpen={sidebarOpen} 
+      <VisionSidebar
+        isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         activeSection={activeSection}
         onSectionChange={setActiveSection}

@@ -81,7 +81,7 @@ export function ChatWindow({
       {/* Disclaimer footer */}
       <div className="px-6 py-3 border-t border-white/10 bg-white/[0.02] shrink-0">
         <p className="text-xs text-white/50 text-center">
-          ⚠️ ZenLink AI oferă informații generale și nu înlocuiește consultul medical.
+          ZenLink AI oferă informații generale și nu înlocuiește consultul medical.
         </p>
       </div>
 

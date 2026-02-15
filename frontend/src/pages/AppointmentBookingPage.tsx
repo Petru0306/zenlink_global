@@ -26,7 +26,7 @@ export default function AppointmentBookingPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  
+
   const doctorId = id ? parseInt(id, 10) : null;
   const [doctor, setDoctor] = useState<DoctorData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +63,7 @@ export default function AppointmentBookingPage() {
       const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
       const day = String(selectedDate.getDate()).padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
-      
+
       fetch(`http://localhost:8080/api/availability/doctor/${doctorId}/date/${dateStr}`)
         .then(res => res.json())
         .then((slots: AvailabilitySlot[]) => {
@@ -112,7 +112,7 @@ export default function AppointmentBookingPage() {
 
   const handleBookAppointment = async () => {
     if (!selectedDate || !selectedTime || !user || !doctorId) return;
-    
+
     try {
       // Use local date instead of UTC to avoid timezone issues
       // Format: YYYY-MM-DD using local date components
@@ -120,10 +120,10 @@ export default function AppointmentBookingPage() {
       const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
       const day = String(selectedDate.getDate()).padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
-      
+
       const [hours, minutes] = selectedTime.split(':');
       const timeStr = `${hours}:${minutes}:00`;
-      
+
       const response = await fetch(`http://localhost:8080/api/appointments?patientId=${user.id}`, {
         method: 'POST',
         headers: {
@@ -142,7 +142,7 @@ export default function AppointmentBookingPage() {
       }
 
       setBookingSuccess(true);
-      
+
       // Redirect to dashboard after 2 seconds
       setTimeout(() => {
         navigate('/dashboard');
@@ -154,11 +154,11 @@ export default function AppointmentBookingPage() {
   };
 
   const formatDateDisplay = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     };
     return date.toLocaleDateString('ro-RO', options);
   };

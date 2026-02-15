@@ -18,7 +18,7 @@ export default function ClinicProfilePage() {
       <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-white text-3xl font-bold mb-6">Clinic not found</h1>
-          <Button 
+          <Button
             onClick={() => navigate('/clinici')}
             className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white"
           >

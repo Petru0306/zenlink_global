@@ -55,8 +55,8 @@ export default function Navbar() {
           const profile = await doctorProfileService.getMyProfile();
           if (profile?.profileImageUrl) {
             // Ensure the URL is absolute
-            const imageUrl = profile.profileImageUrl.startsWith('http') 
-              ? profile.profileImageUrl 
+            const imageUrl = profile.profileImageUrl.startsWith('http')
+              ? profile.profileImageUrl
               : `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'}${profile.profileImageUrl}`;
             setProfileImageUrl(imageUrl);
           } else {
@@ -150,8 +150,8 @@ export default function Navbar() {
                 >
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:scale-110 transition-transform duration-300 overflow-hidden">
                     {profileImageUrl ? (
-                      <img 
-                        src={profileImageUrl} 
+                      <img
+                        src={profileImageUrl}
                         alt={`${user?.firstName} ${user?.lastName}`}
                         className="w-full h-full object-cover"
                         onError={() => setProfileImageUrl(null)}
@@ -235,23 +235,18 @@ export default function Navbar() {
           {/* Mobile Menu Button (if needed, but usually we fallback to bottom nav or sidebar on mobile) */}
           {/* For now, keeping pill desktop-focused roughly, but ensuring it's functional */}
 
-          {/* Separator */}
-          <div className="hidden md:block w-px h-6 bg-white/10 mx-1" />
+          {!isAuthenticated && (
+            <>
+              {/* Separator */}
+              <div className="hidden md:block w-px h-6 bg-white/10 mx-1" />
 
-          {/* CTA Button */}
-          {isAuthenticated ? (
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 text-white text-sm font-medium transition-colors border border-white/5"
-            >
-              Dashboard
-            </button>
-          ) : (
-            <Link to="/auth" state={{ isSignUp: true }}>
-              <Button size="sm" className="rounded-full bg-purple-600 hover:bg-purple-500 text-white px-6">
-                Sign Up
-              </Button>
-            </Link>
+              {/* Sign Up Button */}
+              <Link to="/auth" state={{ isSignUp: true }}>
+                <Button size="sm" className="rounded-full bg-purple-600 hover:bg-purple-500 text-white px-6">
+                  Sign Up
+                </Button>
+              </Link>
+            </>
           )}
         </div>
       </div>
