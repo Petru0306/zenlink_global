@@ -11,11 +11,20 @@ interface DoctorProfileEditorProps {
   onSave?: () => void;
 }
 
-// Predefined options
+// Predefined options - Dentistry related specializations
 const SPECIALIZATIONS = [
-  'Medicina generală', 'Stomatologie', 'Cardiologie', 'Dermatologie', 'Oftalmologie',
-  'Ortopedie', 'Pediatrie', 'Ginecologie', 'Neurologie', 'Psihiatrie',
-  'Endocrinologie', 'Gastroenterologie', 'Urologie', 'Oncologie', 'Radiologie'
+  'Stomatologie',
+  'Ortodonție',
+  'Endodonție',
+  'Parodontologie',
+  'Chirurgie orală și maxilo-facială',
+  'Protetică dentară',
+  'Implantologie',
+  'Pedodonție',
+  'Estetică dentară',
+  'Patologie orală',
+  'Radiologie dentară',
+  'Anestezie dentară'
 ];
 
 const YEARS_OPTIONS = [

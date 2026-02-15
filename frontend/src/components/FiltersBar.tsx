@@ -99,27 +99,35 @@ export default function FiltersBar({ onSearch }: FiltersBarProps) {
               </SelectTrigger>
               <SelectContent className="bg-black/90 backdrop-blur-xl text-white border-purple-500/30">
                 <SelectItem value="all" className="hover:bg-purple-500/20">All specialties</SelectItem>
-                <SelectItem value="cardiology" className="hover:bg-purple-500/20">Cardiology</SelectItem>
-                <SelectItem value="dermatology" className="hover:bg-purple-500/20">Dermatology</SelectItem>
-                <SelectItem value="gynecology" className="hover:bg-purple-500/20">Gynecology</SelectItem>
-                <SelectItem value="internal" className="hover:bg-purple-500/20">Internal Medicine</SelectItem>
-                <SelectItem value="orthopedic" className="hover:bg-purple-500/20">Orthopedic Surgery</SelectItem>
-                <SelectItem value="pediatrics" className="hover:bg-purple-500/20">Pediatrics</SelectItem>
+                <SelectItem value="stomatologie" className="hover:bg-purple-500/20">Stomatologie</SelectItem>
+                <SelectItem value="ortodontie" className="hover:bg-purple-500/20">Ortodonție</SelectItem>
+                <SelectItem value="endodontie" className="hover:bg-purple-500/20">Endodonție</SelectItem>
+                <SelectItem value="parodontologie" className="hover:bg-purple-500/20">Parodontologie</SelectItem>
+                <SelectItem value="chirurgie-orala" className="hover:bg-purple-500/20">Chirurgie orală</SelectItem>
+                <SelectItem value="protetica-dentara" className="hover:bg-purple-500/20">Protetică dentară</SelectItem>
+                <SelectItem value="implantologie" className="hover:bg-purple-500/20">Implantologie</SelectItem>
+                <SelectItem value="pedodontie" className="hover:bg-purple-500/20">Pedodonție</SelectItem>
+                <SelectItem value="estetica-dentara" className="hover:bg-purple-500/20">Estetică dentară</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex flex-wrap gap-2">
-              {['cardiology', 'dermatology', 'pediatrics', 'orthopedic'].map((tag) => (
+              {[
+                { value: 'stomatologie', label: 'Stomatologie' },
+                { value: 'ortodontie', label: 'Ortodonție' },
+                { value: 'endodontie', label: 'Endodonție' },
+                { value: 'parodontologie', label: 'Parodontologie' }
+              ].map(({ value, label }) => (
                 <button
-                  key={tag}
-                  onClick={() => setSelectedSpecialty(tag)}
+                  key={value}
+                  onClick={() => setSelectedSpecialty(value)}
                   className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all border ${
-                    selectedSpecialty === tag
+                    selectedSpecialty === value
                       ? 'bg-gradient-to-r from-purple-500/20 to-purple-600/20 border-purple-400/50 text-purple-200 shadow-lg shadow-purple-500/20'
                       : 'bg-white/5 border-white/10 text-purple-200/70 hover:border-purple-500/30 hover:bg-white/10'
                   }`}
                   type="button"
                 >
-                  {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                  {label}
                 </button>
               ))}
             </div>
