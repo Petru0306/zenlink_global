@@ -28,7 +28,18 @@ public class DatabaseConfig {
         
         log.info("DATABASE_URL from @Value: {}", databaseUrl != null ? (databaseUrl.isEmpty() ? "(empty)" : "***") : "(null)");
         log.info("DATABASE_URL from env: {}", envDatabaseUrl != null ? (envDatabaseUrl.isEmpty() ? "(empty)" : "***") : "(null)");
-        log.info("Using DATABASE_URL: {}", finalDatabaseUrl != null ? (finalDatabaseUrl.isEmpty() ? "(empty)" : "***") : "(null)");
+        
+        // Try to use individual Railway variables if DATABASE_URL is not available
+        String pgHost = System.getenv("PGHOST");
+        String pgPort = System.getenv("PGPORT");
+        String pgDatabase = System.getenv("PGDATABASE");
+        String pgUser = System.getenv("PGUSER");
+        String pgPassword = System.getenv("PGPASSWORD");
+        
+        log.info("Checking Railway individual variables: PGHOST={}, PGDATABASE={}, PGUSER={}", 
+            pgHost != null ? pgHost : "(null)", 
+            pgDatabase != null ? pgDatabase : "(null)",
+            pgUser != null ? pgUser : "(null)");
         
         // If DATABASE_URL is provided (Railway), parse it
         if (finalDatabaseUrl != null && !finalDatabaseUrl.isEmpty() && !finalDatabaseUrl.startsWith("jdbc:")) {
@@ -57,7 +68,7 @@ public class DatabaseConfig {
                 String jdbcUrl = String.format("jdbc:postgresql://%s:%d/%s?sslmode=disable", 
                     host, port, database);
                 
-                log.info("Database connection configured: host={}, port={}, database={}, username={}", 
+                log.info("Database connection configured from DATABASE_URL: host={}, port={}, database={}, username={}", 
                     host, port, database, username);
                 
                 return DataSourceBuilder.create()
@@ -70,6 +81,27 @@ public class DatabaseConfig {
                 log.error("Failed to parse DATABASE_URL: {}", finalDatabaseUrl != null ? "***" : "(null)", e);
                 throw new RuntimeException("Failed to parse DATABASE_URL", e);
             }
+        }
+        
+        // If individual Railway variables are available, use them
+        if (pgHost != null && !pgHost.isEmpty() && 
+            pgDatabase != null && !pgDatabase.isEmpty() && 
+            pgUser != null && !pgUser.isEmpty() && 
+            pgPassword != null && !pgPassword.isEmpty()) {
+            
+            int port = (pgPort != null && !pgPort.isEmpty()) ? Integer.parseInt(pgPort) : 5432;
+            String jdbcUrl = String.format("jdbc:postgresql://%s:%d/%s?sslmode=disable", 
+                pgHost, port, pgDatabase);
+            
+            log.info("Database connection configured from individual Railway variables: host={}, port={}, database={}, username={}", 
+                pgHost, port, pgDatabase, pgUser);
+            
+            return DataSourceBuilder.create()
+                .url(jdbcUrl)
+                .username(pgUser)
+                .password(pgPassword)
+                .driverClassName("org.postgresql.Driver")
+                .build();
         }
         
         log.info("Using default Spring Boot datasource configuration");
