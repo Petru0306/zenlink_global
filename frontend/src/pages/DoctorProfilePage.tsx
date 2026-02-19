@@ -294,7 +294,7 @@ export default function DoctorProfilePage() {
         </div>
       </>
 
-      <div className="max-w-6xl mx-auto px-6 py-6 relative z-10">
+      <div className="max-w-6xl mx-auto px-6 pt-28 pb-6 relative z-10">
         {/* Back Button */}
         <Button
           onClick={() => navigate('/doctori')}

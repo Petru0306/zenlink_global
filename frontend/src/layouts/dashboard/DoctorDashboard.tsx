@@ -1262,7 +1262,7 @@ export default function DoctorDashboard() {
       />
 
       {/* Main Content */}
-      <div className="lg:pl-[280px] min-h-screen relative z-10">
+      <div className="lg:pl-[280px] min-h-screen relative z-10 pt-20 lg:pt-24">
         <main className="p-8 lg:p-12 max-w-[1600px] mx-auto">
           {renderContent()}
         </main>

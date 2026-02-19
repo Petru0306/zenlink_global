@@ -141,7 +141,7 @@ export default function ClinicProfilePage() {
         <div className="absolute top-[40%] right-[30%] w-[400px] h-[400px] rounded-full bg-gradient-to-br from-purple-400/20 to-transparent blur-[90px]" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
+      <div className="max-w-7xl mx-auto px-6 pt-28 pb-8 relative z-10">
         {/* Back Button */}
         <Button
           onClick={() => navigate('/clinici')}
@@ -409,15 +409,6 @@ export default function ClinicProfilePage() {
               </div>
             </div>
           )}
-
-          {/* Action Button */}
-          <div className="flex justify-center pt-4 animate-fade-in-up" style={{ animationDelay: '0.25s' }}>
-            <Button
-              className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-xl px-12 py-7 text-xl shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 font-bold hover:scale-105"
-            >
-              Book Appointment
-            </Button>
-          </div>
         </div>
       </div>
     </div>

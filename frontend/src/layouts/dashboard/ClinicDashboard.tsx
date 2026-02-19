@@ -456,7 +456,7 @@ export default function ClinicDashboard() {
       />
 
       {/* Main Content */}
-      <div className="lg:pl-[280px] min-h-screen relative z-10">
+      <div className="lg:pl-[280px] min-h-screen relative z-10 pt-20 lg:pt-24">
         {/* Mobile Menu Button */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
