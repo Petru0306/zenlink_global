@@ -22,13 +22,21 @@ public class DatabaseConfig {
     @Bean
     @Primary
     public DataSource dataSource() {
+        // Check environment variable directly as well (Railway might set it as env var)
+        String envDatabaseUrl = System.getenv("DATABASE_URL");
+        String finalDatabaseUrl = (envDatabaseUrl != null && !envDatabaseUrl.isEmpty()) ? envDatabaseUrl : databaseUrl;
+        
+        log.info("DATABASE_URL from @Value: {}", databaseUrl != null ? (databaseUrl.isEmpty() ? "(empty)" : "***") : "(null)");
+        log.info("DATABASE_URL from env: {}", envDatabaseUrl != null ? (envDatabaseUrl.isEmpty() ? "(empty)" : "***") : "(null)");
+        log.info("Using DATABASE_URL: {}", finalDatabaseUrl != null ? (finalDatabaseUrl.isEmpty() ? "(empty)" : "***") : "(null)");
+        
         // If DATABASE_URL is provided (Railway), parse it
-        if (databaseUrl != null && !databaseUrl.isEmpty() && !databaseUrl.startsWith("jdbc:")) {
+        if (finalDatabaseUrl != null && !finalDatabaseUrl.isEmpty() && !finalDatabaseUrl.startsWith("jdbc:")) {
             try {
                 log.info("Parsing DATABASE_URL from Railway...");
                 // Railway provides: postgresql://user:password@host:port/database
                 // Convert to: jdbc:postgresql://host:port/database?user=user&password=password
-                URI dbUri = new URI(databaseUrl);
+                URI dbUri = new URI(finalDatabaseUrl);
                 
                 String userInfo = dbUri.getUserInfo();
                 if (userInfo == null || !userInfo.contains(":")) {
@@ -59,8 +67,8 @@ public class DatabaseConfig {
                     .driverClassName("org.postgresql.Driver")
                     .build();
             } catch (Exception e) {
-                log.error("Failed to parse DATABASE_URL: {}", databaseUrl, e);
-                throw new RuntimeException("Failed to parse DATABASE_URL: " + databaseUrl, e);
+                log.error("Failed to parse DATABASE_URL: {}", finalDatabaseUrl != null ? "***" : "(null)", e);
+                throw new RuntimeException("Failed to parse DATABASE_URL", e);
             }
         }
         
