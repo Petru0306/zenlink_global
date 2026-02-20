@@ -19,15 +19,40 @@ public class DatabaseConfig {
     @Value("${DATABASE_URL:}")
     private String databaseUrl;
 
+    @Value("${DATABASE_PUBLIC_URL:}")
+    private String databasePublicUrl;
+
+    @Value("${spring.datasource.url:}")
+    private String springDatasourceUrl;
+
+    @Value("${spring.datasource.username:postgres}")
+    private String springDatasourceUsername;
+
+    @Value("${spring.datasource.password:}")
+    private String springDatasourcePassword;
+
     @Bean
     @Primary
     public DataSource dataSource() {
         // Check environment variable directly as well (Railway might set it as env var)
         String envDatabaseUrl = System.getenv("DATABASE_URL");
+        String envDatabasePublicUrl = System.getenv("DATABASE_PUBLIC_URL");
+        
         String finalDatabaseUrl = (envDatabaseUrl != null && !envDatabaseUrl.isEmpty()) ? envDatabaseUrl : databaseUrl;
+        
+        // Fallback to DATABASE_PUBLIC_URL if DATABASE_URL is not available
+        if ((finalDatabaseUrl == null || finalDatabaseUrl.isEmpty()) && (envDatabasePublicUrl != null && !envDatabasePublicUrl.isEmpty())) {
+            finalDatabaseUrl = envDatabasePublicUrl;
+            log.info("Using DATABASE_PUBLIC_URL as fallback for DATABASE_URL");
+        } else if ((finalDatabaseUrl == null || finalDatabaseUrl.isEmpty()) && (databasePublicUrl != null && !databasePublicUrl.isEmpty())) {
+            finalDatabaseUrl = databasePublicUrl;
+            log.info("Using DATABASE_PUBLIC_URL from @Value as fallback for DATABASE_URL");
+        }
         
         log.info("DATABASE_URL from @Value: {}", databaseUrl != null ? (databaseUrl.isEmpty() ? "(empty)" : "***") : "(null)");
         log.info("DATABASE_URL from env: {}", envDatabaseUrl != null ? (envDatabaseUrl.isEmpty() ? "(empty)" : "***") : "(null)");
+        log.info("DATABASE_PUBLIC_URL from @Value: {}", databasePublicUrl != null ? (databasePublicUrl.isEmpty() ? "(empty)" : "***") : "(null)");
+        log.info("DATABASE_PUBLIC_URL from env: {}", envDatabasePublicUrl != null ? (envDatabasePublicUrl.isEmpty() ? "(empty)" : "***") : "(null)");
         
         // Try to use individual Railway variables if DATABASE_URL is not available
         String pgHost = System.getenv("PGHOST");
@@ -41,7 +66,18 @@ public class DatabaseConfig {
             pgDatabase != null ? pgDatabase : "(null)",
             pgUser != null ? pgUser : "(null)");
         
-        // If DATABASE_URL is provided (Railway), parse it
+        // If DATABASE_URL is a JDBC URL (from application.properties), use it directly
+        if (finalDatabaseUrl != null && !finalDatabaseUrl.isEmpty() && finalDatabaseUrl.startsWith("jdbc:")) {
+            log.info("Using JDBC URL directly from configuration");
+            return DataSourceBuilder.create()
+                .url(finalDatabaseUrl)
+                .username(System.getenv("DB_USERNAME") != null ? System.getenv("DB_USERNAME") : "postgres")
+                .password(System.getenv("DB_PASSWORD") != null ? System.getenv("DB_PASSWORD") : "")
+                .driverClassName("org.postgresql.Driver")
+                .build();
+        }
+        
+        // If DATABASE_URL is provided (Railway format: postgresql://...), parse it
         if (finalDatabaseUrl != null && !finalDatabaseUrl.isEmpty() && !finalDatabaseUrl.startsWith("jdbc:")) {
             try {
                 log.info("Parsing DATABASE_URL from Railway...");
@@ -104,8 +140,23 @@ public class DatabaseConfig {
                 .build();
         }
         
-        log.info("Using default Spring Boot datasource configuration");
-        // Fallback to default Spring Boot configuration
-        return DataSourceBuilder.create().build();
+        // If we reach here, no Railway configuration was found
+        // Fall back to application.properties configuration (only if it's a JDBC URL)
+        if (springDatasourceUrl != null && !springDatasourceUrl.isEmpty() && springDatasourceUrl.startsWith("jdbc:")) {
+            log.info("No Railway database config found. Using application.properties JDBC URL configuration.");
+            return DataSourceBuilder.create()
+                .url(springDatasourceUrl)
+                .username(springDatasourceUsername)
+                .password(springDatasourcePassword)
+                .driverClassName("org.postgresql.Driver")
+                .build();
+        }
+        
+        // Last resort: throw an error with helpful message
+        log.error("No database configuration found! Please set DATABASE_URL, DATABASE_PUBLIC_URL, or configure spring.datasource.* in application.properties.");
+        throw new IllegalStateException(
+            "No database configuration found. Please set DATABASE_URL environment variable or configure database in application.properties. " +
+            "For Railway, ensure PostgreSQL service is linked and DATABASE_URL is available."
+        );
     }
 }
