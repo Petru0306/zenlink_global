@@ -20,9 +20,10 @@ type Props = {
   layout?: 'split' | 'stacked';
 };
 
+import { API_BASE_URL } from '../config/api';
+
 function defaultBackendBaseUrl() {
-  // Keep consistent with existing fetches in the dashboards.
-  return 'http://localhost:8080';
+  return API_BASE_URL;
 }
 
 export function AiChat({

@@ -117,7 +117,7 @@ export default function DoctorProfilePage() {
       const doctorId = parseInt(id, 10);
 
       // Load basic doctor info
-      fetch(`http://localhost:8080/api/users/doctors/${id}`)
+      fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/users/doctors/${id}`)
         .then(res => {
           if (!res.ok) {
             throw new Error('Doctor not found');

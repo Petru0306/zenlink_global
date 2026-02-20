@@ -32,9 +32,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  `http://${window.location.hostname || 'localhost'}:8080`;
+import { API_BASE_URL } from '../config/api';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

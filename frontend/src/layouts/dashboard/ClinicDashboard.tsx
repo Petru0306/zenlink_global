@@ -97,7 +97,7 @@ export default function ClinicDashboard() {
     if (!user?.id) return;
     if (activeSection !== 'patients') return;
 
-    fetch(`http://localhost:8080/api/clinics/${user.id}/patients`)
+    fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/clinics/${user.id}/patients`)
       .then((r) => r.json())
       .then((list) => setClinicPatients(Array.isArray(list) ? list : []))
       .catch((err) => {

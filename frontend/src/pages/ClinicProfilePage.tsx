@@ -31,7 +31,7 @@ export default function ClinicProfilePage() {
       const clinicIdNum = parseInt(id, 10);
       
       // Load basic clinic info
-      fetch(`http://localhost:8080/api/users/clinics/${id}`)
+      fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/users/clinics/${id}`)
         .then(res => {
           if (!res.ok) {
             throw new Error('Clinic not found');

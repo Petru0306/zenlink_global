@@ -80,7 +80,7 @@ export function PatientConsultationsList({ patientId, onSelectConsultation }: Pa
     setError(null);
 
     // Fetch finalized consultations for patient
-    fetch(`http://localhost:8080/api/appointments/patient/${patientId}/finalized`)
+    fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/patient/${patientId}/finalized`)
       .then(res => {
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
@@ -98,7 +98,7 @@ export function PatientConsultationsList({ patientId, onSelectConsultation }: Pa
         // Fetch doctor info for each unique doctor
         const uniqueDoctorIds = [...new Set(data.map(c => c.doctorId))];
         const doctorPromises = uniqueDoctorIds.map(doctorId =>
-          fetch(`http://localhost:8080/api/users/${doctorId}`)
+          fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/users/${doctorId}`)
             .then(res => {
               if (!res.ok) {
                 throw new Error(`Failed to fetch doctor ${doctorId}`);

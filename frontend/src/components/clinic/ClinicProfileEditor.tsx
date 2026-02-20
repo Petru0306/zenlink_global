@@ -379,7 +379,7 @@ export default function ClinicProfileEditor({ userId, onSave }: ClinicProfileEdi
       formDataUpload.append('file', file);
 
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/upload/profile-image', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/upload/profile-image`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token || ''}`,
@@ -399,7 +399,8 @@ export default function ClinicProfileEditor({ userId, onSave }: ClinicProfileEdi
       }
 
       const data = await response.json();
-      const imageUrl = data.url.startsWith('http') ? data.url : `http://localhost:8080${data.url}`;
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+      const imageUrl = data.url.startsWith('http') ? data.url : `${backendUrl}${data.url}`;
       console.log('Banner uploaded successfully, URL:', imageUrl);
       // Update both state and ref
       updateFormData({ bannerImageUrl: imageUrl });
@@ -548,7 +549,7 @@ export default function ClinicProfileEditor({ userId, onSave }: ClinicProfileEdi
         formDataUpload.append('file', file);
 
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:8080/api/upload/profile-image', {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/upload/profile-image`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token || ''}`,
@@ -561,7 +562,8 @@ export default function ClinicProfileEditor({ userId, onSave }: ClinicProfileEdi
         }
 
         const data = await response.json();
-        const imageUrl = data.url.startsWith('http') ? data.url : `http://localhost:8080${data.url}`;
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+      const imageUrl = data.url.startsWith('http') ? data.url : `${backendUrl}${data.url}`;
         newImageUrls.push(imageUrl);
       } catch (error) {
         console.error(`Error uploading ${file.name}:`, error);

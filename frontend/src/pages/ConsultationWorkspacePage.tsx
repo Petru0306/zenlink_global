@@ -30,7 +30,8 @@ export default function ConsultationWorkspacePage() {
   const { appointmentId = '' } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const apiBase = 'http://localhost:8080'
+  import { API_BASE_URL } from '../config/api';
+  const apiBase = API_BASE_URL;
 
   // Disable body/html scroll when component mounts
   useEffect(() => {

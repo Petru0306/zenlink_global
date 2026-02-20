@@ -53,7 +53,8 @@ type PatientContext = {
 export default function ConsultationWorkspace() {
   const { appointmentId = '' } = useParams()
   const navigate = useNavigate()
-  const apiBase = 'http://localhost:8080'
+  import { API_BASE_URL } from '../config/api';
+  const apiBase = API_BASE_URL;
   
   // State
   const [context, setContext] = useState<ConsultationContext | null>(null)
