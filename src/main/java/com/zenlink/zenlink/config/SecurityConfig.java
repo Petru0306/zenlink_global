@@ -2,6 +2,7 @@ package com.zenlink.zenlink.config;
 
 import com.zenlink.zenlink.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -15,7 +16,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -88,17 +88,13 @@ public class SecurityConfig {
             }
         }
         
-        // In production (Railway), allow all origins by default to work with Vercel
+        // In production (Railway), allow all Vercel domains by default
         // You can restrict this by setting ALLOWED_ORIGINS in Railway
-        String port = System.getenv("PORT");
-        boolean isProduction = port != null && !port.isEmpty();
-        
-        if (isProduction) {
-            // Allow all origins in production (Railway) to work with any Vercel domain
-            // You can restrict by setting ALLOWED_ORIGINS env var in Railway
+        String env = System.getenv("RAILWAY_ENVIRONMENT");
+        if (env != null && env.equals("production")) {
+            // Allow all origins in production (you can restrict via ALLOWED_ORIGINS env var)
             configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         } else {
-            // In development, only allow localhost
             configuration.setAllowedOrigins(allowedOrigins);
         }
         
