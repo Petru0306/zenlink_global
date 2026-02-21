@@ -169,7 +169,7 @@ export function ConsultationDetail({ consultation, onBack }: ConsultationDetailP
   };
 
   const formatStructuredResponse = (data: any) => {
-    const parts: JSX.Element[] = [];
+    const parts: React.ReactElement[] = [];
     
     if (data.title) {
       parts.push(

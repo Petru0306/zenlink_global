@@ -67,7 +67,7 @@ export default function ClinicDashboard() {
   const handleAddDoctor = async (doctorId: number) => {
     if (!user?.id) return;
     try {
-      await clinicDoctorService.addDoctor(user.id, doctorId);
+      await clinicDoctorService.addDoctor(typeof user.id === 'string' ? parseInt(user.id, 10) : user.id, doctorId);
       await loadClinicDoctors();
       setSearchQuery('');
       setSearchResults([]);
