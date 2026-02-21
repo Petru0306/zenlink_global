@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export interface Appointment {
   id: string;
@@ -30,7 +30,7 @@ export const useAppointments = () => {
 };
 
 interface AppointmentProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export const AppointmentProvider: React.FC<AppointmentProviderProps> = ({ children }) => {
