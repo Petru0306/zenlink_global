@@ -3,8 +3,7 @@
  * Uses full viewport height with no page scroll
  */
 
-import { useEffect, useState, useRef, useMemo } from 'react'
-import type { ReactNode } from 'react'
+import { useEffect, useState, useRef, useMemo, type ReactNode } from 'react'
 
 interface ConsultationLayoutProps {
   sidebar: ReactNode
