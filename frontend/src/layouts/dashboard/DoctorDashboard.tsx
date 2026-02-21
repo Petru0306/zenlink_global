@@ -216,7 +216,7 @@ export default function DoctorDashboard() {
           <div className="space-y-6">
             {user?.id && (
               <DoctorProfileEditor 
-                userId={user.id}
+                userId={typeof user.id === 'string' ? parseInt(user.id, 10) : user.id}
                 onSave={() => {
                   // Optionally refresh data or show success message
                   console.log('Profile saved successfully');
@@ -1230,7 +1230,7 @@ export default function DoctorDashboard() {
               />
             ) : (
               <ConsultationsList
-                doctorId={user.id}
+                doctorId={typeof user.id === 'string' ? parseInt(user.id, 10) : user.id}
                 onSelectConsultation={setSelectedConsultation}
                 filterPatientId={selectedPatientId ? Number(selectedPatientId) : undefined}
               />

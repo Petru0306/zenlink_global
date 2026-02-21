@@ -3,7 +3,7 @@
  * Never shows raw JSON - always renders as cards, bullets, chips
  */
 
-import { StructureResponse, AnalyzeResponse } from '../../types/consultation'
+import type { StructureResponse, AnalyzeResponse } from '../../types/consultation'
 import { FileText, AlertCircle, Clock, AlertTriangle, BookOpen, ExternalLink, CheckCircle2, Copy, Check, Edit2, Save } from 'lucide-react'
 import { useState, useEffect } from 'react'
 

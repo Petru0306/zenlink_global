@@ -14,6 +14,9 @@ interface UserResponse {
   email: string;
   phone?: string;
   role: string;
+  rating?: number;
+  reviews?: number;
+  patients?: number;
 }
 
 export default function ClinicProfilePage() {
@@ -227,10 +230,10 @@ export default function ClinicProfilePage() {
                       <span className="text-white font-bold text-sm">{(clinic?.rating ?? 0).toFixed(1)}</span>
                       <span className="text-purple-200/60 text-xs">({clinic?.reviews ?? 0})</span>
                     </div>
-                    {(clinic?.patients ?? 0) > 0 && (
+                    {((clinic?.patients ?? 0) > 0) && (
                       <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
                         <Users className="w-4 h-4 text-purple-300" />
-                        <span className="text-white font-semibold text-sm">{(clinic.patients ?? 0).toLocaleString()}+</span>
+                        <span className="text-white font-semibold text-sm">{((clinic?.patients ?? 0)).toLocaleString()}+</span>
                       </div>
                     )}
                   </div>
