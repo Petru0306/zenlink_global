@@ -35,7 +35,7 @@ export async function sendMessageStreaming(
 
   // Convert to backend format
   const backendMessages = toBackendMessages(messages);
-  
+
   console.log('AI Client: Sending streaming request to', `${BACKEND_BASE_URL}/api/ai/chat/stream-simple`);
 
   try {
@@ -49,7 +49,7 @@ export async function sendMessageStreaming(
         triageState: triageState || undefined,
       }),
     });
-    
+
     console.log('AI Client: Streaming response status', response.status, response.statusText);
 
     if (!response.ok) {
@@ -59,9 +59,9 @@ export async function sendMessageStreaming(
       } catch (e) {
         errorText = '';
       }
-      
+
       console.error('AI API streaming error:', response.status, errorText);
-      
+
       if (response.status === 429) {
         throw new Error('Prea multe cereri. Te rog încearcă din nou mai târziu.');
       }
@@ -75,7 +75,7 @@ export async function sendMessageStreaming(
         throw new Error('Eroare internă a serverului. Te rog încearcă din nou.');
       }
       if (response.status === 0 || response.status === 503) {
-        throw new Error('Backend-ul nu este disponibil. Verifică dacă serverul rulează pe http://localhost:8080');
+        throw new Error('Backend-ul nu este disponibil. Te rog încearcă din nou mai târziu.');
       }
       throw new Error(errorText || `Eroare HTTP ${response.status}`);
     }
@@ -93,7 +93,7 @@ export async function sendMessageStreaming(
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        
+
         const chunk = decoder.decode(value, { stream: true });
         fullText += chunk;
         onChunk(chunk);
@@ -125,7 +125,7 @@ export async function sendMessage(
 
   // Convert to backend format
   const backendMessages = toBackendMessages(messages);
-  
+
   console.log('AI Client: Sending request to', `${BACKEND_BASE_URL}/api/ai/chat`);
   console.log('AI Client: Request body', { messages: backendMessages });
 
@@ -139,7 +139,7 @@ export async function sendMessage(
         messages: backendMessages,
       }),
     });
-    
+
     console.log('AI Client: Response status', response.status, response.statusText);
 
     if (!response.ok) {
@@ -155,9 +155,9 @@ export async function sendMessage(
       } catch (e) {
         errorText = await response.text().catch(() => '');
       }
-      
+
       console.error('AI API error:', response.status, errorText);
-      
+
       if (response.status === 429) {
         throw new Error('Prea multe cereri. Te rog încearcă din nou mai târziu.');
       }
@@ -171,7 +171,7 @@ export async function sendMessage(
         throw new Error('Eroare internă a serverului. Te rog încearcă din nou.');
       }
       if (response.status === 0 || response.status === 503) {
-        throw new Error('Backend-ul nu este disponibil. Verifică dacă serverul rulează pe http://localhost:8080');
+        throw new Error('Backend-ul nu este disponibil. Te rog încearcă din nou mai târziu.');
       }
       throw new Error(errorText || `Eroare HTTP ${response.status}`);
     }
