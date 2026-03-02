@@ -70,13 +70,7 @@ export default function DoctorsPage() {
               bio: profile?.about || profile?.tagline || 'Profile information pending',
               education: [],
               experience: profile?.yearsOfExperience || '',
-<<<<<<< HEAD
-              languages: profile?.languages ? profile.languages.split(',').map((l: string) => {
-                return l.trim();
-              }) : [],
-=======
               languages: profile?.languages ? profile.languages.split(',').map((l: string) => l.trim()) : [],
->>>>>>> 49e4222cabec0638c5502ad2f347bbb0117a8f9e
               consultationFee: 0,
             };
           });
