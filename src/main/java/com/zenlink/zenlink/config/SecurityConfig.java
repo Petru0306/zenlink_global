@@ -88,14 +88,12 @@ public class SecurityConfig {
             }
         }
         
-        // In production (Railway), allow all Vercel domains by default
-        // You can restrict this by setting ALLOWED_ORIGINS in Railway
-        String env = System.getenv("RAILWAY_ENVIRONMENT");
-        if (env != null && env.equals("production")) {
-            // Allow all origins in production (you can restrict via ALLOWED_ORIGINS env var)
-            configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        } else {
+        // If ALLOWED_ORIGINS is set, use those specific origins
+        // Otherwise allow all origins (permissive default for development/unknown platforms)
+        if (allowedOriginsEnv != null && !allowedOriginsEnv.isEmpty()) {
             configuration.setAllowedOrigins(allowedOrigins);
+        } else {
+            configuration.setAllowedOriginPatterns(java.util.Arrays.asList("*"));
         }
         
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
