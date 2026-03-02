@@ -5,7 +5,9 @@
 
 import type { Message } from '../lib/aiStorage';
 
-const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+import { API_BASE_URL } from '../config/api';
+
+const BACKEND_BASE_URL = API_BASE_URL;
 
 /**
  * Convert frontend Message format to backend AiMessage format
