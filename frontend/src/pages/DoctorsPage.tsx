@@ -52,7 +52,7 @@ export default function DoctorsPage() {
           // Transform User to Doctor format with profile data
           const transformedDoctors: Doctor[] = users.map((user, index) => {
             const profile = profiles[index];
-            const clinics = profile?.clinics ? profile.clinics.split('\n').filter(c => c.trim()) : [];
+            const clinics = profile?.clinics ? profile.clinics.split('\n').filter((c: string) => c.trim()) : [];
             const firstClinic = clinics.length > 0 ? clinics[0] : null;
 
             return {
@@ -70,7 +70,9 @@ export default function DoctorsPage() {
               bio: profile?.about || profile?.tagline || 'Profile information pending',
               education: [],
               experience: profile?.yearsOfExperience || '',
-              languages: profile?.languages ? profile.languages.split(',').map(l => l.trim()) : [],
+              languages: profile?.languages ? profile.languages.split(',').map((l: string) => {
+                return l.trim();
+              }) : [],
               consultationFee: 0,
             };
           });
