@@ -14,6 +14,9 @@ interface UserResponse {
   email: string;
   phone?: string;
   role: string;
+  rating?: number;
+  reviews?: number;
+  patients?: number;
 }
 
 export default function ClinicProfilePage() {
@@ -31,7 +34,7 @@ export default function ClinicProfilePage() {
       const clinicIdNum = parseInt(id, 10);
       
       // Load basic clinic info
-      fetch(`http://localhost:8080/api/users/clinics/${id}`)
+      fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/users/clinics/${id}`)
         .then(res => {
           if (!res.ok) {
             throw new Error('Clinic not found');
@@ -141,7 +144,7 @@ export default function ClinicProfilePage() {
         <div className="absolute top-[40%] right-[30%] w-[400px] h-[400px] rounded-full bg-gradient-to-br from-purple-400/20 to-transparent blur-[90px]" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
+      <div className="max-w-7xl mx-auto px-6 pt-28 pb-8 relative z-10">
         {/* Back Button */}
         <Button
           onClick={() => navigate('/clinici')}
@@ -227,10 +230,10 @@ export default function ClinicProfilePage() {
                       <span className="text-white font-bold text-sm">{(clinic?.rating ?? 0).toFixed(1)}</span>
                       <span className="text-purple-200/60 text-xs">({clinic?.reviews ?? 0})</span>
                     </div>
-                    {(clinic?.patients ?? 0) > 0 && (
+                    {((clinic?.patients ?? 0) > 0) && (
                       <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
                         <Users className="w-4 h-4 text-purple-300" />
-                        <span className="text-white font-semibold text-sm">{(clinic.patients ?? 0).toLocaleString()}+</span>
+                        <span className="text-white font-semibold text-sm">{((clinic?.patients ?? 0)).toLocaleString()}+</span>
                       </div>
                     )}
                   </div>
@@ -409,15 +412,6 @@ export default function ClinicProfilePage() {
               </div>
             </div>
           )}
-
-          {/* Action Button */}
-          <div className="flex justify-center pt-4 animate-fade-in-up" style={{ animationDelay: '0.25s' }}>
-            <Button
-              className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white rounded-xl px-12 py-7 text-xl shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 font-bold hover:scale-105"
-            >
-              Book Appointment
-            </Button>
-          </div>
         </div>
       </div>
     </div>

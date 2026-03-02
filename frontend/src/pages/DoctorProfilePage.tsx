@@ -117,7 +117,7 @@ export default function DoctorProfilePage() {
       const doctorId = parseInt(id, 10);
 
       // Load basic doctor info
-      fetch(`http://localhost:8080/api/users/doctors/${id}`)
+      fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/users/doctors/${id}`)
         .then(res => {
           if (!res.ok) {
             throw new Error('Doctor not found');
@@ -294,7 +294,7 @@ export default function DoctorProfilePage() {
         </div>
       </>
 
-      <div className="max-w-6xl mx-auto px-6 py-6 relative z-10">
+      <div className="max-w-6xl mx-auto px-6 pt-28 pb-6 relative z-10">
         {/* Back Button */}
         <Button
           onClick={() => navigate('/doctori')}

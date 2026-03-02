@@ -2,7 +2,7 @@
  * Renders STRUCTURE mode output - organized clinical notes
  */
 
-import { StructureOutput } from '../../types/consultation'
+import type { StructureOutput } from '../../types/consultation'
 import { FileText, ClipboardList, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 interface AssistantCardStructureProps {

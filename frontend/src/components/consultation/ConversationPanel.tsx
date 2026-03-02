@@ -2,7 +2,7 @@
  * ChatGPT-like conversation panel - scrollable message area
  */
 
-import { Message } from '../../types/consultation'
+import type { Message } from '../../types/consultation'
 import { renderAssistantOutput } from '../../lib/renderAssistantOutput'
 import AssistantCardStructure from './AssistantCardStructure'
 import AssistantCardAnalyze from './AssistantCardAnalyze'
@@ -134,7 +134,8 @@ export default function ConversationPanel({ messages, currentDraft, isProcessing
               data: parsedOutputData,
             }
           } else {
-            rendered = renderAssistantOutput(msg.content, msg.outputType, msg.outputData)
+            // Convert StructureResponse/AnalyzeResponse to StructureOutput/AnalyzeOutput if needed
+            rendered = renderAssistantOutput(msg.content, msg.outputType, msg.outputData as any)
           }
 
           return (

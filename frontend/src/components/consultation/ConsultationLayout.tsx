@@ -3,12 +3,12 @@
  * Uses full viewport height with no page scroll
  */
 
-import { ReactNode, useEffect, useState, useRef, useMemo } from 'react'
+import React, { useEffect, useState, useRef, useMemo } from 'react'
 
 interface ConsultationLayoutProps {
-  sidebar: ReactNode
-  conversation: ReactNode
-  composer: ReactNode
+  sidebar: React.ReactNode
+  conversation: React.ReactNode
+  composer: React.ReactNode
 }
 
 export default function ConsultationLayout({

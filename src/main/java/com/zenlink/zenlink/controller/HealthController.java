@@ -9,11 +9,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
 public class HealthController {
 
-    @GetMapping("/health")
+    // Root endpoint for Railway health checks
+    @GetMapping("/")
+    public Map<String, String> root() {
+        Map<String, String> response = new HashMap<>();
+        response.put("status", "UP");
+        response.put("message", "Zenlink API is running!");
+        return response;
+    }
+
+    @GetMapping("/api/health")
     public Map<String, String> health() {
         Map<String, String> response = new HashMap<>();
         response.put("status", "UP");

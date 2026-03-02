@@ -34,7 +34,7 @@ export default function ClinicDashboard() {
   const loadClinicDoctors = async () => {
     if (!user?.id) return;
     try {
-      const clinicDoctors = await clinicDoctorService.getClinicDoctors(user.id);
+      const clinicDoctors = await clinicDoctorService.getClinicDoctors(typeof user.id === 'string' ? parseInt(user.id, 10) : user.id);
       setDoctors(clinicDoctors);
     } catch (error) {
       console.error('Error loading clinic doctors:', error);
@@ -67,7 +67,7 @@ export default function ClinicDashboard() {
   const handleAddDoctor = async (doctorId: number) => {
     if (!user?.id) return;
     try {
-      await clinicDoctorService.addDoctor(user.id, doctorId);
+      await clinicDoctorService.addDoctor(typeof user.id === 'string' ? parseInt(user.id, 10) : user.id, doctorId);
       await loadClinicDoctors();
       setSearchQuery('');
       setSearchResults([]);
@@ -85,7 +85,7 @@ export default function ClinicDashboard() {
     if (!confirm('Are you sure you want to remove this doctor from your clinic?')) return;
     
     try {
-      await clinicDoctorService.removeDoctor(user.id, doctorId);
+      await clinicDoctorService.removeDoctor(typeof user.id === 'string' ? parseInt(user.id, 10) : user.id, doctorId);
       await loadClinicDoctors();
     } catch (error) {
       console.error('Error removing doctor:', error);
@@ -97,7 +97,7 @@ export default function ClinicDashboard() {
     if (!user?.id) return;
     if (activeSection !== 'patients') return;
 
-    fetch(`http://localhost:8080/api/clinics/${user.id}/patients`)
+    fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/clinics/${typeof user.id === 'string' ? parseInt(user.id, 10) : user.id}/patients`)
       .then((r) => r.json())
       .then((list) => setClinicPatients(Array.isArray(list) ? list : []))
       .catch((err) => {
@@ -126,7 +126,7 @@ export default function ClinicDashboard() {
       case 'overview':
         return (
           <ClinicProfileEditor 
-            userId={user?.id || 0} 
+            userId={typeof user?.id === 'string' ? parseInt(user.id, 10) : (user?.id || 0)} 
             onSave={() => {
               // Refresh data if needed
               console.log('Clinic profile saved');
@@ -456,7 +456,7 @@ export default function ClinicDashboard() {
       />
 
       {/* Main Content */}
-      <div className="lg:pl-[280px] min-h-screen relative z-10">
+      <div className="lg:pl-[280px] min-h-screen relative z-10 pt-20 lg:pt-24">
         {/* Mobile Menu Button */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}

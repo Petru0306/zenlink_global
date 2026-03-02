@@ -106,7 +106,7 @@ export default function DoctorDashboard() {
   useEffect(() => {
     // Fetch appointments for current doctor
     if (user?.id) {
-      fetch(`http://localhost:8080/api/appointments/doctor/${user.id}`)
+      fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/doctor/${user.id}`)
         .then(res => res.json())
         .then((data: any[]) => {
           const transformed = data.map(apt => ({
@@ -122,7 +122,7 @@ export default function DoctorDashboard() {
         .catch(err => console.error('Error fetching appointments:', err));
       
       // Fetch availability
-      fetch(`http://localhost:8080/api/availability/doctor/${user.id}`)
+      fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/availability/doctor/${user.id}`)
         .then(res => res.json())
         .then(data => setAvailability(data))
         .catch(err => console.error('Error fetching availability:', err));
@@ -216,7 +216,7 @@ export default function DoctorDashboard() {
           <div className="space-y-6">
             {user?.id && (
               <DoctorProfileEditor 
-                userId={user.id}
+                userId={typeof user.id === 'string' ? parseInt(user.id, 10) : user.id}
                 onSave={() => {
                   // Optionally refresh data or show success message
                   console.log('Profile saved successfully');
@@ -232,7 +232,7 @@ export default function DoctorDashboard() {
           
           setSaving(true);
           try {
-            const response = await fetch(`http://localhost:8080/api/users/${user.id}`, {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/users/${user.id}`, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
@@ -623,7 +623,7 @@ export default function DoctorDashboard() {
                 }))
               };
               
-              const response = await fetch(`http://localhost:8080/api/availability/doctor/${doctorId}`, {
+              const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/availability/doctor/${doctorId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),
@@ -641,7 +641,7 @@ export default function DoctorDashboard() {
           
           // Refresh availability
           try {
-            const updatedAvailability = await fetch(`http://localhost:8080/api/availability/doctor/${doctorId}`)
+            const updatedAvailability = await fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/availability/doctor/${doctorId}`)
               .then(res => res.json());
             setAvailability(updatedAvailability);
           } catch (error) {
@@ -755,7 +755,7 @@ export default function DoctorDashboard() {
             const doctorId = typeof user.id === 'string' ? parseInt(user.id) : user.id;
             console.log('Doctor ID:', doctorId, 'Type:', typeof doctorId);
             
-            const response = await fetch(`http://localhost:8080/api/availability/doctor/${doctorId}`, {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/availability/doctor/${doctorId}`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -769,7 +769,7 @@ export default function DoctorDashboard() {
             if (response.status >= 200 && response.status < 300) {
               // Success - refresh availability list
               try {
-                const updatedAvailability = await fetch(`http://localhost:8080/api/availability/doctor/${doctorId}`)
+                const updatedAvailability = await fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/availability/doctor/${doctorId}`)
                   .then(res => res.json());
                 setAvailability(updatedAvailability);
                 console.log('Availability refreshed:', updatedAvailability);
@@ -1230,7 +1230,7 @@ export default function DoctorDashboard() {
               />
             ) : (
               <ConsultationsList
-                doctorId={user.id}
+                doctorId={typeof user.id === 'string' ? parseInt(user.id, 10) : user.id}
                 onSelectConsultation={setSelectedConsultation}
                 filterPatientId={selectedPatientId ? Number(selectedPatientId) : undefined}
               />
@@ -1262,7 +1262,7 @@ export default function DoctorDashboard() {
       />
 
       {/* Main Content */}
-      <div className="lg:pl-[280px] min-h-screen relative z-10">
+      <div className="lg:pl-[280px] min-h-screen relative z-10 pt-20 lg:pt-24">
         <main className="p-8 lg:p-12 max-w-[1600px] mx-auto">
           {renderContent()}
         </main>

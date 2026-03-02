@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-const API_BASE = 'http://localhost:8080';
+import { API_BASE_URL as API_BASE } from '../../config/api';
 import { AiChat } from '../../components/AiChat';
 import { medicalProfileService } from '../../services/medicalProfileService';
 import { PatientConsultationsList } from '../../components/consultations/PatientConsultationsList';
@@ -222,7 +222,7 @@ export default function Dashboard() {
   useEffect(() => {
     // Fetch real appointments from backend
     if (user?.id) {
-      fetch(`http://localhost:8080/api/appointments/patient/${user.id}`)
+      fetch(`${API_BASE}/api/appointments/patient/${user.id}`)
         .then(res => res.json())
         .then((data) => {
           const transformed = data.map(apt => ({
@@ -406,7 +406,7 @@ export default function Dashboard() {
         profileForm.age === '' || profileForm.age === null || profileForm.age === undefined
           ? null
           : Number(profileForm.age);
-      const response = await fetch(`http://localhost:8080/api/users/${user.id}`, {
+      const response = await fetch(`${API_BASE}/api/users/${user.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

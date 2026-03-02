@@ -47,6 +47,19 @@ public class ClinicController {
         this.clinicProfileRepository = clinicProfileRepository;
     }
 
+    /**
+     * Get all clinics
+     * This endpoint provides the same functionality as /api/users/clinics
+     */
+    @GetMapping
+    public ResponseEntity<List<com.zenlink.zenlink.dto.UserResponse>> getAllClinics() {
+        List<User> clinics = userRepository.findByRole(UserRole.CLINIC);
+        List<com.zenlink.zenlink.dto.UserResponse> response = clinics.stream()
+                .map(com.zenlink.zenlink.dto.UserResponse::new)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/{clinicId}/doctors/{doctorId}")
     @Transactional
     public ResponseEntity<?> addDoctor(@PathVariable Long clinicId, @PathVariable Long doctorId) {

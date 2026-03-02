@@ -50,7 +50,7 @@ export function ConsultationDetail({ consultation, onBack }: ConsultationDetailP
     setLoading(true);
 
     // Fetch patient info
-    fetch(`http://localhost:8080/api/users/${consultation.patientId}`)
+    fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/users/${consultation.patientId}`)
       .then(res => {
         if (res.ok) {
           return res.json();
@@ -64,7 +64,7 @@ export function ConsultationDetail({ consultation, onBack }: ConsultationDetailP
       });
 
     // Fetch messages
-    fetch(`http://localhost:8080/api/appointments/${consultation.appointmentId}/messages`)
+    fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/${consultation.appointmentId}/messages`)
       .then(res => {
         if (res.ok) {
           return res.json();
@@ -169,7 +169,7 @@ export function ConsultationDetail({ consultation, onBack }: ConsultationDetailP
   };
 
   const formatStructuredResponse = (data: any) => {
-    const parts: JSX.Element[] = [];
+    const parts: React.ReactElement[] = [];
     
     if (data.title) {
       parts.push(
@@ -290,7 +290,7 @@ export function ConsultationDetail({ consultation, onBack }: ConsultationDetailP
         rollingSummary: doctorSummary?.chiefComplaint || '',
       };
 
-      const response = await fetch(`http://localhost:8080/api/appointments/${consultation.appointmentId}/copilot-chat`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/${consultation.appointmentId}/copilot-chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
@@ -314,7 +314,7 @@ export function ConsultationDetail({ consultation, onBack }: ConsultationDetailP
 
       // Save messages to backend
       try {
-        await fetch(`http://localhost:8080/api/appointments/${consultation.appointmentId}/messages`, {
+        await fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/${consultation.appointmentId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -323,7 +323,7 @@ export function ConsultationDetail({ consultation, onBack }: ConsultationDetailP
             outputType: 'message',
           }),
         });
-        await fetch(`http://localhost:8080/api/appointments/${consultation.appointmentId}/messages`, {
+        await fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/${consultation.appointmentId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

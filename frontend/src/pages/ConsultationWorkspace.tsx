@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { WebSpeechTranscriptionProvider } from '../lib/transcription/WebSpeechTranscriptionProvider'
 import { Mic, Pause, CheckCircle2, FileText, X, Send, Loader2, Download } from 'lucide-react'
 import { renderMarkdown } from '../lib/markdown'
+import { API_BASE_URL } from '../config/api'
 // Removed triage UI imports - Consultation Workspace uses doctor copilot only
 
 // Types
@@ -53,7 +54,7 @@ type PatientContext = {
 export default function ConsultationWorkspace() {
   const { appointmentId = '' } = useParams()
   const navigate = useNavigate()
-  const apiBase = 'http://localhost:8080'
+  const apiBase = API_BASE_URL;
   
   // State
   const [context, setContext] = useState<ConsultationContext | null>(null)

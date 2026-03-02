@@ -37,7 +37,7 @@ export default function AppointmentBookingPage() {
 
   useEffect(() => {
     if (doctorId) {
-      fetch(`http://localhost:8080/api/users/doctors/${doctorId}`)
+      fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/users/doctors/${doctorId}`)
         .then(res => res.json())
         .then((data: DoctorData) => {
           setDoctor(data);
@@ -64,7 +64,7 @@ export default function AppointmentBookingPage() {
       const day = String(selectedDate.getDate()).padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
 
-      fetch(`http://localhost:8080/api/availability/doctor/${doctorId}/date/${dateStr}`)
+      fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/availability/doctor/${doctorId}/date/${dateStr}`)
         .then(res => res.json())
         .then((slots: AvailabilitySlot[]) => {
           setAvailableSlots(slots);
@@ -124,7 +124,7 @@ export default function AppointmentBookingPage() {
       const [hours, minutes] = selectedTime.split(':');
       const timeStr = `${hours}:${minutes}:00`;
 
-      const response = await fetch(`http://localhost:8080/api/appointments?patientId=${user.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments?patientId=${user.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

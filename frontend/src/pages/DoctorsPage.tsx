@@ -33,7 +33,7 @@ export default function DoctorsPage() {
     // Fetch real doctors from backend
     console.log('Fetching doctors from backend...');
     Promise.all([
-      fetch('http://localhost:8080/api/users/doctors').then(res => {
+      fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/users/doctors`).then(res => {
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         return res.json();
       }),
@@ -43,7 +43,7 @@ export default function DoctorsPage() {
 
         // Fetch profiles for all doctors
         const profilePromises = users.map(user =>
-          fetch(`http://localhost:8080/api/doctor-profiles/doctor/${user.id}`)
+          fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/doctor-profiles/doctor/${user.id}`)
             .then(res => res.ok ? res.json() : null)
             .catch(() => null)
         );
@@ -70,9 +70,13 @@ export default function DoctorsPage() {
               bio: profile?.about || profile?.tagline || 'Profile information pending',
               education: [],
               experience: profile?.yearsOfExperience || '',
+<<<<<<< HEAD
               languages: profile?.languages ? profile.languages.split(',').map((l: string) => {
                 return l.trim();
               }) : [],
+=======
+              languages: profile?.languages ? profile.languages.split(',').map((l: string) => l.trim()) : [],
+>>>>>>> 49e4222cabec0638c5502ad2f347bbb0117a8f9e
               consultationFee: 0,
             };
           });

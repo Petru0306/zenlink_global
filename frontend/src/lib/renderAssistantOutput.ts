@@ -3,7 +3,7 @@
  * Prevents raw JSON from being displayed
  */
 
-import { StructureOutput, AnalyzeOutput } from '../types/consultation'
+import type { StructureOutput, AnalyzeOutput } from '../types/consultation'
 import { renderMarkdown } from './markdown'
 
 export function renderAssistantOutput(

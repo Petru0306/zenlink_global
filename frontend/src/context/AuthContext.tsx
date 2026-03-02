@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { psychProfileService, type PsychProfileResponse } from '../services/psychProfileService';
 
 export type UserRole = 'PATIENT' | 'DOCTOR' | 'CLINIC';
@@ -32,9 +32,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  `http://${window.location.hostname || 'localhost'}:8080`;
+import { API_BASE_URL } from '../config/api';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -45,7 +43,7 @@ export const useAuth = () => {
 };
 
 interface AuthProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {

@@ -2,7 +2,7 @@
  * Renders ZENLINK ANALYZE mode output - structure + insights + references
  */
 
-import { AnalyzeOutput } from '../../types/consultation'
+import type { AnalyzeOutput } from '../../types/consultation'
 import AssistantCardStructure from './AssistantCardStructure'
 import { Sparkles, HelpCircle, BookOpen, AlertTriangle, Stethoscope, ExternalLink } from 'lucide-react'
 

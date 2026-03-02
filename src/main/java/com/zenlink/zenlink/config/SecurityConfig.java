@@ -2,6 +2,7 @@ package com.zenlink.zenlink.config;
 
 import com.zenlink.zenlink.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -17,6 +18,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 @Configuration
@@ -26,6 +28,9 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Value("${ALLOWED_ORIGINS:}")
+    private String allowedOriginsEnv;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -63,12 +68,36 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
+        
+        // Build allowed origins list
+        List<String> allowedOrigins = new ArrayList<>(Arrays.asList(
             "http://localhost:5173", 
             "http://localhost:3000",
             "http://127.0.0.1:5173",
             "http://127.0.0.1:3000"
         ));
+        
+        // Add origins from environment variable (comma-separated)
+        if (allowedOriginsEnv != null && !allowedOriginsEnv.isEmpty()) {
+            String[] origins = allowedOriginsEnv.split(",");
+            for (String origin : origins) {
+                String trimmed = origin.trim();
+                if (!trimmed.isEmpty() && !allowedOrigins.contains(trimmed)) {
+                    allowedOrigins.add(trimmed);
+                }
+            }
+        }
+        
+        // In production (Railway), allow all Vercel domains by default
+        // You can restrict this by setting ALLOWED_ORIGINS in Railway
+        String env = System.getenv("RAILWAY_ENVIRONMENT");
+        if (env != null && env.equals("production")) {
+            // Allow all origins in production (you can restrict via ALLOWED_ORIGINS env var)
+            configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        } else {
+            configuration.setAllowedOrigins(allowedOrigins);
+        }
+        
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("Authorization"));

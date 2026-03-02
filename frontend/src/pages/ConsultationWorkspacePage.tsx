@@ -15,6 +15,7 @@ import { renderAssistantOutput } from '../lib/renderAssistantOutput'
 import { psychProfileService, type PsychProfileResponse } from '../services/psychProfileService'
 import { medicalProfileService, type MedicalProfileResponse } from '../services/medicalProfileService'
 import { useAuth } from '../context/AuthContext'
+import { API_BASE_URL } from '../config/api'
 import type {
   SessionContext,
   Segment,
@@ -30,7 +31,7 @@ export default function ConsultationWorkspacePage() {
   const { appointmentId = '' } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const apiBase = 'http://localhost:8080'
+  const apiBase = API_BASE_URL;
 
   // Disable body/html scroll when component mounts
   useEffect(() => {
@@ -209,7 +210,7 @@ export default function ConsultationWorkspacePage() {
             console.error('❌ Invalid patient ID:', patientId)
             setPatientMedicalData({
               id: null,
-              userId: null,
+              userId: 0,
               bloodType: null,
               allergies: null,
               chronicConditions: null,
